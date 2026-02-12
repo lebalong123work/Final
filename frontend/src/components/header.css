@@ -1,0 +1,82 @@
+.zt-header {
+  height: 64px;
+  display: flex;
+  align-items: center;
+}
+
+.zt-header .navbar {
+  padding: 10px 0;
+  width: 100%;
+}
+
+/* Brand */
+.brand-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.brand-text {
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.2px;
+  color: #1f2937;
+}
+
+.brand-z {
+  color: #1d4ed8; /* xanh giống hình */
+}
+
+/* Nav */
+.zt-nav .nav-link {
+  color: #111827;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 10px;
+}
+
+.zt-nav .nav-link:hover {
+  background: #f3f4f6;
+}
+
+.zt-nav .nav-link.active {
+  color: #2563eb;
+}
+
+/* Search */
+.zt-search-group {
+  width: 320px;
+  max-width: 42vw;
+}
+
+.zt-search-input {
+  border-radius: 999px 0 0 999px;
+  border-right: 0;
+  background: #f3f4f6;
+}
+
+.zt-search-input:focus {
+  box-shadow: none;
+  border-color: #e5e7eb;
+  background: #f3f4f6;
+}
+
+.zt-search-btn {
+  border-radius: 0 999px 999px 0;
+  border-left: 0;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.zt-search-btn:hover {
+  background: #e5e7eb;
+}
+.user-btn {
+  border: none;
+  background: transparent;
+  padding: 6px;
+}
+
+.user-btn:hover {
+  background: #f3f4f6;
+  border-radius: 50%;
+}

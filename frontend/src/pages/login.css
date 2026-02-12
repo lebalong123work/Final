@@ -1,0 +1,122 @@
+.login-page {
+  min-height: calc(100vh - 64px);
+  background: radial-gradient(1200px 600px at 10% 10%, #dbeafe 0%, transparent 55%),
+              radial-gradient(900px 500px at 90% 20%, #fee2e2 0%, transparent 55%),
+              #f8fafc;
+}
+
+.login-card {
+  border-radius: 18px;
+}
+
+.login-google {
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.google-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.login-sep {
+  position: relative;
+  text-align: center;
+}
+.login-sep span {
+  background: #fff;
+  padding: 0 12px;
+  color: #6b7280;
+  font-size: 14px;
+}
+.login-sep::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: #e5e7eb;
+  transform: translateY(-50%);
+  z-index: -1;
+}
+
+/* Left hero */
+.login-hero {
+  border-radius: 20px;
+  min-height: 420px;
+  background: linear-gradient(135deg, #0ea5e9, #2563eb, #111827);
+  color: #fff;
+  box-shadow: 0 14px 40px rgba(0,0,0,.18);
+}
+
+.hero-icon { font-size: 22px; }
+.hero-brand { font-size: 22px; font-weight: 800; }
+.hero-z { color: #fde047; }
+
+.hero-title {
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1.1;
+  margin-top: 10px;
+}
+
+.hero-sub {
+  margin-top: 14px;
+  opacity: .9;
+  max-width: 520px;
+}
+
+.hero-badges .badge {
+  margin-right: 8px;
+  color: #0f172a;
+}
+.login-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 36px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+/* Force LEFT align for the whole form (fix center text inherited from parent) */
+.login-form,
+.login-form * {
+  text-align: left !important;
+}
+
+/* Keep icon/center sections centered if needed */
+.login-icon {
+  margin: 0 auto;
+}
+/* Ảnh chìm nền cho hero */
+.hero-bg-img {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(900px 500px at 20% 20%, rgba(255,255,255,.18), transparent 60%),
+    radial-gradient(700px 400px at 80% 30%, rgba(255,255,255,.12), transparent 55%),
+    url("https://haycafe.vn/wp-content/uploads/2021/12/Anh-ngon-tinh-dep-nhat-800x563.jpg");
+  background-size: cover;
+  background-position: center;
+  opacity: 0.18;           /* độ chìm */
+  filter: blur(0.5px);     /* nhẹ thôi */
+  transform: scale(1.05);
+  pointer-events: none;
+}
+
+/* lớp phủ để chữ nổi rõ hơn */
+.login-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0,0,0,.05), rgba(0,0,0,.35));
+  pointer-events: none;
+}
+
