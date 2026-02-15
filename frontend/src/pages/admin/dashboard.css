@@ -1,0 +1,249 @@
+.ad-page {
+  background: radial-gradient(1100px 600px at 10% 10%, #dbeafe 0%, transparent 55%),
+              radial-gradient(900px 500px at 90% 20%, #fee2e2 0%, transparent 55%),
+              #f8fafc;
+  min-height: 100vh;
+}
+
+.ad-title {
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+
+.ad-card {
+  border-radius: 18px;
+}
+
+.ad-kpi-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ad-kpi-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  background: #111827;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+
+.ad-kpi-value {
+  font-size: 26px;
+  font-weight: 900;
+  margin-top: 2px;
+}
+
+.ad-kpi-sub {
+  color: #6b7280;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.ad-delta {
+  font-weight: 800;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.ad-delta.up {
+  background: rgba(34,197,94,.14);
+  color: #15803d;
+}
+
+.ad-delta.down {
+  background: rgba(239,68,68,.14);
+  color: #b91c1c;
+}
+
+/* Mini bars */
+.ad-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ad-bar-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.ad-bar-label {
+  font-weight: 800;
+  color: #111827;
+}
+
+.ad-bar-track {
+  height: 12px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.ad-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
+.ad-bar-fill-money {
+  background: #111827;
+}
+
+.ad-bar-value {
+  font-weight: 700;
+  color: #374151;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.ad-note {
+  border-top: 1px dashed #e5e7eb;
+  padding-top: 10px;
+}
+
+.ad-progress {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ad-users {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ad-user {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.ad-user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  background: #111827;
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+.ad-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.ad-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Khi màn hình nhỏ: sidebar ẩn (tuỳ chọn) */
+@media (max-width: 992px) {
+  .ad-layout {
+    flex-direction: column;
+  }
+  .ad-side {
+    position: relative;
+    width: 100%;
+    height: auto;
+  }
+}
+.ad-card {
+  border-radius: 18px;
+  transition: all .25s ease;
+}
+
+.ad-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 45px rgba(0,0,0,.08);
+}
+
+.ad-kpi-value {
+  font-size: 26px;
+  font-weight: 900;
+}
+/* ====== LAYOUT ====== */
+.ad-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.ad-main {
+  flex: 1;
+  min-width: 0;              /* tránh tràn ngang */
+}
+
+/* giảm padding container khi màn nhỏ */
+@media (max-width: 576px) {
+  .ad-page .container-fluid {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
+/* ====== KPI: chữ không bị tràn ====== */
+.ad-kpi-value {
+  word-break: break-word;
+}
+
+/* ====== MINI BAR: responsive để không bị vỡ ====== */
+@media (max-width: 576px) {
+  .ad-bar-row {
+    grid-template-columns: 40px 1fr;  /* bỏ cột value xuống dòng */
+    grid-template-rows: auto auto;
+  }
+
+  .ad-bar-value {
+    grid-column: 1 / -1;
+    text-align: right;
+    margin-top: -6px;
+  }
+}
+
+/* ====== TABLE: luôn kéo ngang khi thiếu chỗ ====== */
+.table-responsive {
+  overflow-x: auto;
+}
+
+/* ====== CARD: đồng đều ====== */
+.ad-card {
+  border-radius: 18px;
+  transition: all .25s ease;
+}
+
+.ad-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 45px rgba(0,0,0,.08);
+}
+
+/* ====== MOBILE: layout dọc, sidebar thành topbar ====== */
+@media (max-width: 992px) {
+  .ad-layout {
+    flex-direction: column;
+  }
+}
+@media (max-width: 576px) {
+  .ad-user {
+    grid-template-columns: 38px 1fr;
+  }
+  .ad-user > div:last-child {
+    grid-column: 1 / -1;
+    text-align: right;
+    margin-top: -6px;
+  }
+}
+.ad-kpi-value {
+  line-height: 1.1;
+}

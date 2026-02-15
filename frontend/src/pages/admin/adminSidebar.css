@@ -1,0 +1,133 @@
+.ad-side {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 280px;
+  background: linear-gradient(180deg, #111827, #0b1220);
+  color: #fff;
+  padding: 16px;
+  border-right: 1px solid rgba(255,255,255,.08);
+}
+
+.ad-side-brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  margin-bottom: 12px;
+}
+
+.ad-side-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.10);
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+}
+
+.ad-side-name {
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+.ad-side-sub {
+  font-size: 12px;
+  color: rgba(255,255,255,.65);
+  margin-top: 2px;
+}
+
+.ad-side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ad-side-link {
+  text-decoration: none;
+  color: rgba(255,255,255,.82);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  transition: .2s;
+  background: transparent;
+}
+
+.ad-side-link i {
+  font-size: 18px;
+  opacity: .9;
+}
+
+.ad-side-link:hover {
+  background: rgba(255,255,255,.08);
+  color: #fff;
+}
+
+.ad-side-link.active {
+  background: rgba(59,130,246,.22);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(59,130,246,.35);
+}
+
+.ad-side-footer {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+}
+.ad-side {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 280px;
+  flex: 0 0 280px;                 /* QUAN TRỌNG: sidebar giữ đúng chiều rộng */
+  background: linear-gradient(180deg, #111827, #0b1220);
+  color: #fff;
+  padding: 16px;
+  border-right: 1px solid rgba(255,255,255,.08);
+  overflow-y: auto;                /* nếu menu dài */
+}
+
+.ad-side-footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  position: static;                /* BỎ absolute để khỏi đè khi responsive */
+}
+
+/* ===== MOBILE: sidebar thành thanh ngang trên ===== */
+@media (max-width: 992px) {
+  .ad-side {
+    width: 100%;
+    flex: none;
+    height: auto;
+    position: relative;
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+
+  .ad-side-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); /* menu 2 cột */
+    gap: 10px;
+  }
+
+  .ad-side-link {
+    justify-content: center;
+  }
+
+  .ad-side-footer {
+    margin-top: 12px;
+  }
+}
+
+/* ===== MOBILE nhỏ hơn nữa: menu 1 cột ===== */
+@media (max-width: 576px) {
+  .ad-side-nav {
+    grid-template-columns: 1fr;
+  }
+}

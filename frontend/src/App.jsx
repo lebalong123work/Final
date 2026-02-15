@@ -11,6 +11,8 @@ import Login from './pages/Login';
 import { Route, Routes } from 'react-router-dom';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
+import ProfileWallet from './pages/ProfileWallet';
+import Dashboard from './pages/admin/Dashboard';
 
 function App() {
  
@@ -20,6 +22,8 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/profile" element={<ProfileWallet />} />
+      <Route path="/admin" element={<Dashboard />} />
     </Routes>
   );
 
