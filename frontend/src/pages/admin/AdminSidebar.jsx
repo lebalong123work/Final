@@ -5,7 +5,7 @@ export default function AdminSidebar() {
   const items = [
     { to: "#", icon: "bi-grid", label: "Dashboard", end: true },
     { to: "#", icon: "bi-people", label: "Quản lý người dùng" },
-    { to: "#", icon: "bi-journal-bookmark", label: "Quản lý truyện" },
+    { to: "/admin/comics", icon: "bi-journal-bookmark", label: "Quản lý truyện" },
     { to: "#", icon: "bi-bag-check", label: "Đơn hàng" },
     { to: "#", icon: "bi-receipt", label: "Giao dịch" },
     { to: "#", icon: "bi-gear", label: "Cài đặt" },
