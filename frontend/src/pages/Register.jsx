@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import "./login.css";
 import Header from "../components/Header";
-
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 export default function Register() {
   const [form, setForm] = useState({
     username: "",
@@ -18,17 +19,54 @@ export default function Register() {
   const onChange = (e) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
-  const onSubmit = (e) => {
-    e.preventDefault();
+ const onSubmit = async (e) => {
+  e.preventDefault();
 
-    if (form.password !== form.confirmPassword) {
-      alert("Mật khẩu xác nhận không khớp!");
+  if (form.password !== form.confirmPassword) {
+    toast.error("Mật khẩu xác nhận không khớp!");
+    return;
+  }
+
+  try {
+    const res = await fetch("http://localhost:5000/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: form.username,
+        email: form.email,
+        phone: form.phone,
+        password: form.password,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      toast.error(data.message);
       return;
     }
 
-    // TODO: call API register ở đây
-    console.log("Register:", form);
-  };
+    toast.success("Đăng ký thành công ");
+
+    setForm({
+      username: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
+    });
+
+ } catch (error) {
+  console.error(error);
+
+  toast.error(
+    error?.message || "Lỗi kết nối server"
+  );
+}
+};
+
 
   const registerWithGoogle = () => {
     alert("Google register (UI). Tích hợp thật sẽ làm ở bước tiếp theo.");
@@ -37,7 +75,11 @@ export default function Register() {
   return (
     <div className="login-page">
       <Header />
-
+  <ToastContainer 
+      position="top-right"
+      autoClose={3000}
+      theme="colored"
+    />
       <div className="container py-5">
         <div className="row justify-content-center align-items-center g-4">
           {/* Left banner */}
@@ -213,12 +255,7 @@ export default function Register() {
                   </div>
 
                   {/* Terms */}
-                  <div className="form-check mb-4">
-                    <input className="form-check-input" type="checkbox" id="terms" required />
-                    <label className="form-check-label" htmlFor="terms">
-                      Tôi đồng ý với <span className="text-primary">Điều khoản</span>
-                    </label>
-                  </div>
+                  
 <div className="d-flex">
   <button
     type="submit"

@@ -2,18 +2,61 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import "./login.css";
 import Header from "../components/Header";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const [form, setForm] = useState({ username: "", password: "" });
+  const [form, setForm] = useState({ email: "", password: "" });
   const [showPass, setShowPass] = useState(false);
-
+const navigate = useNavigate();
   const onChange = (e) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
-  const onSubmit = (e) => {
-    e.preventDefault();
-    console.log("Login:", form);
-  };
+ 
+
+const onSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    const res = await fetch("http://localhost:5000/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: form.email,
+        password: form.password,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      toast.error(data.message || "Đăng nhập thất bại");
+      return;
+    }
+
+    // lưu token + user
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    toast.success("Đăng nhập thành công");
+
+    setTimeout(() => {
+      if (data.user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+    }, 1000);
+
+  } catch (error) {
+    console.error(error);
+    toast.error("Không kết nối được server");
+  }
+};
+
 
   const loginWithGoogle = () => {
     alert("Google login (UI). Tích hợp thật sẽ làm ở bước tiếp theo.");
@@ -22,6 +65,7 @@ export default function Login() {
   return (
     <div className="login-page">
        <Header/>
+       <ToastContainer position="top-right" autoClose={3000} />
       <div className="container py-5">
         <div className="row justify-content-center align-items-center g-4">
           {/* Left banner */}
@@ -75,18 +119,18 @@ export default function Login() {
                 <form onSubmit={onSubmit}>
                   <div className="mb-3">
                    <label className="form-label fw-semibold text-start w-100">
-  Tên người dùng
+  Email
 </label>
                     <div className="input-group">
                       <span className="input-group-text">
                         <i className="bi bi-person" />
                       </span>
                       <input
-                        name="username"
-                        value={form.username}
+                        name="email"
+                        value={form.email}
                         onChange={onChange}
                         className="form-control"
-                        placeholder="vd: duy_thuan"
+                        placeholder="vd: admin@gmail.com"
                         required
                       />
                     </div>

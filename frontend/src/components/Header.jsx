@@ -1,7 +1,25 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import "./header.css";
 
 export default function Header() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+
+  // Lấy user từ localStorage
+  useEffect(() => {
+    const raw = localStorage.getItem("user");
+    if (raw) {
+      setUser(JSON.parse(raw));
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+    navigate("/");
+  };
   return (
     <header className="zt-header border-bottom bg-white">
       <nav className="navbar navbar-expand-lg navbar-light">
@@ -72,28 +90,68 @@ export default function Header() {
               </form>
 
               {/* User Icon Dropdown */}
-              <div className="dropdown">
+                         <div className="dropdown">
                 <button
                   className="btn user-btn dropdown-toggle"
                   type="button"
                   data-bs-toggle="dropdown"
                 >
-                  <i className="bi bi-person-circle fs-4"></i>
+                  <i className="bi bi-person-circle fs-4 me-1"></i>
+                  {user ? user.username : ""}
                 </button>
 
                 <ul className="dropdown-menu dropdown-menu-end">
-                  <li>
-                    <Link className="dropdown-item" to="/login">
-                      <i className="bi bi-box-arrow-in-right me-2"></i>
-                      Đăng nhập
-                    </Link>
-                  </li>
-                  <li>
-                    <Link className="dropdown-item" to="/register">
-                      <i className="bi bi-person-plus me-2"></i>
-                      Đăng ký
-                    </Link>
-                  </li>
+
+                  {!user && (
+                    <>
+                      <li>
+                        <Link className="dropdown-item" to="/login">
+                          <i className="bi bi-box-arrow-in-right me-2"></i>
+                          Đăng nhập
+                        </Link>
+                      </li>
+                      <li>
+                        <Link className="dropdown-item" to="/register">
+                          <i className="bi bi-person-plus me-2"></i>
+                          Đăng ký
+                        </Link>
+                      </li>
+                    </>
+                  )}
+
+                  {user && (
+                    <>
+                      <li>
+                        <Link className="dropdown-item" to="/profile">
+                          <i className="bi bi-person me-2"></i>
+                          Trang cá nhân
+                        </Link>
+                      </li>
+
+                      {/* 🔥 Nếu admin */}
+                      {user.role === "admin" && (
+                        <li>
+                          <Link className="dropdown-item text-danger" to="/admin">
+                            <i className="bi bi-speedometer2 me-2"></i>
+                            Quản trị
+                          </Link>
+                        </li>
+                      )}
+
+                      <li><hr className="dropdown-divider" /></li>
+
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={handleLogout}
+                        >
+                          <i className="bi bi-box-arrow-right me-2"></i>
+                          Đăng xuất
+                        </button>
+                      </li>
+                    </>
+                  )}
+
                 </ul>
               </div>
 
