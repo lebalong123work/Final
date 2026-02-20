@@ -2,21 +2,64 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import "./login.css";
 import Header from "../components/Header";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+const API_FORGOT = "http://localhost:5000/api/auth/forgot-password";
+
+function isEmail(v) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim());
+}
 
 export default function ForgotPassword() {
-  const [value, setValue] = useState(""); // email hoặc phone
+  const [value, setValue] = useState(""); // email hoặc phone (hiện xử lý email)
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    // TODO: call API gửi OTP/reset link
-    console.log("ForgotPassword:", value);
-    setSent(true);
+    const v = value.trim();
+
+    // Hiện backend reset theo email local -> kiểm tra email
+    if (!isEmail(v)) {
+      toast.error("Vui lòng nhập đúng Email (hiện chưa hỗ trợ SĐT)");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setSent(false);
+
+      const res = await fetch(API_FORGOT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: v }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        toast.error(data.message || "Gửi yêu cầu thất bại");
+        return;
+      }
+
+      toast.success(data.message || "Đã gửi mật khẩu mới về email");
+      setSent(true);
+      setValue("");
+    } catch (err) {
+      console.error("forgot password error:", err);
+      toast.error("Không kết nối được server");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="login-page">
       <Header />
+
+      {/* Toast phải có để hiển thị */}
+      <ToastContainer position="top-right" autoClose={2000} />
 
       <div className="container py-5">
         <div className="row justify-content-center align-items-center g-4">
@@ -25,18 +68,17 @@ export default function ForgotPassword() {
             <div className="login-hero p-4 p-xl-5 position-relative overflow-hidden">
               <div className="hero-bg-img" />
 
-        <div className="d-flex align-items-center gap-2 mb-3 position-relative">
-  <img
-    src="https://www.zettruyen.space/images/logo.webp"
-    alt="Ztruyen Logo"
-    className="hero-logo"
-  />
+              <div className="d-flex align-items-center gap-2 mb-3 position-relative">
+                <img
+                  src="https://www.zettruyen.space/images/logo.webp"
+                  alt="Ztruyen Logo"
+                  className="hero-logo"
+                />
 
-  <span className="hero-brand">
-    <span className="hero-z">Z</span>truyện
-  </span>
-</div>
-
+                <span className="hero-brand">
+                  <span className="hero-z">Z</span>truyện
+                </span>
+              </div>
 
               <h2 className="hero-title position-relative">
                 Khôi phục mật khẩu nhanh chóng
@@ -63,13 +105,11 @@ export default function ForgotPassword() {
                   </div>
                 </div>
 
-                <p className="text-secondary mb-4 text-center">
-                  Quên mật khẩu?
-                </p>
+                <p className="text-secondary mb-4 text-center">Quên mật khẩu?</p>
 
                 {sent && (
                   <div className="alert alert-success" role="alert">
-                   Mật khẩu mới đã được cấp vui lòng kiểm tra mail
+                    Mật khẩu mới đã được cấp, vui lòng kiểm tra mail.
                   </div>
                 )}
 
@@ -88,16 +128,17 @@ export default function ForgotPassword() {
                         className="form-control"
                         placeholder="vd: abc@gmail.com"
                         required
+                        disabled={submitting}
                       />
                     </div>
-        
                   </div>
 
                   <button
                     type="submit"
                     className="btn btn-primary w-100 py-2 fw-semibold"
+                    disabled={submitting}
                   >
-                    Gửi mã xác nhận
+                    {submitting ? "Đang gửi..." : "Gửi mật khẩu mới"}
                   </button>
                 </form>
 
@@ -112,18 +153,14 @@ export default function ForgotPassword() {
                 </div>
 
                 <div className="text-center mt-2">
-                  <Link
-                    to="/register"
-                    className="text-decoration-none small"
-                  >
+                  <Link to="/register" className="text-decoration-none small">
                     Tạo tài khoản mới
                   </Link>
                 </div>
               </div>
             </div>
-
-          
           </div>
+          {/* end right */}
         </div>
       </div>
     </div>

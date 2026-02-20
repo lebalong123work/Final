@@ -2,7 +2,8 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const db = require("../db");
-
+const crypto = require("crypto");
+const { sendNewPasswordMail } = require("../middleware/mailer");
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key";
@@ -194,6 +195,60 @@ router.post("/google", async (req, res) => {
   } catch (err) {
     console.error("google auth error:", err);
     return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// POST /api/auth/forgot-password
+// body: { email }
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ message: "Thiếu email" });
+
+    // chỉ xử lý local
+    const { rows } = await db.query(
+      `SELECT id, status
+       FROM users
+       WHERE email=$1 AND provider='local'
+       LIMIT 1`,
+      [email]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "Email không tồn tại (tài khoản local)" });
+    }
+
+    // nếu tài khoản bị khóa thì không cho reset
+    if (rows[0].status === 0) {
+      return res.status(403).json({ message: "Tài khoản đã bị khóa" });
+    }
+
+    const userId = rows[0].id;
+
+    // Tạo mật khẩu mới random (10-12 ký tự)
+    const newPassword = crypto.randomBytes(6).toString("base64url"); // ví dụ: 9-10 ký tự an toàn
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await db.query(
+      `UPDATE users
+       SET password_hash=$1
+       WHERE id=$2`,
+      [passwordHash, userId]
+    );
+
+    // gửi mail
+    await sendNewPasswordMail(email, newPassword);
+
+    return res.json({ message: "Đã gửi mật khẩu mới về email" });
+  } catch (err) {
+    console.error("forgot-password error:", err);
+
+    // lỗi SMTP / auth
+    if (String(err?.message || "").includes("Invalid login")) {
+      return res.status(500).json({ message: "Sai cấu hình SMTP (user/pass)" });
+    }
+
+    return res.status(500).json({ message: "Lỗi server" });
   }
 });
 
