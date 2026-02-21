@@ -1,7 +1,7 @@
 const express = require("express");
+const router = express.Router();
 const db = require("../db");
-const { auth } = require("../middleware/auth"); 
-
+const { auth } = require("../middleware/auth");
 router.get("/", auth, async (req, res) => {
   try {
     const userId = req.user.id;

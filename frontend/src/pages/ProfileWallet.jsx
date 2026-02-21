@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Header from "../components/Header";
 import "./profileWallet.css";
-
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 const MOCK_LIBRARY = [
   { id: 1, title: "Kiếm Thần Trở Lại", cover: "https://picsum.photos/500/800?random=41", status: "Đang phát hành", lastRead: "Chap 86" },
   { id: 2, title: "Bí Mật Thanh Xuân", cover: "https://picsum.photos/500/800?random=42", status: "Hoàn thành", lastRead: "Chap 120" },
@@ -9,29 +10,32 @@ const MOCK_LIBRARY = [
   { id: 4, title: "Ta Có Một Thành Phố", cover: "https://picsum.photos/500/800?random=44", status: "Sắp ra mắt", lastRead: "Chưa đọc" },
 ];
 
-const MOCK_TX = [
-  { id: "TX24001", date: "2026-02-10 21:12", type: "Mua truyện", item: "Kiếm Thần Trở Lại (Gói 20 chap)", amount: -35000, status: "Thành công", method: "Ví" },
-  { id: "TX24002", date: "2026-02-08 10:02", type: "Nạp tiền", item: "Nạp ví", amount: 100000, status: "Thành công", method: "Momo" },
-  { id: "TX24003", date: "2026-02-03 08:40", type: "Mua truyện", item: "Hệ Thống Bá Đạo (Gói 10 chap)", amount: -20000, status: "Thành công", method: "Ví" },
-];
+
 
 const API_BASE = "http://localhost:5000";
 
 export default function ProfileWallet() {
-  const [tab, setTab] = useState("profile"); // profile | library | wallet | transactions
+  const [tab, setTab] = useState("profile"); 
   const [q, setQ] = useState("");
-
-  const [me, setMe] = useState(null);          // user thật từ /api/me
-  const [wallet, setWallet] = useState(null);  // wallet thật từ /api/me
+const [showTopupModal, setShowTopupModal] = useState(false);
+const [topupAmount, setTopupAmount] = useState("");
+  const [me, setMe] = useState(null);          
+  const [wallet, setWallet] = useState(null);  
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState("");
-
+const [topupSubmitting, setTopupSubmitting] = useState(false);
   const token = localStorage.getItem("token");
+const TX_LIMIT = 5;
 
+const [recentTx, setRecentTx] = useState([]);
+const [txList, setTxList] = useState([]);
+const [txPage, setTxPage] = useState(1);
+const [txTotalPages, setTxTotalPages] = useState(1);
+const [txLoading, setTxLoading] = useState(false);
   const fmtVND = (n) =>
     new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
 
-  // demo level/xp/badges/stats: bạn chưa có bảng nên mình vẫn giữ UI bằng giá trị mặc định
+  
   const uiUser = useMemo(() => {
     const username = me?.username || "User";
     const email = me?.email || "";
@@ -51,6 +55,137 @@ export default function ProfileWallet() {
     };
   }, [me]);
 
+  const fmtDate = (iso) => {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("vi-VN");
+};
+
+
+
+
+const badgeClass = (status) => {
+  if (status === "success") return "text-bg-success";
+  if (status === "pending") return "text-bg-warning";
+  if (status === "failed") return "text-bg-danger";
+  return "text-bg-secondary";
+};
+
+const fetchRecentTx = async () => {
+  if (!token) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/wallet/transactions?page=1&limit=5`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.message || "Lỗi tải giao dịch");
+    setRecentTx(Array.isArray(data?.data) ? data.data : []);
+  } catch (e) {
+    console.error(e);
+    setRecentTx([]);
+  }
+};
+
+const fetchTxPage = async (page) => {
+  if (!token) return;
+  try {
+    setTxLoading(true);
+    const res = await fetch(
+      `${API_BASE}/api/wallet/transactions?page=${page}&limit=${TX_LIMIT}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.message || "Lỗi tải lịch sử giao dịch");
+
+    setTxList(Array.isArray(data?.data) ? data.data : []);
+    setTxPage(data.page || page);
+    setTxTotalPages(data.totalPages || 1);
+  } catch (e) {
+    console.error(e);
+    setTxList([]);
+    setTxTotalPages(1);
+  } finally {
+    setTxLoading(false);
+  }
+};
+
+useEffect(() => {
+  if (!token) return;
+
+  if (tab === "wallet") {
+    fetchRecentTx(); // lấy 5 giao dịch mới nhất
+  }
+
+  if (tab === "transactions") {
+    fetchTxPage(txPage); // load trang hiện tại
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [tab, token]);
+
+// khi đổi trang ở tab transactions
+useEffect(() => {
+  if (!token) return;
+  if (tab !== "transactions") return;
+  fetchTxPage(txPage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [txPage]);
+useEffect(() => {
+  const url = new URL(window.location.href);
+  const resultCode = url.searchParams.get("resultCode");
+  const orderId = url.searchParams.get("orderId");
+
+ 
+  
+  if (!resultCode || !orderId) return;
+
+ 
+  const payload = Object.fromEntries(url.searchParams.entries());
+
+  (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/momo/return-confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data?.message || "Xác nhận giao dịch thất bại");
+        return;
+      }
+
+      if (data.status === "success") {
+        toast.success("Nạp tiền thành công! Đang cập nhật số dư...");
+
+
+  window.history.replaceState({}, "", "/profile");
+
+
+  setTimeout(() => {
+    window.location.reload();
+  }, 1200);
+        const meRes = await fetch(`${API_BASE}/api/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const meData = await meRes.json();
+        if (meRes.ok) setWallet(meData.wallet);
+
+      } else if (data.status === "failed") {
+        toast.error("Thanh toán thất bại");
+      } else {
+        toast.info("Giao dịch đã được xử lý trước đó");
+      }
+
+      // xoá query khỏi URL để tránh confirm lại khi F5
+      window.history.replaceState({}, "", "/profile");
+    } catch (e) {
+      console.error(e);
+      toast.error("Không kết nối được server");
+    }
+  })();
+}, [token]);
   const xpPercent = useMemo(() => {
     const p = Math.round((uiUser.xp / uiUser.nextXp) * 100);
     return Math.min(100, Math.max(0, p));
@@ -120,6 +255,7 @@ export default function ProfileWallet() {
     return (
       <div className="pw-page">
         <Header />
+        <ToastContainer position="top-right" autoClose={2500} />
         <div className="container py-5 text-center text-secondary">
           Đang tải dữ liệu...
         </div>
@@ -143,7 +279,89 @@ export default function ProfileWallet() {
       </div>
     );
   }
+const handleConfirmTopup = async () => {
+  const amount = Number(topupAmount);
 
+  if (!Number.isFinite(amount) || amount <= 0) {
+    toast.warn("Vui lòng nhập số tiền hợp lệ");
+    return;
+  }
+
+  if (!token) {
+    toast.warn("Bạn cần đăng nhập");
+    return;
+  }
+
+  let loadingToastId = null;
+
+  try {
+    setTopupSubmitting(true);
+    loadingToastId = toast.loading("Đang tạo thanh toán MoMo...");
+
+    const res = await fetch(`${API_BASE}/api/wallet/topup/momo`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ amount }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      toast.update(loadingToastId, {
+        render: data?.message || "Tạo thanh toán thất bại",
+        type: "error",
+        isLoading: false,
+        autoClose: 2500,
+      });
+      return;
+    }
+
+    // đóng modal + reset
+    setShowTopupModal(false);
+    setTopupAmount("");
+
+    if (data?.payUrl) {
+      toast.update(loadingToastId, {
+        render: "Tạo thanh toán thành công! Đang chuyển sang MoMo...",
+        type: "success",
+        isLoading: false,
+        autoClose: 1200,
+      });
+
+      // chờ 0.8s cho người dùng thấy toast rồi chuyển trang
+      setTimeout(() => {
+        window.location.href = data.payUrl;
+      }, 800);
+
+      return;
+    }
+
+    toast.update(loadingToastId, {
+      render: "Không nhận được payUrl từ server",
+      type: "error",
+      isLoading: false,
+      autoClose: 2500,
+    });
+  } catch (e) {
+    console.error(e);
+
+    if (loadingToastId) {
+      toast.update(loadingToastId, {
+        render: "Không kết nối được server",
+        type: "error",
+        isLoading: false,
+        autoClose: 2500,
+      });
+    } else {
+      toast.error("Không kết nối được server");
+    }
+  } finally {
+    setTopupSubmitting(false);
+  }
+};
   return (
     <div className="pw-page">
       <Header />
@@ -379,7 +597,7 @@ export default function ProfileWallet() {
 
                   {filteredLibrary.length === 0 && (
                     <div className="text-center text-secondary py-5">
-                      Không tìm thấy truyện trong tủ 😥
+                      Không tìm thấy truyện trong tủ 
                     </div>
                   )}
                 </div>
@@ -397,14 +615,15 @@ export default function ProfileWallet() {
                       <div className="text-white-50 small">Số dư hiện tại</div>
                       <div className="pw-wallet-balance">{fmtVND(balance)}</div>
                       <div className="pw-wallet-actions">
-                        <button className="btn btn-light fw-semibold" type="button">
-                          <i className="bi bi-plus-circle me-2" />
-                          Nạp tiền
-                        </button>
-                        <button className="btn btn-outline-light fw-semibold" type="button">
-                          <i className="bi bi-receipt me-2" />
-                          Lịch sử
-                        </button>
+                       <button
+  className="btn btn-light fw-semibold"
+  type="button"
+  onClick={() => setShowTopupModal(true)}
+>
+  <i className="bi bi-plus-circle me-2" />
+  Nạp tiền
+</button>
+                        
                       </div>
                     </div>
 
@@ -438,27 +657,37 @@ export default function ProfileWallet() {
                             <th className="text-end">Trạng thái</th>
                           </tr>
                         </thead>
-                        <tbody>
-                          {MOCK_TX.slice(0, 5).map((t) => (
-                            <tr key={t.id}>
-                              <td className="fw-semibold">{t.id}</td>
-                              <td>
-                                <div className="fw-semibold">{t.type}</div>
-                                <div className="small text-secondary text-truncate">
-                                  {t.item}
-                                </div>
-                              </td>
-                              <td className="small text-secondary">{t.date}</td>
-                              <td className={`text-end fw-bold ${t.amount < 0 ? "pw-neg" : "pw-pos"}`}>
-                                {t.amount < 0 ? "-" : "+"}
-                                {fmtVND(Math.abs(t.amount))}
-                              </td>
-                              <td className="text-end">
-                                <span className="badge text-bg-success">{t.status}</span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
+                       <tbody>
+  {recentTx.map((t) => (
+    <tr key={t.id}>
+      <td className="fw-semibold">{t.order_id || `TX${t.id}`}</td>
+      <td>
+        <div className="fw-semibold">{t.type}</div>
+        
+      </td>
+      <td className="small text-secondary">{fmtDate(t.created_at)}</td>
+
+      <td className={`text-end fw-bold ${Number(t.amount) < 0 ? "pw-neg" : "pw-pos"}`}>
+        {Number(t.amount) < 0 ? "-" : "+"}
+        {fmtVND(Math.abs(Number(t.amount) || 0))}
+      </td>
+
+      <td className="text-end">
+        <span className={`badge ${badgeClass(t.status)}`}>
+          {t.status}
+        </span>
+      </td>
+    </tr>
+  ))}
+
+  {recentTx.length === 0 && (
+    <tr>
+      <td colSpan={5} className="text-center text-secondary py-4">
+        Chưa có giao dịch
+      </td>
+    </tr>
+  )}
+</tbody>
                       </table>
                     </div>
 
@@ -474,14 +703,8 @@ export default function ProfileWallet() {
                 <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center">
                   <h5 className="fw-bold m-0">Lịch sử giao dịch</h5>
                   <div className="d-flex gap-2">
-                    <button className="btn btn-outline-dark btn-sm" type="button">
-                      <i className="bi bi-funnel me-2" />
-                      Lọc
-                    </button>
-                    <button className="btn btn-outline-dark btn-sm" type="button">
-                      <i className="bi bi-download me-2" />
-                      Xuất
-                    </button>
+                   
+                    
                   </div>
                 </div>
 
@@ -490,7 +713,7 @@ export default function ProfileWallet() {
                     <thead>
                       <tr className="text-secondary small">
                         <th>Mã</th>
-                        <th>Loại</th>
+                      
                         <th>Nội dung</th>
                         <th>Phương thức</th>
                         <th>Thời gian</th>
@@ -498,27 +721,64 @@ export default function ProfileWallet() {
                         <th className="text-end">Trạng thái</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {MOCK_TX.map((t) => (
-                        <tr key={t.id}>
-                          <td className="fw-semibold">{t.id}</td>
-                          <td>{t.type}</td>
-                          <td className="text-truncate" style={{ maxWidth: 360 }}>
-                            {t.item}
-                          </td>
-                          <td className="small text-secondary">{t.method}</td>
-                          <td className="small text-secondary">{t.date}</td>
-                          <td className={`text-end fw-bold ${t.amount < 0 ? "pw-neg" : "pw-pos"}`}>
-                            {t.amount < 0 ? "-" : "+"}
-                            {fmtVND(Math.abs(t.amount))}
-                          </td>
-                          <td className="text-end">
-                            <span className="badge text-bg-success">{t.status}</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
+               <tbody>
+  {txLoading ? (
+    <tr>
+      <td colSpan={7} className="text-center text-secondary py-4">
+        Đang tải...
+      </td>
+    </tr>
+  ) : txList.map((t) => (
+    <tr key={t.id}>
+      <td className="fw-semibold">{t.order_id || `TX${t.id}`}</td>
+      <td>{t.type}</td>
+     
+      <td className="small text-secondary">{t.type}</td>
+      <td className="small text-secondary">{fmtDate(t.created_at)}</td>
+      <td className={`text-end fw-bold ${Number(t.amount) < 0 ? "pw-neg" : "pw-pos"}`}>
+        {Number(t.amount) < 0 ? "-" : "+"}
+        {fmtVND(Math.abs(Number(t.amount) || 0))}
+      </td>
+      <td className="text-end">
+        <span className={`badge ${badgeClass(t.status)}`}>{t.status}</span>
+      </td>
+    </tr>
+  ))}
+
+  {!txLoading && txList.length === 0 && (
+    <tr>
+      <td colSpan={7} className="text-center text-secondary py-4">
+        Chưa có giao dịch
+      </td>
+    </tr>
+  )}
+</tbody>
                   </table>
+                  <div className="d-flex justify-content-between align-items-center mt-3">
+  <div className="small text-secondary">
+    Trang {txPage}/{txTotalPages} • 5 dòng/trang
+  </div>
+
+  <div className="btn-group">
+    <button
+      className="btn btn-outline-dark btn-sm"
+      disabled={txPage <= 1 || txLoading}
+      onClick={() => setTxPage((p) => Math.max(1, p - 1))}
+      type="button"
+    >
+      <i className="bi bi-chevron-left" /> Trước
+    </button>
+
+    <button
+      className="btn btn-outline-dark btn-sm"
+      disabled={txPage >= txTotalPages || txLoading}
+      onClick={() => setTxPage((p) => Math.min(txTotalPages, p + 1))}
+      type="button"
+    >
+      Sau <i className="bi bi-chevron-right" />
+    </button>
+  </div>
+</div>
                 </div>
 
               </div>
@@ -526,6 +786,88 @@ export default function ProfileWallet() {
           )}
         </div>
       </div>
+{showTopupModal && (
+  <>
+    {/* Overlay */}
+    <div
+      className="modal-backdrop fade show"
+      onClick={() => setShowTopupModal(false)}
+    />
+
+    {/* Modal */}
+    <div className="modal fade show d-block" tabIndex="-1">
+      <div className="modal-dialog modal-dialog-centered">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h5 className="modal-title">
+              <i className="bi bi-wallet2 me-2 text-primary" />
+              Nạp tiền vào ví
+            </h5>
+            <button
+              type="button"
+              className="btn-close"
+              onClick={() => setShowTopupModal(false)}
+            />
+          </div>
+
+          <div className="modal-body">
+            <label className="form-label fw-semibold">
+              Nhập số tiền muốn nạp
+            </label>
+
+            <input
+              type="number"
+              className="form-control"
+              placeholder="Ví dụ: 100000"
+              value={topupAmount}
+              onChange={(e) => setTopupAmount(e.target.value)}
+            />
+
+            <div className="mt-3 d-flex gap-2 flex-wrap">
+              {[50000, 100000, 200000, 500000].map((amount) => (
+                <button
+                  key={amount}
+                  className="btn btn-outline-primary btn-sm"
+                  onClick={() => setTopupAmount(amount)}
+                >
+                  {fmtVND(amount)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="modal-footer">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowTopupModal(false)}
+            >
+              Hủy
+            </button>
+
+       <button
+  className="btn btn-primary"
+  onClick={handleConfirmTopup}
+  disabled={topupSubmitting}
+>
+  {topupSubmitting ? (
+    <>
+      <span className="spinner-border spinner-border-sm me-2" />
+      Đang tạo thanh toán...
+    </>
+  ) : (
+    <>
+      <i className="bi bi-check-circle me-2" />
+      Xác nhận nạp
+    </>
+  )}
+</button>
+          </div>
+        </div>
+      </div>
     </div>
+  </>
+)}
+    </div>
+    
   );
 }
