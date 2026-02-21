@@ -1,7 +1,8 @@
-.zt-header {
-  height: 64px;
-  display: flex;
-  align-items: center;
+.zt-header{
+  position: sticky;  /* hoặc fixed nếu bạn đang dùng fixed */
+  top: 0;
+  z-index: 2000;
+  background: #fff;
 }
 
 .zt-header .navbar {

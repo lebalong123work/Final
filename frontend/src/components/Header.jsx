@@ -1,44 +1,59 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./header.css";
 
 export default function Header() {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
 
-  // Lấy user từ localStorage
-  useEffect(() => {
-    const raw = localStorage.getItem("user");
-    if (raw) {
-      setUser(JSON.parse(raw));
+ 
+  const [tick, setTick] = useState(0);
+
+  const user = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("user");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      console.error("Parse user error:", e);
+      return null;
     }
+  }, [tick]);
+
+
+  useEffect(() => {
+    const onStorage = (e) => {
+     
+      if (e.key === "user" || e.key === "token") {
+        setTick((t) => t + 1);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    setUser(null);
+    setTick((t) => t + 1); // cập nhật ngay trên tab hiện tại
     navigate("/");
   };
+
   return (
     <header className="zt-header border-bottom bg-white">
       <nav className="navbar navbar-expand-lg navbar-light">
         <div className="container-fluid px-4">
-
           {/* Brand */}
           <Link to="/" className="navbar-brand d-flex align-items-center gap-2">
-          <div className="d-flex align-items-center gap-2 mb-3 position-relative">
-  <img
-    src="https://www.zettruyen.space/images/logo.webp"
-    alt="Ztruyen Logo"
-    className="hero-logo"
-  />
+            <div className="d-flex align-items-center gap-2 mb-0">
+              <img
+                src="https://www.zettruyen.space/images/logo.webp"
+                alt="Ztruyen Logo"
+                className="hero-logo"
+              />
 
-  <span className="brand-text">
-    <span className="brand-z">Z</span>truyện
-  </span>
-</div>
-        
+              <span className="brand-text">
+                <span className="brand-z">Z</span>truyện
+              </span>
+            </div>
           </Link>
 
           {/* Toggle */}
@@ -52,45 +67,53 @@ export default function Header() {
           </button>
 
           <div className="collapse navbar-collapse" id="ztNav">
-
             {/* Menu */}
             <ul className="navbar-nav mx-auto mb-2 mb-lg-0 zt-nav">
               <li className="nav-item">
-                <NavLink className="nav-link" to="#">Thể loại</NavLink>
+                <NavLink className="nav-link" to="#">
+                  Thể loại
+                </NavLink>
               </li>
               <li className="nav-item">
-                <NavLink className="nav-link" to="#">Đang phát hành</NavLink>
+                <NavLink className="nav-link" to="#">
+                  Đang phát hành
+                </NavLink>
               </li>
               <li className="nav-item">
-                <NavLink className="nav-link" to="#">Hoàn thành</NavLink>
+                <NavLink className="nav-link" to="#">
+                  Hoàn thành
+                </NavLink>
               </li>
               <li className="nav-item">
-                <NavLink className="nav-link" to="#">Sắp ra mắt</NavLink>
+                <NavLink className="nav-link" to="#">
+                  Sắp ra mắt
+                </NavLink>
               </li>
               <li className="nav-item">
-                <NavLink className="nav-link" to="#">Truyện mới</NavLink>
+                <NavLink className="nav-link" to="#">
+                  Truyện mới
+                </NavLink>
               </li>
             </ul>
 
             {/* Search + User */}
             <div className="d-flex align-items-center gap-3">
-
               {/* Search */}
-              <form className="d-flex align-items-center zt-search">
+              <form className="d-flex align-items-center zt-search" onSubmit={(e) => e.preventDefault()}>
                 <div className="input-group zt-search-group">
                   <input
                     type="search"
                     className="form-control zt-search-input"
                     placeholder="Tìm truyện..."
                   />
-                  <button className="btn zt-search-btn">
+                  <button className="btn zt-search-btn" type="button">
                     <i className="bi bi-search" />
                   </button>
                 </div>
               </form>
 
               {/* User Icon Dropdown */}
-                         <div className="dropdown">
+              <div className="dropdown">
                 <button
                   className="btn user-btn dropdown-toggle"
                   type="button"
@@ -101,7 +124,6 @@ export default function Header() {
                 </button>
 
                 <ul className="dropdown-menu dropdown-menu-end">
-
                   {!user && (
                     <>
                       <li>
@@ -128,7 +150,7 @@ export default function Header() {
                         </Link>
                       </li>
 
-                      {/* 🔥 Nếu admin */}
+                      {/* Nếu admin */}
                       {user.role === "admin" && (
                         <li>
                           <Link className="dropdown-item text-danger" to="/admin">
@@ -138,25 +160,21 @@ export default function Header() {
                         </li>
                       )}
 
-                      <li><hr className="dropdown-divider" /></li>
+                      <li>
+                        <hr className="dropdown-divider" />
+                      </li>
 
                       <li>
-                        <button
-                          className="dropdown-item"
-                          onClick={handleLogout}
-                        >
+                        <button className="dropdown-item" onClick={handleLogout}>
                           <i className="bi bi-box-arrow-right me-2"></i>
                           Đăng xuất
                         </button>
                       </li>
                     </>
                   )}
-
                 </ul>
               </div>
-
             </div>
-
           </div>
         </div>
       </nav>

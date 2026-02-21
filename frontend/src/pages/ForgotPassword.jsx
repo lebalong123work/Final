@@ -122,14 +122,16 @@ export default function ForgotPassword() {
                       <span className="input-group-text">
                         <i className="bi bi-envelope" />
                       </span>
-                      <input
-                        value={value}
-                        onChange={(e) => setValue(e.target.value)}
-                        className="form-control"
-                        placeholder="vd: abc@gmail.com"
-                        required
-                        disabled={submitting}
-                      />
+                  <input
+  type="email"
+  value={value}
+  onChange={(e) => setValue(e.target.value)}
+  className="form-control"
+  placeholder="vd: abc@gmail.com"
+  required
+  autoComplete="email"
+  disabled={submitting}
+/>
                     </div>
                   </div>
 

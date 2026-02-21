@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPass, setShowPass] = useState(false);
-const navigate = useNavigate();
+  const navigate = useNavigate();
   const onChange = (e) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 

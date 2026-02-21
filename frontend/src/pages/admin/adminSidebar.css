@@ -84,19 +84,19 @@
   top: 0;
   height: 100vh;
   width: 280px;
-  flex: 0 0 280px;                 /* QUAN TRỌNG: sidebar giữ đúng chiều rộng */
+  flex: 0 0 280px;              
   background: linear-gradient(180deg, #111827, #0b1220);
   color: #fff;
   padding: 16px;
   border-right: 1px solid rgba(255,255,255,.08);
-  overflow-y: auto;                /* nếu menu dài */
+  overflow-y: auto;         
 }
 
 .ad-side-footer {
   margin-top: 16px;
   padding-top: 12px;
   border-top: 1px solid rgba(255,255,255,.08);
-  position: static;                /* BỎ absolute để khỏi đè khi responsive */
+  position: static;            
 }
 
 /* ===== MOBILE: sidebar thành thanh ngang trên ===== */

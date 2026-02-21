@@ -1,112 +1,148 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Header from "../components/Header";
 import "./profileWallet.css";
 
-const MOCK_USER = {
-  name: "Duythuan",
-  username: "@duythuan",
-  avatar:
-    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80",
-  level: 12,
-  xp: 3250,
-  nextXp: 4000,
-  badges: [
-    { key: "vip", label: "VIP", icon: "bi-gem" },
-    { key: "reader", label: "Đọc chăm", icon: "bi-book" },
-    { key: "collector", label: "Sưu tầm", icon: "bi-collection" },
-    { key: "supporter", label: "Ủng hộ", icon: "bi-heart-fill" },
-  ],
-  stats: [
-    { label: "Truyện theo dõi", value: 28, icon: "bi-bookmark-heart" },
-    { label: "Chap đã đọc", value: 512, icon: "bi-lightning-charge" },
-    { label: "Bình luận", value: 86, icon: "bi-chat-dots" },
-  ],
-};
-
 const MOCK_LIBRARY = [
-  {
-    id: 1,
-    title: "Kiếm Thần Trở Lại",
-    cover: "https://picsum.photos/500/800?random=41",
-    status: "Đang phát hành",
-    lastRead: "Chap 86",
-  },
-  {
-    id: 2,
-    title: "Bí Mật Thanh Xuân",
-    cover: "https://picsum.photos/500/800?random=42",
-    status: "Hoàn thành",
-    lastRead: "Chap 120",
-  },
-  {
-    id: 3,
-    title: "Hệ Thống Bá Đạo",
-    cover: "https://picsum.photos/500/800?random=43",
-    status: "Đang phát hành",
-    lastRead: "Chap 37",
-  },
-  {
-    id: 4,
-    title: "Ta Có Một Thành Phố",
-    cover: "https://picsum.photos/500/800?random=44",
-    status: "Sắp ra mắt",
-    lastRead: "Chưa đọc",
-  },
+  { id: 1, title: "Kiếm Thần Trở Lại", cover: "https://picsum.photos/500/800?random=41", status: "Đang phát hành", lastRead: "Chap 86" },
+  { id: 2, title: "Bí Mật Thanh Xuân", cover: "https://picsum.photos/500/800?random=42", status: "Hoàn thành", lastRead: "Chap 120" },
+  { id: 3, title: "Hệ Thống Bá Đạo", cover: "https://picsum.photos/500/800?random=43", status: "Đang phát hành", lastRead: "Chap 37" },
+  { id: 4, title: "Ta Có Một Thành Phố", cover: "https://picsum.photos/500/800?random=44", status: "Sắp ra mắt", lastRead: "Chưa đọc" },
 ];
 
 const MOCK_TX = [
-  {
-    id: "TX24001",
-    date: "2026-02-10 21:12",
-    type: "Mua truyện",
-    item: "Kiếm Thần Trở Lại (Gói 20 chap)",
-    amount: -35000,
-    status: "Thành công",
-    method: "Ví",
-  },
-  {
-    id: "TX24002",
-    date: "2026-02-08 10:02",
-    type: "Nạp tiền",
-    item: "Nạp ví",
-    amount: 100000,
-    status: "Thành công",
-    method: "Momo",
-  },
-  {
-    id: "TX24003",
-    date: "2026-02-03 08:40",
-    type: "Mua truyện",
-    item: "Hệ Thống Bá Đạo (Gói 10 chap)",
-    amount: -20000,
-    status: "Thành công",
-    method: "Ví",
-  },
+  { id: "TX24001", date: "2026-02-10 21:12", type: "Mua truyện", item: "Kiếm Thần Trở Lại (Gói 20 chap)", amount: -35000, status: "Thành công", method: "Ví" },
+  { id: "TX24002", date: "2026-02-08 10:02", type: "Nạp tiền", item: "Nạp ví", amount: 100000, status: "Thành công", method: "Momo" },
+  { id: "TX24003", date: "2026-02-03 08:40", type: "Mua truyện", item: "Hệ Thống Bá Đạo (Gói 10 chap)", amount: -20000, status: "Thành công", method: "Ví" },
 ];
+
+const API_BASE = "http://localhost:5000";
 
 export default function ProfileWallet() {
   const [tab, setTab] = useState("profile"); // profile | library | wallet | transactions
   const [q, setQ] = useState("");
 
-  const xpPercent = useMemo(() => {
-    const p = Math.round((MOCK_USER.xp / MOCK_USER.nextXp) * 100);
-    return Math.min(100, Math.max(0, p));
-  }, []);
+  const [me, setMe] = useState(null);          // user thật từ /api/me
+  const [wallet, setWallet] = useState(null);  // wallet thật từ /api/me
+  const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState("");
 
-  const balance = useMemo(() => {
-    // demo: tính từ giao dịch
-    const sum = MOCK_TX.reduce((acc, t) => acc + t.amount, 0);
-    return sum;
-  }, []);
+  const token = localStorage.getItem("token");
 
   const fmtVND = (n) =>
     new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
+
+  // demo level/xp/badges/stats: bạn chưa có bảng nên mình vẫn giữ UI bằng giá trị mặc định
+  const uiUser = useMemo(() => {
+    const username = me?.username || "User";
+    const email = me?.email || "";
+    return {
+      name: username,
+      username: email ? email : "@" + username,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`,
+      level: 1,
+      xp: 0,
+      nextXp: 100,
+    
+      stats: [
+        { label: "Truyện theo dõi", value: 0, icon: "bi-bookmark-heart" },
+        { label: "Chap đã đọc", value: 0, icon: "bi-lightning-charge" },
+        { label: "Bình luận", value: 0, icon: "bi-chat-dots" },
+      ],
+    };
+  }, [me]);
+
+  const xpPercent = useMemo(() => {
+    const p = Math.round((uiUser.xp / uiUser.nextXp) * 100);
+    return Math.min(100, Math.max(0, p));
+  }, [uiUser]);
+
+  const balance = wallet?.balance ?? 0;
 
   const filteredLibrary = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return MOCK_LIBRARY;
     return MOCK_LIBRARY.filter((x) => x.title.toLowerCase().includes(s));
   }, [q]);
+
+  useEffect(() => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    (async () => {
+      try {
+        setLoadErr("");
+        setLoading(true);
+
+        const res = await fetch(`${API_BASE}/api/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          // token hết hạn / sai
+          setLoadErr(data.message || "Không lấy được dữ liệu");
+          setMe(null);
+          setWallet(null);
+          return;
+        }
+
+        setMe(data.user);
+       console.log("user =", JSON.stringify(data.user, null, 2));
+        setWallet(data.wallet);
+      } catch (e) {
+        console.error(e);
+        setLoadErr("Không kết nối được server");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token]);
+
+  // UI khi chưa login
+  if (!token) {
+    return (
+      <div className="pw-page">
+        <Header />
+        <div className="container py-5">
+          <div className="alert alert-warning mb-0">
+            Bạn cần đăng nhập để xem trang này.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // UI loading
+  if (loading) {
+    return (
+      <div className="pw-page">
+        <Header />
+        <div className="container py-5 text-center text-secondary">
+          Đang tải dữ liệu...
+        </div>
+      </div>
+    );
+  }
+
+  // UI lỗi load
+  if (loadErr) {
+    return (
+      <div className="pw-page">
+        <Header />
+        <div className="container py-5">
+          <div className="alert alert-danger">
+            {loadErr}
+            <div className="small mt-2 text-secondary">
+              Nếu token hết hạn, hãy đăng nhập lại.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pw-page">
@@ -119,23 +155,23 @@ export default function ProfileWallet() {
             <div className="row g-3 align-items-center">
               <div className="col-12 col-md-auto">
                 <div className="pw-avatar-wrap">
-                  <img className="pw-avatar" src={MOCK_USER.avatar} alt="avatar" />
-                  <span className="pw-level-badge">Lv {MOCK_USER.level}</span>
+                  <img className="pw-avatar" src={uiUser.avatar} alt="avatar" />
+                  <span className="pw-level-badge">Lv {uiUser.level}</span>
                 </div>
               </div>
 
               <div className="col">
                 <div className="d-flex flex-wrap align-items-center gap-2">
-                  <h3 className="m-0 pw-name">{MOCK_USER.name}</h3>
-                  <span className="pw-username">{MOCK_USER.username}</span>
+                  <h3 className="m-0 pw-name">{uiUser.name}</h3>
+                  <span className="pw-username">{uiUser.username}</span>
                 </div>
 
                 {/* Level progress */}
                 <div className="pw-xp mt-2">
                   <div className="d-flex justify-content-between small text-secondary">
-                    <span>Level {MOCK_USER.level}</span>
+                    <span>Level {uiUser.level}</span>
                     <span>
-                      {MOCK_USER.xp}/{MOCK_USER.nextXp} XP
+                      {uiUser.xp}/{uiUser.nextXp} XP
                     </span>
                   </div>
                   <div className="progress pw-progress mt-1">
@@ -150,14 +186,8 @@ export default function ProfileWallet() {
                   </div>
                 </div>
 
-                {/* Badges */}
-                <div className="pw-badges mt-3 d-flex flex-wrap gap-2">
-                  {MOCK_USER.badges.map((b) => (
-                    <span key={b.key} className="pw-badge">
-                      <i className={`bi ${b.icon}`} /> {b.label}
-                    </span>
-                  ))}
-                </div>
+               
+               
               </div>
 
               {/* Wallet summary */}
@@ -179,7 +209,7 @@ export default function ProfileWallet() {
 
             {/* Stats */}
             <div className="row g-3 mt-1">
-              {MOCK_USER.stats.map((s) => (
+              {uiUser.stats.map((s) => (
                 <div className="col-12 col-sm-4" key={s.label}>
                   <div className="pw-stat">
                     <div className="pw-stat-icon">
@@ -246,25 +276,25 @@ export default function ProfileWallet() {
                     <div className="pw-info-grid">
                       <div className="pw-info-item">
                         <div className="text-secondary small">Tên</div>
-                        <div className="fw-semibold">{MOCK_USER.name}</div>
+                        <div className="fw-semibold">{me?.username}</div>
                       </div>
                       <div className="pw-info-item">
-                        <div className="text-secondary small">Username</div>
-                        <div className="fw-semibold">{MOCK_USER.username}</div>
+                        <div className="text-secondary small">Email</div>
+                        <div className="fw-semibold">{me?.email}</div>
                       </div>
                       <div className="pw-info-item">
-                        <div className="text-secondary small">Cấp độ</div>
-                        <div className="fw-semibold">Level {MOCK_USER.level}</div>
+                        <div className="text-secondary small">SĐT</div>
+                        <div className="fw-semibold">{me?.phone || "-"}</div>
                       </div>
                       <div className="pw-info-item">
-                        <div className="text-secondary small">Huy hiệu</div>
-                        <div className="fw-semibold">{MOCK_USER.badges.length} huy hiệu</div>
+                        <div className="text-secondary small">Số dư ví</div>
+                        <div className="fw-semibold">{fmtVND(balance)}</div>
                       </div>
                     </div>
 
                     <div className="alert alert-light border mt-3 mb-0">
                       <i className="bi bi-info-circle me-2" />
-                      Gợi ý: nạp tiền để tăng XP và nhận huy hiệu mới.
+                      Gợi ý: nạp tiền để tăng level và mua truyện.
                     </div>
                   </div>
                 </div>
@@ -378,9 +408,7 @@ export default function ProfileWallet() {
                       </div>
                     </div>
 
-                    <div className="mt-3 small text-secondary">
-                      * Đây là UI demo. Khi nối backend, bạn sẽ nhận số dư từ API.
-                    </div>
+                    
                   </div>
                 </div>
               </div>

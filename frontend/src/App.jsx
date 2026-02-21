@@ -14,6 +14,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ProfileWallet from './pages/ProfileWallet';
 import Dashboard from './pages/admin/Dashboard';
 import AdminComics from './pages/admin/AdminComics';
+import AdminLevels from './pages/admin/AdminLevels';
 
 function App() {
  
@@ -26,6 +27,7 @@ function App() {
       <Route path="/profile" element={<ProfileWallet />} />
       <Route path="/admin" element={<Dashboard />} />
       <Route path="/admin/comics" element={<AdminComics />} />
+        <Route path="/admin/levels" element={<AdminLevels />} /> 
     </Routes>
   );
 

@@ -10,7 +10,7 @@ function chunk(arr, size) {
 export default function ComicSlider({
   title = "Truyện Sắp Ra Mắt",
   items = [],
-  perPage = 4, // desktop 4
+  perPage = 4, 
 }) {
   const pages = useMemo(() => chunk(items, perPage), [items, perPage]);
   const [page, setPage] = useState(0);
@@ -36,7 +36,7 @@ export default function ComicSlider({
       </div>
 
       <div className="position-relative py-3">
-        {/* Buttons overlay like your screenshot */}
+     
         <button
           className="cs-fab cs-fab-left"
           onClick={prev}

@@ -9,6 +9,7 @@ export default function AdminSidebar() {
     { to: "#", icon: "bi-bag-check", label: "Đơn hàng" },
     { to: "#", icon: "bi-receipt", label: "Giao dịch" },
     { to: "#", icon: "bi-gear", label: "Cài đặt" },
+    { to: "/admin/levels", icon: "bi-layers", label: "Quản lý level" }
   ];
 
   return (
