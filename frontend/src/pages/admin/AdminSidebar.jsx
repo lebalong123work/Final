@@ -7,7 +7,7 @@ export default function AdminSidebar() {
     { to: "#", icon: "bi-people", label: "Quản lý người dùng" },
     { to: "/admin/comics", icon: "bi-journal-bookmark", label: "Quản lý truyện" },
     { to: "#", icon: "bi-bag-check", label: "Đơn hàng" },
-    { to: "#", icon: "bi-receipt", label: "Giao dịch" },
+    { to: "/admin/transactions", icon: "bi-receipt", label: "Giao dịch" },
     { to: "#", icon: "bi-gear", label: "Cài đặt" },
     { to: "/admin/levels", icon: "bi-layers", label: "Quản lý level" }
   ];

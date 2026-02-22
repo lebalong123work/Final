@@ -662,7 +662,7 @@ const handleConfirmTopup = async () => {
     <tr key={t.id}>
       <td className="fw-semibold">{t.order_id || `TX${t.id}`}</td>
       <td>
-        <div className="fw-semibold">{t.type}</div>
+        <div className="fw-semibold">{t.note}</div>
         
       </td>
       <td className="small text-secondary">{fmtDate(t.created_at)}</td>
@@ -731,7 +731,7 @@ const handleConfirmTopup = async () => {
   ) : txList.map((t) => (
     <tr key={t.id}>
       <td className="fw-semibold">{t.order_id || `TX${t.id}`}</td>
-      <td>{t.type}</td>
+      <td>{t.note}</td>
      
       <td className="small text-secondary">{t.type}</td>
       <td className="small text-secondary">{fmtDate(t.created_at)}</td>
@@ -756,7 +756,7 @@ const handleConfirmTopup = async () => {
                   </table>
                   <div className="d-flex justify-content-between align-items-center mt-3">
   <div className="small text-secondary">
-    Trang {txPage}/{txTotalPages} • 5 dòng/trang
+    Trang {txPage}/{txTotalPages} - 5 dòng/trang
   </div>
 
   <div className="btn-group">

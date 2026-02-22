@@ -26,4 +26,43 @@ router.put("/users/:id/role", auth, requireAdmin, async (req, res) => {
   }
 });
 
+router.get("/wallet/transactions", auth, requireAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, Number(req.query.page || 1));
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 5)));
+    const offset = (page - 1) * limit;
+
+    // total tất cả giao dịch
+    const totalRes = await db.query(
+      `SELECT COUNT(*)::int AS total
+       FROM wallet_transactions`
+    );
+    const total = totalRes.rows[0]?.total || 0;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    // data (JOIN users để lấy username/email nếu muốn)
+    const result = await db.query(
+      `SELECT wt.id, wt.user_id, u.username, u.email,
+              wt.type, wt.amount, wt.note, wt.order_id, wt.trans_id, wt.status, wt.created_at
+       FROM wallet_transactions wt
+       LEFT JOIN users u ON u.id = wt.user_id
+       ORDER BY wt.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+
+    return res.json({
+      success: true,
+      page,
+      limit,
+      total,
+      totalPages,
+      data: result.rows,
+    });
+  } catch (err) {
+    console.error("Admin get transactions error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;
