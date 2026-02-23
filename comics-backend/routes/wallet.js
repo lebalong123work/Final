@@ -45,7 +45,7 @@ function postJson(url, bodyObj) {
   });
 }
 
-// POST /api/wallet/topup/momo
+// POST 
 router.post("/topup/momo", auth, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -63,7 +63,7 @@ router.post("/topup/momo", auth, async (req, res) => {
     const redirectUrl = process.env.MOMO_REDIRECT_URL;
     const ipnUrl = process.env.MOMO_IPN_URL;
 
-    // orderId nên unique
+   
     const requestId = `${partnerCode}${Date.now()}`;
     const orderId = requestId;
 
@@ -112,7 +112,7 @@ router.post("/topup/momo", auth, async (req, res) => {
 
     const momoRes = await postJson(endpoint, requestBody);
 
-    // nếu create thất bại => update failed
+   
     if (momoRes.statusCode !== 200 || momoRes.body?.resultCode !== 0) {
       await db.query(
         `UPDATE wallet_transactions
@@ -135,13 +135,13 @@ router.post("/topup/momo", auth, async (req, res) => {
       qrCodeUrl: momoRes.body.qrCodeUrl,
     });
   } catch (err) {
-    // nếu lỗi do trùng order_id thì tạo lại (hiếm)
+    
     console.error("POST /wallet/topup/momo error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 });
 
-// GET /api/wallet/topup/status/:orderId
+
 router.get("/topup/status/:orderId", auth, async (req, res) => {
   try {
     const userId = req.user.id;

@@ -10,7 +10,7 @@ function isIntLike(n) {
   return Number.isInteger(Number(n));
 }
 
-// GET /levels?keyword=&page=1&limit=20
+
 router.get("/", async (req, res) => {
   try {
     const { keyword = "", page = 1, limit = 20 } = req.query;

@@ -1,0 +1,322 @@
+.rc-page { background: #0b0f17; min-height: 100vh; }
+
+.rc-topbar{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(10,14,20,.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.rc-topbar-inner{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 10px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.rc-back{
+  color: #dbe4ff;
+  text-decoration:none;
+  font-weight: 700;
+  display:flex;
+  align-items:center;
+  gap: 8px;
+}
+
+.rc-title{ text-align:center; min-width: 220px; }
+.rc-comic{ color:#fff; font-weight: 900; font-size: 14px; }
+.rc-chap{ color: rgba(255,255,255,.72); font-weight: 700; font-size: 12px; }
+
+.rc-nav{ display:flex; gap:8px; }
+
+.rc-wrap{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 14px;
+}
+
+.rc-loading{
+  color: rgba(255,255,255,.75);
+  padding: 30px 0;
+  text-align:center;
+}
+
+.rc-reader{ display:flex; flex-direction:column; gap: 12px; }
+
+.rc-pageImg{
+  position: relative;
+  border-radius: 18px;
+  overflow:hidden;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 18px 60px rgba(0,0,0,.45);
+}
+
+
+.rc-pageImg img{
+  width: min(400px, 100%);  /* <-- chỉnh 760px thành 650/700/800 tùy bạn */
+  display: block;
+  margin: 0 auto;          /* căn giữa */
+}
+
+.rc-pageNo{
+  position:absolute;
+  right: 10px;
+  bottom: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color:#fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.55);
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+.rc-bottomNav{
+  margin: 18px auto 34px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap: 10px;
+}
+
+@media (max-width: 768px){
+  .rc-title{ display:none; }
+}
+/* actions bar */
+.rc-actionsBar{
+  margin: 12px 0 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+}
+
+.rc-likeBtn{
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: #fff;
+  border-radius: 999px;
+  padding: 10px 12px;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  font-weight: 800;
+}
+.rc-likeBtn i{ font-size: 18px; }
+.rc-likeBtn.active{
+  border-color: rgba(255,80,120,.45);
+  background: rgba(255,80,120,.14);
+}
+.rc-likeBtn:hover{ filter: brightness(1.06); }
+
+.rc-actionsMeta{
+  display:flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rc-pill{
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.35);
+  color: rgba(255,255,255,.85);
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* comments */
+.rc-comments{
+  margin: 22px 0 40px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  box-shadow: 0 18px 60px rgba(0,0,0,.35);
+  overflow:hidden;
+}
+
+.rc-commentsHead{
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.rc-commentsTitle{
+  color:#fff;
+  font-weight: 900;
+  display:flex;
+  align-items:center;
+}
+.rc-commentsHint{
+  color: rgba(255,255,255,.62);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* composer */
+.rc-composer{
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.rc-replyTo{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  color: rgba(255,255,255,.85);
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  padding: 8px 10px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+.rc-x{
+  border:none;
+  background: transparent;
+  color: rgba(255,255,255,.75);
+}
+.rc-input{
+  width: 100%;
+  resize: vertical;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.35);
+  color: #fff;
+  padding: 10px 12px;
+  outline: none;
+}
+.rc-input:focus{
+  border-color: rgba(120,160,255,.55);
+  box-shadow: 0 0 0 3px rgba(120,160,255,.18);
+}
+
+.rc-composerActions{
+  display:flex;
+  justify-content:flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* list */
+.rc-commentList{
+  padding: 12px 14px 16px;
+}
+
+.rc-empty{
+  color: rgba(255,255,255,.65);
+  text-align:center;
+  padding: 18px 0;
+}
+.rc-empty i{ font-size: 26px; display:block; margin-bottom: 6px; opacity: .8; }
+
+.rc-cmt{
+  display:flex;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px dashed rgba(255,255,255,.08);
+}
+.rc-cmt:last-child{ border-bottom: none; }
+
+.rc-cmtAvatar img{
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255,255,255,.14);
+}
+.rc-cmtBody{ flex: 1; min-width: 0; }
+
+.rc-cmtTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+}
+.rc-cmtName{
+  color:#fff;
+  font-weight: 900;
+  font-size: 13px;
+}
+.rc-cmtTime{
+  color: rgba(255,255,255,.55);
+  font-size: 11px;
+}
+
+.rc-cmtText{
+  color: rgba(255,255,255,.86);
+  margin-top: 4px;
+  white-space: pre-wrap;
+}
+
+.rc-cmtActions{
+  margin-top: 6px;
+}
+.rc-linkBtn{
+  border:none;
+  background: transparent;
+  color: rgba(180,210,255,.9);
+  font-weight: 800;
+  font-size: 12px;
+  padding: 0;
+}
+.rc-linkBtn:disabled{ opacity: .5; }
+
+.rc-replies{
+  margin-top: 10px;
+  padding-left: 10px;
+  border-left: 2px solid rgba(255,255,255,.10);
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+.rc-reply{
+  background: rgba(0,0,0,.25);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  padding: 10px 10px;
+}
+.rc-replyTop{
+  display:flex;
+  justify-content:space-between;
+  gap: 10px;
+}
+.rc-replyName{ color:#fff; font-weight: 900; font-size: 12px; }
+.rc-replyTime{ color: rgba(255,255,255,.55); font-size: 11px; }
+.rc-replyText{ color: rgba(255,255,255,.84); margin-top: 4px; white-space: pre-wrap; }
+
+.rc-scroll5{
+  max-height: 520px;           /* bạn muốn cao bao nhiêu tùy chỉnh */
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* scrollbar đẹp (optional) */
+.rc-scroll5::-webkit-scrollbar{ width: 8px; }
+.rc-scroll5::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.18);
+  border-radius: 999px;
+}
+
+/* icon button delete */
+.rc-iconBtn{
+  background: transparent;
+  border: 0;
+  padding: 6px 8px;
+  border-radius: 10px;
+  color: rgba(255,255,255,.75);
+  transition: .15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.rc-iconBtn:hover{
+  background: rgba(255,255,255,.08);
+  color: #fff;
+}
+.rc-iconBtn.danger:hover{
+  background: rgba(220,53,69,.18);
+  color: #ff6b7a;
+}

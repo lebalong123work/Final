@@ -96,8 +96,10 @@ if (!paid) {
     return list.sort((a, b) => Number(a.name) - Number(b.name));
   }, [item]);
 
-  const isPaid = !!pricing.is_paid;
-  const locked = isPaid && !hasAccess;
+  const isPaid = !!pricing.is_paid;        // truyện trả phí?
+const locked = isPaid && !hasAccess;    // bị khóa?
+const isFree = !isPaid;                 // miễn phí
+const isBought = isPaid && hasAccess;   // đã mua
 
   const fmtVND = (n) => new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
 
@@ -126,7 +128,7 @@ if (!paid) {
   const goRead = (chapterApi) => {
     if (locked) return;
     
-    nav(`/doc?api=${encodeURIComponent(chapterApi)}`);
+   nav(`/doc?slug=${encodeURIComponent(slug)}&chap=${encodeURIComponent(chapterApi)}`);
   };
 
   if (loading) return <div className="cd-wrap cd-loading">Đang tải truyện...</div>;
@@ -166,24 +168,43 @@ if (!paid) {
               <div><i className="bi bi-tags me-2" />{(item.category || []).map(x => x.name).join(", ") || "—"}</div>
             </div>
 
-            <div className="cd-actions">
-              {locked ? (
-                <>
-                  <button className="btn btn-danger cd-btn" onClick={handleBuy}>
-                    <i className="bi bi-lock-fill me-2" />
-                    Mua truyện • {fmtVND(pricing.price)}
-                  </button>
-                  <div className="cd-hint">
-                    Truyện này đang khóa. Bạn cần mua để xem chapter.
-                  </div>
-                </>
-              ) : (
-                <Link className="btn btn-dark cd-btn" >
-                  <i className="bi bi-book me-2" />
-                  Đã mua
-                </Link>
-              )}
-            </div>
+     <div className="cd-actions">
+
+  {isFree && (
+    <Link
+      className="btn btn-success cd-btn"
+      to={`/doc?slug=${encodeURIComponent(slug)}&chap=${encodeURIComponent(chapters?.[0]?.api || "")}`}
+    >
+       <i className="bi bi-unlock-fill me-2" />
+  Miễn phí
+  
+    </Link>
+  )}
+
+ 
+  {locked && (
+    <>
+      <button className="btn btn-danger cd-btn" onClick={handleBuy}>
+        <i className="bi bi-lock-fill me-2" />
+        Mua truyện  {fmtVND(pricing.price)}
+      </button>
+      <div className="cd-hint">
+        Truyện này đang khóa. Bạn cần mua để xem chapter.
+      </div>
+    </>
+  )}
+
+  
+  {isBought && (
+    <Link
+      className="btn btn-dark cd-btn"
+      to={`/doc?slug=${encodeURIComponent(slug)}&chap=${encodeURIComponent(chapters?.[0]?.api || "")}`}
+    >
+      <i className="bi bi-book me-2" />
+      Đã mua 
+    </Link>
+  )}
+</div>
 
             <div className="cd-desc">
               {stripHtml(item.content)}
@@ -227,7 +248,7 @@ if (!paid) {
                 {ch.title ? <div className="cd-chap-title">{ch.title}</div> : null}
               </div>
               <div className="cd-chap-right">
-                <span className="cd-chap-server">{ch.server}</span>
+              
                 <i className="bi bi-chevron-right" />
               </div>
             </button>

@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const http = require("http"); 
 
 const authRoutes = require("./routes/auth");
 const adminRoutes = require("./routes/admin");
@@ -9,8 +10,18 @@ const levelsRoute = require("./routes/levels");
 const meRoutes = require("./routes/me");
 const walletRoutes = require("./routes/wallet");
 const momoRoutes = require("./routes/momo");
+const commentsRoutes = require("./routes/comments");
+const reactionsRoutes = require("./routes/reactions");
+
+const { initSocket } = require("./socket");
+
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: ["http://localhost:5173", "http://localhost:3000"],
+  credentials: true,
+}));
+
 app.use(express.json());
 
 app.get("/health", async (req, res) => {
@@ -21,6 +32,7 @@ app.get("/health", async (req, res) => {
     res.status(500).json({ ok: false, message: "DB error" });
   }
 });
+
 app.use("/api/admin", require("./routes/adminExternalComics"));
 app.use("/api/external-comics", require("./routes/externalComics"));
 app.use("/api/purchases", require("./routes/purchaseComic"));
@@ -31,5 +43,18 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/me", meRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/momo", momoRoutes);
+app.use("/api/comments", commentsRoutes);
+app.use("/api/reactions", reactionsRoutes);
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log("Server running on port", PORT));
+
+
+const server = http.createServer(app);
+
+
+initSocket(server);
+
+
+server.listen(PORT, () => {
+  console.log("Server running on port", PORT);
+});

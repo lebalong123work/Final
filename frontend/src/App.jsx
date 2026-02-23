@@ -17,6 +17,7 @@ import AdminComics from './pages/admin/AdminComics';
 import AdminLevels from './pages/admin/AdminLevels';
 import AdminWalletTransactions from './pages/admin/AdminWalletTransactions';
 import ComicDetail from './components/ComicDetail';
+import ReadChapter from './components/ReadChapter';
 
 function App() {
  
@@ -32,6 +33,7 @@ function App() {
         <Route path="/admin/levels" element={<AdminLevels />} /> 
         <Route path="/admin/transactions" element={<AdminWalletTransactions />} /> 
          <Route path="/truyen/:slug" element={<ComicDetail />} />
+         <Route path="/doc" element={<ReadChapter />} />
 
     </Routes>
   );

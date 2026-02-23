@@ -4,10 +4,7 @@ const { auth, requireAdmin } = require("../middleware/auth");
 
 const router = express.Router();
 
-/**
- * PUT /api/admin/users/:id/role
- * body: { roleCode: "admin" | "user" | "..." }
- */
+
 router.put("/users/:id/role", auth, requireAdmin, async (req, res) => {
   try {
     const userId = Number(req.params.id);
@@ -40,7 +37,7 @@ router.get("/wallet/transactions", auth, requireAdmin, async (req, res) => {
     const total = totalRes.rows[0]?.total || 0;
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
-    // data (JOIN users để lấy username/email nếu muốn)
+    
     const result = await db.query(
       `SELECT wt.id, wt.user_id, u.username, u.email,
               wt.type, wt.amount, wt.note, wt.order_id, wt.trans_id, wt.status, wt.created_at
