@@ -50,8 +50,9 @@ export default function ComicSlider({
   limit = 24,
   q = "",
   category = "",
-  // đổi route detail ở đây nếu bạn khác
+  viewAllHref = "/truyen",
   buildDetailUrl = (comic) => `/truyen/${comic.slug || comic.id}`,
+  
 }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -102,13 +103,21 @@ export default function ComicSlider({
           <span className="cs-count">{items.length}</span>
         </div>
 
-        <div className="cs-controls d-none d-md-flex gap-2">
-          <button className="btn cs-btn" onClick={prev} aria-label="Prev" disabled={!pages.length}>
-            <i className="bi bi-chevron-left" />
-          </button>
-          <button className="btn cs-btn" onClick={next} aria-label="Next" disabled={!pages.length}>
-            <i className="bi bi-chevron-right" />
-          </button>
+         <div className="cs-actions d-none d-md-flex align-items-center gap-2">
+          {/* ✅ Xem tất cả */}
+          <Link to={viewAllHref} className="cs-viewAll" aria-label="Xem tất cả">
+            Xem tất cả <i className="bi bi-arrow-right ms-1" />
+          </Link>
+
+          {/* controls */}
+          <div className="cs-controls d-none d-md-flex gap-2">
+            <button className="btn cs-btn" onClick={prev} aria-label="Prev" disabled={!pages.length}>
+              <i className="bi bi-chevron-left" />
+            </button>
+            <button className="btn cs-btn" onClick={next} aria-label="Next" disabled={!pages.length}>
+              <i className="bi bi-chevron-right" />
+            </button>
+          </div>
         </div>
       </div>
 

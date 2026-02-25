@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
-// GET /api/external-comics?page=1&limit=12&q=...&category=action
+
 router.get("/", async (req, res) => {
   try {
     const page = Math.max(1, Number(req.query.page || 1));
@@ -14,29 +14,35 @@ router.get("/", async (req, res) => {
 
     const params = [];
     const where = [];
-    let joinCategory = "";
 
+    // q
     if (q) {
       params.push(`%${q.toLowerCase()}%`);
       where.push(`LOWER(c.name) LIKE $${params.length}`);
     }
 
+    // category filter (✅ dùng EXISTS để không phá json_agg)
     if (category) {
       params.push(category);
-      joinCategory = `
-        JOIN external_comic_categories cc ON cc.comic_id = c.id
-        JOIN external_categories cat ON cat.id = cc.category_id
-      `;
-      where.push(`(cat.slug = $${params.length} OR cat.api_id = $${params.length})`);
+      const p = params.length;
+      where.push(`
+        EXISTS (
+          SELECT 1
+          FROM external_comic_categories cc
+          JOIN external_categories cat ON cat.id = cc.category_id
+          WHERE cc.comic_id = c.id
+            AND (cat.slug = $${p} OR cat.api_id = $${p})
+        )
+      `);
     }
 
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
+    // total
     const totalRes = await db.query(
       `
-      SELECT COUNT(DISTINCT c.id)::int AS total
+      SELECT COUNT(*)::int AS total
       FROM external_comics c
-      ${joinCategory}
       ${whereSql}
       `,
       params
@@ -44,9 +50,8 @@ router.get("/", async (req, res) => {
     const total = totalRes.rows[0]?.total || 0;
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
-    params.push(limit);
-    params.push(offset);
-
+    // data
+    const dataParams = [...params, limit, offset];
     const dataRes = await db.query(
       `
       SELECT
@@ -69,17 +74,23 @@ router.get("/", async (req, res) => {
       LEFT JOIN external_comic_categories cc2 ON cc2.comic_id = c.id
       LEFT JOIN external_categories cat2 ON cat2.id = cc2.category_id
 
-      ${joinCategory ? "" : ""}
       ${whereSql}
 
       GROUP BY c.id, lc.chapter_name, lc.chapter_api_data
       ORDER BY COALESCE(c.updated_at, c.created_at) DESC
-      LIMIT $${params.length - 1} OFFSET $${params.length}
+      LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}
       `,
-      params
+      dataParams
     );
 
-    return res.json({ success: true, page, limit, total, totalPages, data: dataRes.rows });
+    return res.json({
+      success: true,
+      page,
+      limit,
+      total,
+      totalPages,
+      data: dataRes.rows,
+    });
   } catch (err) {
     console.error("GET /api/external-comics error:", err);
     return res.status(500).json({ message: "Server error" });
@@ -99,7 +110,7 @@ router.get("/:slug/pricing", async (req, res) => {
     );
 
     if (!r.rows.length) {
-      // Không có trong DB => coi như miễn phí (vẫn đọc được từ otruyeanapi)
+   
       return res.json({ success: true, data: { is_paid: false, price: 0 } });
     }
 
@@ -108,6 +119,23 @@ router.get("/:slug/pricing", async (req, res) => {
     console.error("GET pricing error:", err);
     return res.status(500).json({ message: "Server error" });
   }
+});
+
+router.get("/:slug/owner", async (req, res) => {
+  const slug = req.params.slug;
+
+  const r = await db.query(
+    `
+    SELECT ec.slug, ec.owner_user_id, u.username
+    FROM external_comics ec
+    LEFT JOIN users u ON u.id = ec.owner_user_id
+    WHERE ec.slug=$1
+    `,
+    [slug]
+  );
+
+  if (r.rowCount === 0) return res.json({ data: { owner_user_id: null, username: null } });
+  return res.json({ data: r.rows[0] });
 });
 
 module.exports = router;

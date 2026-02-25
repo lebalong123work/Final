@@ -1,0 +1,159 @@
+.nt-wrap {
+  max-width: 960px;
+}
+
+.nt-card {
+  background: #fff;
+  border: 1px solid #eef0f2;
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.nt-head {
+  padding: 16px 18px;
+  border-bottom: 1px solid #f1f3f5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nt-title {
+  font-weight: 900;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.nt-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nt-badge {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f1f3f5;
+  border: 1px solid #e9ecef;
+  color: #495057;
+}
+
+.nt-badge.on {
+  background: rgba(220, 53, 69, 0.1);
+  border-color: rgba(220, 53, 69, 0.25);
+  color: #dc3545;
+}
+
+.nt-loading {
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #6c757d;
+}
+
+.nt-empty {
+  padding: 42px 18px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.nt-empty i {
+  font-size: 34px;
+  opacity: 0.9;
+}
+
+.nt-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.nt-item {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: #fff;
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f3f5;
+  transition: background 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+
+.nt-item:hover {
+  background: #fafbfc;
+}
+
+.nt-item:active {
+  transform: scale(0.997);
+}
+
+.nt-item.unread {
+  background: rgba(13, 110, 253, 0.04);
+}
+
+.nt-itemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nt-itemTitle {
+  font-weight: 900;
+  color: #111;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nt-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #0d6efd;
+  display: inline-block;
+}
+
+.nt-time {
+  font-size: 12px;
+  color: #6c757d;
+  white-space: nowrap;
+}
+
+.nt-body {
+  margin-top: 6px;
+  color: #343a40;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.nt-meta {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nt-metaChip {
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid #e9ecef;
+  background: #f8f9fa;
+  border-radius: 999px;
+  padding: 5px 10px;
+  color: #495057;
+}
+
+.nt-metaLink {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 900;
+  color: #0d6efd;
+  display: inline-flex;
+  align-items: center;
+}

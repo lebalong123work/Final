@@ -8,7 +8,7 @@ export default function AdminSidebar() {
     { to: "/admin/comics", icon: "bi-journal-bookmark", label: "Quản lý truyện" },
     { to: "#", icon: "bi-bag-check", label: "Đơn hàng" },
     { to: "/admin/transactions", icon: "bi-receipt", label: "Giao dịch" },
-    { to: "#", icon: "bi-gear", label: "Cài đặt" },
+    { to: "/", icon: "bi-house-fill", label: "Trang chủ" },
     { to: "/admin/levels", icon: "bi-layers", label: "Quản lý level" }
   ];
 

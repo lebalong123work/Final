@@ -190,7 +190,44 @@
   font-weight: 700;
   font-size: 12px;
 }
+/* group actions */
+.cs-actions {
+  display: flex;
+}
 
+/* View all button/link */
+.cs-viewAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 14px;
+  color: #111;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.08);
+  box-shadow: 0 6px 18px rgba(0,0,0,.06);
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+.cs-viewAll:hover {
+  background: rgba(0,0,0,.03);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0,0,0,.10);
+}
+
+.cs-viewAll:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 16px rgba(0,0,0,.08);
+}
+
+/* focus accessibility */
+.cs-viewAll:focus-visible {
+  outline: 3px solid rgba(13,110,253,.35);
+  outline-offset: 2px;
+}
 .cs-body{
   padding: 12px 12px 14px;
 }
@@ -239,4 +276,82 @@
 .cs-dot.active{
   background:#111;
   width:18px;
+}
+/* ===== Follow + Rating row ===== */
+/* ===== Follow + Rating row ===== */
+.cd-socialRow{
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;   /* xếp theo chiều dọc */
+  gap: 12px;
+}
+
+/* ===== Owner block ===== */
+.cd-owner{
+  display:flex;
+  align-items:center;
+  gap: 16px;
+  white-space: nowrap;        /* không xuống dòng */
+}
+
+/* text bên trái */
+.cd-ownerTop{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+/* ===== Rating block ===== */
+.cd-rating{
+  display:flex;
+  align-items:center;
+  white-space: nowrap;
+}
+
+.cd-ratingTop{
+  display:flex;
+  align-items:center;
+  gap: 20px;
+  white-space: nowrap;
+}
+
+/* ===== My rating stars ===== */
+.cd-myRating{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+/* ===== Stars ===== */
+.cd-stars{
+  display:flex;
+  gap: 6px;
+}
+
+.cd-starBtn{
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.25);
+  color: rgba(255,255,255,.65);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor: default;
+}
+
+.cd-starBtn.clickable{ cursor: pointer; }
+.cd-starBtn.on{
+  color: #ffc107;
+  background: rgba(255,193,7,.12);
+  border-color: rgba(255,193,7,.30);
+}
+
+@media (min-width: 900px){
+  .cd-socialRow{
+    grid-template-columns: 1fr 1fr;
+  }
 }

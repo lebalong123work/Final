@@ -10,15 +10,24 @@ function originNameToText(origin_name) {
   return origin_name || null;
 }
 
-// POST /api/admin/external-comics/sync
+
 router.post("/external-comics/sync", auth, requireAdmin, async (req, res) => {
   const client = await db.connect();
+
+  
+  const io = req.app.get("io");
+
   try {
+    const ownerUserId = req.user?.id || null;
+
     const r = await fetch(API_HOME);
     const json = await r.json();
     const items = json?.data?.items || [];
 
+  
     let upsertedComics = 0;
+    let insertedNewComics = 0; 
+    let notified = 0;         
     let upsertedCats = 0;
     let linked = 0;
     let latestSaved = 0;
@@ -26,11 +35,11 @@ router.post("/external-comics/sync", auth, requireAdmin, async (req, res) => {
     await client.query("BEGIN");
 
     for (const c of items) {
-      // 1) upsert comic (giữ is_paid, price nếu đã set trước đó)
+    
       const comicRes = await client.query(
         `INSERT INTO external_comics
-          (api_id, name, slug, origin_name, status, thumb_url, sub_docquyen, updated_at, is_paid, price)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,false,0)
+          (api_id, name, slug, origin_name, status, thumb_url, sub_docquyen, updated_at, is_paid, price, owner_user_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,false,0,$9)
          ON CONFLICT (api_id)
          DO UPDATE SET
            name=EXCLUDED.name,
@@ -40,7 +49,7 @@ router.post("/external-comics/sync", auth, requireAdmin, async (req, res) => {
            thumb_url=EXCLUDED.thumb_url,
            sub_docquyen=EXCLUDED.sub_docquyen,
            updated_at=EXCLUDED.updated_at
-         RETURNING id`,
+         RETURNING id, slug, name, (xmax = 0) AS inserted`,
         [
           c._id,
           c.name,
@@ -50,13 +59,33 @@ router.post("/external-comics/sync", auth, requireAdmin, async (req, res) => {
           c.thumb_url || null,
           !!c.sub_docquyen,
           c.updatedAt ? new Date(c.updatedAt) : null,
+          ownerUserId,
         ]
       );
 
-      const comicId = comicRes.rows[0].id;
+      const row = comicRes.rows[0];
+      const comicId = row.id;
       upsertedComics++;
 
-      // 2) categories + link many-to-many
+   
+      if (row.inserted) {
+        insertedNewComics++;
+
+        if (io?.notifyFollowersNewComic && ownerUserId && row.slug) {
+          try {
+            await io.notifyFollowersNewComic({
+              ownerUserId,
+              comicSlug: row.slug,
+              comicName: row.name,
+            });
+            notified++;
+          } catch (e) {
+            console.error("notifyFollowersNewComic error:", e);
+          }
+        }
+      }
+
+   
       const cats = Array.isArray(c.category) ? c.category : [];
       for (const cat of cats) {
         const catRes = await client.query(
@@ -102,7 +131,14 @@ router.post("/external-comics/sync", auth, requireAdmin, async (req, res) => {
     return res.json({
       success: true,
       message: "Sync OK",
-      stats: { upsertedComics, upsertedCats, linked, latestSaved },
+      stats: {
+        upsertedComics,
+        insertedNewComics,
+        notified,
+        upsertedCats,
+        linked,
+        latestSaved,
+      },
     });
   } catch (err) {
     await client.query("ROLLBACK");

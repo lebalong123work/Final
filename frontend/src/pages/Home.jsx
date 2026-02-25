@@ -1,4 +1,4 @@
-import ComicSlider from "../components/ComicSlider";
+import ComicSlider from "./user/ComicSlider";
 import FeaturedBanner from "../components/FeaturedBanner";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
@@ -70,7 +70,7 @@ export default function Home() {
            
              
          
-      <ComicSlider title="Truyện Sắp Ra Mắt" items={COMICS} perPage={4} className="py-3" />
+      <ComicSlider title="Truyện ngoài" items={COMICS} perPage={4} className="py-3" />
         <Footer />
     </div>
   );

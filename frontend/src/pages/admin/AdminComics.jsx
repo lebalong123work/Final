@@ -316,10 +316,7 @@ const handleSyncToDB = async () => {
                         </div>
 
                         <div className="ad-comic-actions">
-                          <button className="btn btn-light btn-sm" type="button">
-                            <i className="bi bi-eye me-1" />
-                            Xem
-                          </button>
+                          
 
                           {tab === "external" ? (
                             <button className="btn btn-warning btn-sm" type="button" onClick={() => openSetting(c)}>

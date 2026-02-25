@@ -12,7 +12,9 @@ const walletRoutes = require("./routes/wallet");
 const momoRoutes = require("./routes/momo");
 const commentsRoutes = require("./routes/comments");
 const reactionsRoutes = require("./routes/reactions");
-
+const followsRoutes = require("./routes/follows");
+const ratingsRoutes = require("./routes/ratings")
+const notificationsRoutes = require("./routes/notifications");
 const { initSocket } = require("./socket");
 
 const app = express();
@@ -45,16 +47,17 @@ app.use("/api/wallet", walletRoutes);
 app.use("/api/momo", momoRoutes);
 app.use("/api/comments", commentsRoutes);
 app.use("/api/reactions", reactionsRoutes);
-
+app.use("/api/follows", followsRoutes);
+app.use("/api/ratings", ratingsRoutes);
+app.use("/api/notifications", notificationsRoutes);
 const PORT = process.env.PORT || 5000;
 
 
 const server = http.createServer(app);
 
+const io = initSocket(server);
 
-initSocket(server);
-
-
+app.set("io", io);
 server.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });

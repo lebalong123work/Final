@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import Header from "./Header";
+import Header from "../../components/Header";
 import "./readChapter.css";
 import { io } from "socket.io-client";
 

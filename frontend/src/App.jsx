@@ -16,8 +16,10 @@ import Dashboard from './pages/admin/Dashboard';
 import AdminComics from './pages/admin/AdminComics';
 import AdminLevels from './pages/admin/AdminLevels';
 import AdminWalletTransactions from './pages/admin/AdminWalletTransactions';
-import ComicDetail from './components/ComicDetail';
-import ReadChapter from './components/ReadChapter';
+import ComicDetail from './pages/user/ComicDetail';
+import ReadChapter from './pages/user/ReadChapter';
+import NotificationsPage from './pages/user/NotificationsPage';
+import ComicListPage from './pages/user/comicListPage';
 
 function App() {
  
@@ -34,7 +36,8 @@ function App() {
         <Route path="/admin/transactions" element={<AdminWalletTransactions />} /> 
          <Route path="/truyen/:slug" element={<ComicDetail />} />
          <Route path="/doc" element={<ReadChapter />} />
-
+ <Route path="/notifications" element={<NotificationsPage />} />
+ <Route path="/truyen" element={<ComicListPage />} />
     </Routes>
   );
 

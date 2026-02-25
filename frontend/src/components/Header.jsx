@@ -1,11 +1,13 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./header.css";
+import { io } from "socket.io-client";
+
+const API_BASE = "http://localhost:5000";
 
 export default function Header() {
   const navigate = useNavigate();
 
- 
   const [tick, setTick] = useState(0);
 
   const user = useMemo(() => {
@@ -18,13 +20,20 @@ export default function Header() {
     }
   }, [tick]);
 
+  const token = useMemo(() => localStorage.getItem("token") || "", [tick]);
 
+  
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const [notifs, setNotifs] = useState([]); // [{id,title,body,url,created_at,read_at,...}]
+
+  const socketRef = useRef(null);
+  const notifHoverTimerRef = useRef(null);
+
+  // storage sync giữa nhiều tab
   useEffect(() => {
     const onStorage = (e) => {
-     
-      if (e.key === "user" || e.key === "token") {
-        setTick((t) => t + 1);
-      }
+      if (e.key === "user" || e.key === "token") setTick((t) => t + 1);
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
@@ -33,8 +42,171 @@ export default function Header() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    setTick((t) => t + 1); // cập nhật ngay trên tab hiện tại
+
+    // đóng socket
+    if (socketRef.current) {
+      try {
+        socketRef.current.disconnect();
+      } catch {
+        //
+      }
+      socketRef.current = null;
+    }
+
+    setUnread(0);
+    setNotifs([]);
+    setTick((t) => t + 1);
     navigate("/");
+  };
+
+
+  const fetchNotifications = async () => {
+    if (!token) return;
+    try {
+      const r = await fetch(`${API_BASE}/api/notifications?limit=20`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const j = await r.json();
+      if (r.ok && Array.isArray(j?.data)) {
+        setNotifs(j.data);
+      }
+    } catch  {
+      // ignore
+    }
+  };
+
+ 
+  useEffect(() => {
+   
+    if (!token || !user?.id) {
+   
+      if (socketRef.current) {
+        try {
+          socketRef.current.disconnect();
+        } catch {
+          //
+        }
+        socketRef.current = null;
+      }
+      setUnread(0);
+      setNotifs([]);
+      return;
+    }
+
+    // tạo socket 1 lần
+    if (!socketRef.current) {
+      socketRef.current = io(API_BASE, {
+        transports: ["websocket", "polling"],
+        withCredentials: true,
+        auth: { token },
+      });
+
+      socketRef.current.on("connect", () => {
+        // hỏi unread ngay khi connect
+        socketRef.current?.emit("notif:unread:get");
+      });
+
+      socketRef.current.on("connect_error", (e) => {
+        console.log("socket connect_error:", e.message);
+      });
+    } else {
+      // cập nhật token nếu đổi
+      socketRef.current.auth = { token };
+      if (!socketRef.current.connected) socketRef.current.connect();
+    }
+
+    const s = socketRef.current;
+
+    // unread badge realtime
+    const onUnread = (payload) => {
+      if (typeof payload?.unread === "number") setUnread(payload.unread);
+    };
+
+    // notif realtime: new / updated
+    const onNotifNew = (payload) => {
+      const n = payload?.notification;
+      if (!n?.id) return;
+      setNotifs((prev) => {
+        // upsert theo id + đưa lên đầu
+        const existedIdx = prev.findIndex((x) => Number(x.id) === Number(n.id));
+        const copy = [...prev];
+        if (existedIdx >= 0) copy.splice(existedIdx, 1);
+        copy.unshift(n);
+        return copy;
+      });
+    };
+
+    const onNotifUpdated = (payload) => {
+      const n = payload?.notification;
+      if (!n?.id) return;
+      setNotifs((prev) => {
+        const idx = prev.findIndex((x) => Number(x.id) === Number(n.id));
+        if (idx < 0) return [n, ...prev];
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], ...n };
+        // đưa lên đầu cho “mới nhất”
+        copy.splice(idx, 1);
+        copy.unshift(copy[idx] || n);
+        return copy;
+      });
+    };
+
+    s.on("notif:unread", onUnread);
+    s.on("notif:new", onNotifNew);
+    s.on("notif:updated", onNotifUpdated);
+
+    // load list lần đầu (REST)
+    fetchNotifications();
+
+    return () => {
+      s.off("notif:unread", onUnread);
+      s.off("notif:new", onNotifNew);
+      s.off("notif:updated", onNotifUpdated);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, user?.id]);
+
+  // =========================
+  // ✅ UI: hover open/close dropdown notification
+  // =========================
+  const openNotif = () => {
+    if (notifHoverTimerRef.current) clearTimeout(notifHoverTimerRef.current);
+    setNotifOpen(true);
+  };
+  const closeNotif = () => {
+    if (notifHoverTimerRef.current) clearTimeout(notifHoverTimerRef.current);
+    // delay nhẹ để user rê chuột xuống list không bị đóng
+    notifHoverTimerRef.current = setTimeout(() => setNotifOpen(false), 180);
+  };
+
+  
+  const markReadAndGo = (notif) => {
+    if (!notif?.id) return;
+
+   
+    setNotifs((prev) =>
+      prev.map((x) =>
+        Number(x.id) === Number(notif.id)
+          ? { ...x, read_at: x.read_at || new Date().toISOString() }
+          : x
+      )
+    );
+
+
+    socketRef.current?.emit("notif:read", { notifId: notif.id });
+
+
+    if (notif?.url) {
+      setNotifOpen(false);
+      navigate(notif.url);
+    }
+  };
+
+  const fmtTime = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleString("vi-VN");
   };
 
   return (
@@ -49,7 +221,6 @@ export default function Header() {
                 alt="Ztruyen Logo"
                 className="hero-logo"
               />
-
               <span className="brand-text">
                 <span className="brand-z">Z</span>truyện
               </span>
@@ -96,10 +267,13 @@ export default function Header() {
               </li>
             </ul>
 
-            {/* Search + User */}
+            {/* Search + Notifications + User */}
             <div className="d-flex align-items-center gap-3">
               {/* Search */}
-              <form className="d-flex align-items-center zt-search" onSubmit={(e) => e.preventDefault()}>
+              <form
+                className="d-flex align-items-center zt-search"
+                onSubmit={(e) => e.preventDefault()}
+              >
                 <div className="input-group zt-search-group">
                   <input
                     type="search"
@@ -112,7 +286,89 @@ export default function Header() {
                 </div>
               </form>
 
-              {/* User Icon Dropdown */}
+              {/* 🔔 Notifications */}
+              <div
+                className="zt-notifWrap"
+                onMouseEnter={openNotif}
+                onMouseLeave={closeNotif}
+              >
+                <button
+                  className="btn zt-notifBtn"
+                  type="button"
+                  onClick={() => setNotifOpen((v) => !v)}
+                  title={user ? "Thông báo" : "Đăng nhập để nhận thông báo"}
+                  disabled={!user}
+                >
+                  <i className="bi bi-bell fs-5" />
+                  {user && unread > 0 ? (
+                    <span className="zt-notifBadge">
+                      {unread > 99 ? "99+" : unread}
+                    </span>
+                  ) : null}
+                </button>
+
+                {/* dropdown */}
+                {notifOpen && user ? (
+                  <div className="zt-notifDropdown">
+                    <div className="zt-notifHead">
+                      <div className="zt-notifTitle">
+                        <i className="bi bi-bell-fill me-2" />
+                        Thông báo
+                      </div>
+                      <button
+                        className="zt-notifRefresh"
+                        type="button"
+                        onClick={fetchNotifications}
+                        title="Tải lại"
+                      >
+                        <i className="bi bi-arrow-clockwise" />
+                      </button>
+                    </div>
+
+                    <div className="zt-notifList">
+                      {notifs.length === 0 ? (
+                        <div className="zt-notifEmpty">
+                          <i className="bi bi-inbox" />
+                          <div>Chưa có thông báo.</div>
+                        </div>
+                      ) : (
+                        notifs.map((n) => {
+                          const isUnread = !n.read_at;
+                          return (
+                            <button
+                              key={n.id}
+                              type="button"
+                              className={`zt-notifItem ${isUnread ? "unread" : ""}`}
+                              onClick={() => markReadAndGo(n)}
+                            >
+                              <div className="zt-notifItemTop">
+                                <div className="zt-notifItemTitle">
+                                  {isUnread ? <span className="dot" /> : null}
+                                  {n.title || "Thông báo"}
+                                </div>
+                                <div className="zt-notifItemTime">
+                                  {fmtTime(n.created_at)}
+                                </div>
+                              </div>
+                              {n.body ? (
+                                <div className="zt-notifItemBody">{n.body}</div>
+                              ) : null}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div className="zt-notifFoot">
+                      <Link className="zt-notifAll" to="/notifications" onClick={() => setNotifOpen(false)}>
+                        Xem tất cả <i className="bi bi-chevron-right ms-1" />
+                      </Link>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* User Dropdown */}
               <div className="dropdown">
                 <button
                   className="btn user-btn dropdown-toggle"
@@ -150,7 +406,6 @@ export default function Header() {
                         </Link>
                       </li>
 
-                      {/* Nếu admin */}
                       {user.role === "admin" && (
                         <li>
                           <Link className="dropdown-item text-danger" to="/admin">
@@ -174,6 +429,7 @@ export default function Header() {
                   )}
                 </ul>
               </div>
+              {/* end user dropdown */}
             </div>
           </div>
         </div>
