@@ -5,7 +5,7 @@ import Header from "../components/Header";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
-
+import { GoogleLogin } from "@react-oauth/google";
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPass, setShowPass] = useState(false);
@@ -58,9 +58,6 @@ const onSubmit = async (e) => {
 };
 
 
-  const loginWithGoogle = () => {
-    alert("Google login (UI). Tích hợp thật sẽ làm ở bước tiếp theo.");
-  };
 
   return (
     <div className="login-page">
@@ -198,19 +195,23 @@ const onSubmit = async (e) => {
                   <span>hoặc</span>
                 </div>
 
-                {/* Google (đặt dưới form) */}
-                <button
-                  type="button"
-                  className="btn btn-outline-dark w-100 d-flex align-items-center justify-content-center gap-2 login-google"
-                  onClick={loginWithGoogle}
-                >
-                  <img
-                    className="google-icon"
-                    src="https://www.svgrepo.com/show/475656/google-color.svg"
-                    alt="google"
-                  />
-                  Đăng nhập với Google
-                </button>
+               <GoogleLogin
+  onSuccess={async (res) => {
+    // res.credential = id_token
+    const r = await fetch("http://localhost:5000/api/auth/google", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential: res.credential }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data?.message || "Login fail");
+
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+      navigate("/");
+  }}
+  onError={() => console.log("Google Login Failed")}
+/>
 
                 <div className="text-center mt-4 text-secondary">
                   Chưa có tài khoản?{" "}

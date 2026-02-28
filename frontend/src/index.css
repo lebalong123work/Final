@@ -12,6 +12,14 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+.page-wrapper {
+  overflow: hidden;
+}
+
+.page-wrapper img {
+  width: 100%;
+  transform: translateY(-40px); /* cắt phía trên */
+}
 
 a {
   font-weight: 500;

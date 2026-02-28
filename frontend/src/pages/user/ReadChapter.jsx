@@ -425,7 +425,10 @@ export default function ReadChapter() {
         <div className="rc-reader">
           {pages.map((src, idx) => (
             <div className="rc-pageImg" key={src}>
-              <img src={src} alt={`page-${idx + 1}`} loading="lazy" />
+              <div className="page-wrapper">
+      <img src={src} alt={`page-${idx + 1}`} loading="lazy" />
+</div>
+         
               <div className="rc-pageNo">
                 {idx + 1}/{pages.length}
               </div>
