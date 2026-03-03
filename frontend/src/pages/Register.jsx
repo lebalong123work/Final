@@ -69,7 +69,7 @@ export default function Register() {
 
 
   const registerWithGoogle = () => {
-    alert("Google register (UI). Tích hợp thật sẽ làm ở bước tiếp theo.");
+      toast("Google register (UI). Tích hợp thật sẽ làm ở bước tiếp theo.");
   };
 
   return (

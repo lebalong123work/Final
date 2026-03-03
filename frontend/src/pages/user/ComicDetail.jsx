@@ -19,7 +19,7 @@ function stripHtml(html) {
   return (html || "").replace(/<[^>]+>/g, "").trim();
 }
 
-// ✅ helper fetch an toàn: không bị crash khi server trả HTML/404
+
 async function fetchJSON(url, options) {
   const res = await fetch(url, options);
   const text = await res.text();
@@ -60,12 +60,11 @@ export default function ComicDetail() {
   const [pricing, setPricing] = useState({ is_paid: false, price: 0 });
   const [hasAccess, setHasAccess] = useState(false);
 
-  // ✅ owner + follow
+
   const [owner, setOwner] = useState({ owner_user_id: null, username: null });
   const [following, setFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
 
-  // ✅ rating
   const [ratingAvg, setRatingAvg] = useState(0);
   const [ratingCount, setRatingCount] = useState(0);
   const [myRating, setMyRating] = useState(0);
@@ -95,9 +94,9 @@ export default function ComicDetail() {
         setRatingAvg(Number(js?.data?.summary?.avg || 0));
         setRatingCount(Number(js?.data?.summary?.count || 0));
 
-        // 5) follow status + my rating (nếu login)
+     
         if (token && ownerData?.owner_user_id) {
-          // ✅ FIX: đúng URL theo backend router.get("/:userId/status")
+        
           const jf = await fetchJSON(`${API_BASE}/api/follows/${ownerData.owner_user_id}/status`, {
             headers: { Authorization: `Bearer ${token}` },
           });

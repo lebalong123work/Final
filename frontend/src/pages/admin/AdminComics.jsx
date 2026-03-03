@@ -154,7 +154,7 @@ const handleSyncToDB = async () => {
     const price = Math.max(0, Number(settingDraft.price || 0));
 
     if (isPaid && price <= 0) {
-      alert("Giá phải > 0 khi bật trả phí");
+        toast("Giá phải > 0 khi bật trả phí");
       return;
     }
 
@@ -185,7 +185,7 @@ const handleSyncToDB = async () => {
       closeSetting();
     } catch (e) {
       console.error(e);
-      alert(e.message || "Lỗi lưu");
+        toast(e.message || "Lỗi lưu");
     } finally {
       setSaving(false);
     }

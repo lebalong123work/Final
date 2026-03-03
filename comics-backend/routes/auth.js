@@ -16,10 +16,10 @@ function signToken(user) {
   );
 }
 
-// Helper lấy role_code
 async function getUserWithRoleById(id) {
   const { rows } = await db.query(
-    `SELECT u.id, u.username, u.email, u.phone, u.provider, u.google_id, r.code AS role_code
+    `SELECT u.id, u.username, u.email, u.phone, u.provider, u.google_id, u.status,
+            r.code AS role_code
      FROM users u
      JOIN roles r ON r.id = u.role_id
      WHERE u.id = $1`,
@@ -27,7 +27,6 @@ async function getUserWithRoleById(id) {
   );
   return rows[0];
 }
-
 /**
  * POST /api/auth/register
  * body: { username, email, phone, password }
@@ -188,17 +187,14 @@ router.post("/google", async (req, res) => {
     if (found.rows.length) {
       userId = found.rows[0].id;
     } else {
-      // 2) nếu email đã tồn tại ở local -> bạn có thể:
-      //    - merge account (cập nhật google_id) hoặc
-      //    - báo lỗi để user login local
+     
       const emailExists = await db.query(
         `SELECT id, provider FROM users WHERE email=$1 LIMIT 1`,
         [email]
       );
 
       if (emailExists.rows.length && emailExists.rows[0].provider === "local") {
-        // ✅ Option A: MERGE (khuyên dùng cho UX)
-        // cập nhật tài khoản local thành có google_id (tuỳ bạn có muốn không)
+      
         await db.query(
           `UPDATE users SET google_id=$1 WHERE id=$2`,
           [googleId, emailExists.rows[0].id]
@@ -220,9 +216,26 @@ router.post("/google", async (req, res) => {
     }
 
     const user = await getUserWithRoleById(userId);
-    const token = signToken(user);
+    if (!user) return res.status(404).json({ message: "User không tồn tại" });
+if (Number(user.status) === 0) {
+  return res.status(403).json({ message: "Tài khoản đã bị khóa" });
+}
 
-    return res.json({ token, user });
+const token = signToken(user);
+return res.json({
+  token,
+  user: {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    phone: user.phone,
+    provider: user.provider,
+    google_id: user.google_id,
+    status: user.status,
+    role: user.role_code, 
+  },
+});
+  
   } catch (err) {
     console.error("google auth error:", err);
     return res.status(401).json({ message: "Google token invalid" });

@@ -286,7 +286,7 @@ export default function Header() {
                 </div>
               </form>
 
-              {/* 🔔 Notifications */}
+             
               <div
                 className="zt-notifWrap"
                 onMouseEnter={openNotif}
@@ -406,14 +406,14 @@ export default function Header() {
                         </Link>
                       </li>
 
-                      {user.role === "admin" && (
-                        <li>
-                          <Link className="dropdown-item text-danger" to="/admin">
-                            <i className="bi bi-speedometer2 me-2"></i>
-                            Quản trị
-                          </Link>
-                        </li>
-                      )}
+                      {(user.role === "admin" || user.role === "sub_admin") && (
+      <li>
+        <Link className="dropdown-item text-danger" to="/admin">
+          <i className="bi bi-speedometer2 me-2"></i>
+          Quản trị
+        </Link>
+      </li>
+    )}
 
                       <li>
                         <hr className="dropdown-divider" />

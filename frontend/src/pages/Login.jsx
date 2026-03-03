@@ -6,9 +6,11 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
+
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPass, setShowPass] = useState(false);
+   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const onChange = (e) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
@@ -44,7 +46,7 @@ const onSubmit = async (e) => {
     toast.success("Đăng nhập thành công");
 
     setTimeout(() => {
-      if (data.user.role === "admin") {
+      if (data.user.role === "admin" || data.user.role === "sub_admin") {
         navigate("/admin");
       } else {
         navigate("/");
@@ -195,23 +197,54 @@ const onSubmit = async (e) => {
                   <span>hoặc</span>
                 </div>
 
-               <GoogleLogin
-  onSuccess={async (res) => {
-    // res.credential = id_token
-    const r = await fetch("http://localhost:5000/api/auth/google", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ credential: res.credential }),
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data?.message || "Login fail");
+              <GoogleLogin
+        onSuccess={async (res) => {
+          if (loading) return;
 
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
-      navigate("/");
-  }}
-  onError={() => console.log("Google Login Failed")}
-/>
+          const toastId = toast.loading("Đang đăng nhập Google...");
+          setLoading(true);
+
+          try {
+            const r = await fetch("http://localhost:5000/api/auth/google", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ credential: res.credential }),
+            });
+
+            const data = await r.json().catch(() => ({}));
+
+            if (!r.ok) {
+              throw new Error(data?.message || "Đăng nhập thất bại");
+            }
+
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("user", JSON.stringify(data.user));
+
+            toast.update(toastId, {
+              render: "Đăng nhập thành công ",
+              type: "success",
+              isLoading: false,
+              autoClose: 2000,
+            });
+
+            setTimeout(() => navigate("/"), 800);
+          } catch (err) {
+            console.error("Google login error:", err);
+
+            toast.update(toastId, {
+              render: err.message || "Đăng nhập thất bại",
+              type: "error",
+              isLoading: false,
+              autoClose: 3000,
+            });
+          } finally {
+            setLoading(false);
+          }
+        }}
+        onError={() => {
+          toast.error("Google Login Failed ❌");
+        }}
+      />
 
                 <div className="text-center mt-4 text-secondary">
                   Chưa có tài khoản?{" "}

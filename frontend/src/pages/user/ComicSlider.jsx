@@ -104,7 +104,7 @@ export default function ComicSlider({
         </div>
 
          <div className="cs-actions d-none d-md-flex align-items-center gap-2">
-          {/* ✅ Xem tất cả */}
+       
           <Link to={viewAllHref} className="cs-viewAll" aria-label="Xem tất cả">
             Xem tất cả <i className="bi bi-arrow-right ms-1" />
           </Link>

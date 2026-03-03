@@ -20,6 +20,7 @@ import ComicDetail from './pages/user/ComicDetail';
 import ReadChapter from './pages/user/ReadChapter';
 import NotificationsPage from './pages/user/NotificationsPage';
 import ComicListPage from './pages/user/comicListPage';
+import AdminUsers from './pages/admin/AdminUsers';
 
 function App() {
  
@@ -38,6 +39,7 @@ function App() {
          <Route path="/doc" element={<ReadChapter />} />
  <Route path="/notifications" element={<NotificationsPage />} />
  <Route path="/truyen" element={<ComicListPage />} />
+ <Route path="/admin/users" element={<AdminUsers />} />
     </Routes>
   );
 
