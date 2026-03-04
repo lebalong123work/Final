@@ -70,13 +70,13 @@ export default function ForgotPassword() {
 
               <div className="d-flex align-items-center gap-2 mb-3 position-relative">
                 <img
-                  src="https://www.zettruyen.space/images/logo.webp"
+                  src="https://ibb.co/4wJ9F49W"
                   alt="Ztruyen Logo"
                   className="hero-logo"
                 />
 
                 <span className="hero-brand">
-                  <span className="hero-z">Z</span>truyện
+                  <span className="hero-z">R</span>eadink
                 </span>
               </div>
 

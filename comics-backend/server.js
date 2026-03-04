@@ -15,6 +15,8 @@ const reactionsRoutes = require("./routes/reactions");
 const followsRoutes = require("./routes/follows");
 const ratingsRoutes = require("./routes/ratings")
 const notificationsRoutes = require("./routes/notifications");
+const adminFinanceRoutes = require("./routes/adminFinance");
+
 const { initSocket } = require("./socket");
 
 const app = express();
@@ -51,7 +53,9 @@ app.use("/api/follows", followsRoutes);
 app.use("/api/ratings", ratingsRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/admin", require("./routes/adminUsers"));
+app.use("/api/admin", adminFinanceRoutes);
 const PORT = process.env.PORT || 5000;
+
 
 
 const server = http.createServer(app);

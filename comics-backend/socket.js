@@ -254,13 +254,7 @@ function initSocket(httpServer) {
       }
     });
 
-    /**
-     * ✅ Event server nội bộ để push notification new comic
-     * - route tạo truyện mới sẽ gọi:
-     *   req.app.get("io").emit("internal:new_comic", { ownerUserId, comicSlug, comicName })
-     *
-     * hoặc bạn có thể gọi trực tiếp notifyFollowersNewComic(io, ...)
-     */
+    
     socket.on("internal:new_comic", async ({ ownerUserId, comicSlug, comicName }) => {
       try {
         // chỉ admin mới được bắn event nội bộ (tuỳ bạn)

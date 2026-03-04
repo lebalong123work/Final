@@ -55,7 +55,7 @@ router.post("/:id/read", auth, async (req, res) => {
       [userId]
     );
 
-    // ✅ realtime update badge
+   
     const io = req.app.get("io");
     io?.to(`user:${userId}`).emit("notif:unread", { unread: cnt.rows[0]?.unread || 0 });
 

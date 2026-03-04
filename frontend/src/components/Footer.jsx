@@ -12,13 +12,10 @@ export default function Footer() {
             <div className="ft-brand d-flex align-items-center gap-2 mb-3">
               
     <div className="d-flex align-items-center gap-2 mb-3 position-relative">
-  <img
-    src="https://www.zettruyen.space/images/logo.webp"
-    alt="Ztruyen Logo"
-    className="hero-logo"
-  />
+    <a href="/"><img  className="hero-logo" src="https://i.ibb.co/4wJ9F49W/logo-fotor-bg-remover-202603048410-1.png" alt="logo-fotor-bg-remover-202603048410-1" border="0"/></a>
+          
  <span className="ft-title">
-                <span className="ft-z">Z</span>truyện
+                <span className="ft-z">R</span>eadink
               </span>
 </div>
 

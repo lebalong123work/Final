@@ -216,13 +216,10 @@ export default function Header() {
           {/* Brand */}
           <Link to="/" className="navbar-brand d-flex align-items-center gap-2">
             <div className="d-flex align-items-center gap-2 mb-0">
-              <img
-                src="https://www.zettruyen.space/images/logo.webp"
-                alt="Ztruyen Logo"
-                className="hero-logo"
-              />
+               <a href="/"><img  className="hero-logo" src="https://i.ibb.co/4wJ9F49W/logo-fotor-bg-remover-202603048410-1.png" alt="logo-fotor-bg-remover-202603048410-1" border="0"/></a>
+          
               <span className="brand-text">
-                <span className="brand-z">Z</span>truyện
+                <span className="brand-z">R</span>eadink
               </span>
             </div>
           </Link>

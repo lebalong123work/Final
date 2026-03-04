@@ -100,7 +100,7 @@ router.post("/return-confirm", async (req, res) => {
        SET status='success', trans_id=$1, note=$2
        WHERE order_id=$3 AND status='pending'
        RETURNING amount`,
-      [transId, `nạp tiền momo thành công`, orderId]
+      [transId, `topup_momo`, orderId]
     );
 
     if (!upd.rows.length) {

@@ -21,7 +21,7 @@ router.get("/", async (req, res) => {
       where.push(`LOWER(c.name) LIKE $${params.length}`);
     }
 
-    // category filter (✅ dùng EXISTS để không phá json_agg)
+   
     if (category) {
       params.push(category);
       const p = params.length;
