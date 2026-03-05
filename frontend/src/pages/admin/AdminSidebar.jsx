@@ -31,7 +31,7 @@ export default function AdminSidebar() {
     
     { to: "/admin/comics", icon: "bi-journal-bookmark", label: "Quản lý truyện", allow: ["admin", "sub_admin"] },
 
-
+{ to: "/admin/categories", icon: "bi-collection", label: "Quản lý danh mục", allow: ["admin", "sub_admin"] },
    
     { to: "/admin/transactions", icon: "bi-receipt", label: "Giao dịch", allow: ["admin"] },
 

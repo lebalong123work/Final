@@ -54,6 +54,7 @@ app.use("/api/ratings", ratingsRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/admin", require("./routes/adminUsers"));
 app.use("/api/admin", adminFinanceRoutes);
+app.use("/api/categories", require("./routes/categories"));
 const PORT = process.env.PORT || 5000;
 
 

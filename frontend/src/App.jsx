@@ -21,6 +21,7 @@ import ReadChapter from './pages/user/ReadChapter';
 import NotificationsPage from './pages/user/NotificationsPage';
 import ComicListPage from './pages/user/comicListPage';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminCategories from './pages/admin/AdminCategories';
 
 function App() {
  
@@ -40,6 +41,8 @@ function App() {
  <Route path="/notifications" element={<NotificationsPage />} />
  <Route path="/truyen" element={<ComicListPage />} />
  <Route path="/admin/users" element={<AdminUsers />} />
+
+<Route path="/admin/categories" element={<AdminCategories />} />
     </Routes>
   );
 
