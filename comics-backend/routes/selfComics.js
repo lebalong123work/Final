@@ -79,8 +79,9 @@ router.get("/", auth, async (req, res) => {
         sc.id,
         sc.user_id,
         sc.title,
-        sc.content,
         sc.cover_image,
+        sc.description,
+        sc.total_chapters,
         sc.status,
         sc.created_at,
         sc.updated_at,
@@ -138,8 +139,9 @@ router.get("/:id", auth, async (req, res) => {
         sc.id,
         sc.user_id,
         sc.title,
-        sc.content,
         sc.cover_image,
+        sc.description,
+        sc.total_chapters,
         sc.status,
         sc.created_at,
         sc.updated_at,
@@ -170,8 +172,9 @@ router.get("/:id", auth, async (req, res) => {
  * POST /api/self-comics
  * body:
  * - title
- * - content
  * - cover_image
+ * - description
+ * - total_chapters
  * - status
  * - category_id
  * - is_paid
@@ -181,8 +184,9 @@ router.post("/", auth, async (req, res) => {
   try {
     const userId = req.user?.id;
     const title = normalizeText(req.body.title);
-    const content = normalizeText(req.body.content);
     const coverImage = normalizeText(req.body.cover_image) || null;
+    const description = normalizeText(req.body.description) || null;
+    const totalChapters = Math.max(1, toInt(req.body.total_chapters, 1));
     const status = Number(req.body.status ?? 1);
     const categoryId = req.body.category_id ? toInt(req.body.category_id, 0) : null;
     const isPaid = !!req.body.is_paid;
@@ -196,8 +200,8 @@ router.post("/", auth, async (req, res) => {
       return res.status(400).json({ message: "Vui lòng nhập tiêu đề" });
     }
 
-    if (!content) {
-      return res.status(400).json({ message: "Vui lòng nhập nội dung" });
+    if (totalChapters < 1) {
+      return res.status(400).json({ message: "Tổng số chương phải lớn hơn hoặc bằng 1" });
     }
 
     if (![0, 1].includes(status)) {
@@ -220,19 +224,38 @@ router.post("/", auth, async (req, res) => {
 
     const insertSql = `
       INSERT INTO self_comics (
-        user_id, title, content, cover_image, status, category_id, is_paid, price
+        user_id,
+        title,
+        cover_image,
+        description,
+        total_chapters,
+        status,
+        category_id,
+        is_paid,
+        price
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING
-        id, user_id, title, content, cover_image, status, created_at, updated_at,
-        category_id, is_paid, price
+        id,
+        user_id,
+        title,
+        cover_image,
+        description,
+        total_chapters,
+        status,
+        created_at,
+        updated_at,
+        category_id,
+        is_paid,
+        price
     `;
 
     const result = await db.query(insertSql, [
       userId,
       title,
-      content,
       coverImage,
+      description,
+      totalChapters,
       status,
       categoryId || null,
       isPaid,
@@ -277,13 +300,20 @@ router.patch("/:id", auth, async (req, res) => {
     const title =
       req.body.title !== undefined ? normalizeText(req.body.title) : comic.title;
 
-    const content =
-      req.body.content !== undefined ? normalizeText(req.body.content) : comic.content;
-
     const coverImage =
       req.body.cover_image !== undefined
         ? normalizeText(req.body.cover_image) || null
         : comic.cover_image;
+
+    const description =
+      req.body.description !== undefined
+        ? normalizeText(req.body.description) || null
+        : comic.description;
+
+    const totalChapters =
+      req.body.total_chapters !== undefined
+        ? Math.max(1, toInt(req.body.total_chapters, 1))
+        : Math.max(1, toInt(comic.total_chapters, 1));
 
     const status =
       req.body.status !== undefined ? Number(req.body.status) : Number(comic.status);
@@ -305,8 +335,8 @@ router.patch("/:id", auth, async (req, res) => {
       return res.status(400).json({ message: "Tiêu đề không được để trống" });
     }
 
-    if (!content) {
-      return res.status(400).json({ message: "Nội dung không được để trống" });
+    if (totalChapters < 1) {
+      return res.status(400).json({ message: "Tổng số chương phải lớn hơn hoặc bằng 1" });
     }
 
     if (![0, 1].includes(status)) {
@@ -331,23 +361,35 @@ router.patch("/:id", auth, async (req, res) => {
       UPDATE self_comics
       SET
         title = $1,
-        content = $2,
-        cover_image = $3,
-        status = $4,
-        category_id = $5,
-        is_paid = $6,
-        price = $7,
+        cover_image = $2,
+        description = $3,
+        total_chapters = $4,
+        status = $5,
+        category_id = $6,
+        is_paid = $7,
+        price = $8,
         updated_at = NOW()
-      WHERE id = $8
+      WHERE id = $9
       RETURNING
-        id, user_id, title, content, cover_image, status, created_at, updated_at,
-        category_id, is_paid, price
+        id,
+        user_id,
+        title,
+        cover_image,
+        description,
+        total_chapters,
+        status,
+        created_at,
+        updated_at,
+        category_id,
+        is_paid,
+        price
     `;
 
     const result = await db.query(updateSql, [
       title,
-      content,
       coverImage,
+      description,
+      totalChapters,
       status,
       categoryId || null,
       isPaid,
@@ -376,7 +418,12 @@ router.delete("/:id", auth, async (req, res) => {
     if (!id) return res.status(400).json({ message: "ID không hợp lệ" });
 
     const check = await db.query(
-      `SELECT id, user_id, title, cover_image FROM self_comics WHERE id = $1 LIMIT 1`,
+      `
+      SELECT id, user_id, title, cover_image, total_chapters
+      FROM self_comics
+      WHERE id = $1
+      LIMIT 1
+      `,
       [id]
     );
 
@@ -398,6 +445,7 @@ router.delete("/:id", auth, async (req, res) => {
         id: comic.id,
         title: comic.title,
         cover_image: comic.cover_image,
+        total_chapters: comic.total_chapters,
       },
     });
   } catch (err) {

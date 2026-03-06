@@ -16,6 +16,7 @@ const followsRoutes = require("./routes/follows");
 const ratingsRoutes = require("./routes/ratings")
 const notificationsRoutes = require("./routes/notifications");
 const adminFinanceRoutes = require("./routes/adminFinance");
+const selfChaptersRoutes = require("./routes/selfChapters");
 
 const { initSocket } = require("./socket");
 
@@ -57,7 +58,7 @@ app.use("/api/admin", require("./routes/adminUsers"));
 app.use("/api/admin", adminFinanceRoutes);
 app.use("/api/categories", require("./routes/categories"));
 app.use("/api/self-comics", selfComicsRoutes);
-
+app.use("/api/self-chapters", selfChaptersRoutes);
 const PORT = process.env.PORT || 5000;
 
 
