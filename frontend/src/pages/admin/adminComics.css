@@ -5,7 +5,25 @@
               #f8fafc;
   min-height: 100vh;
 }
+.editor-scroll-box {
+  height: 300px;
+  overflow-y: auto;
+}
+.ad-modal-body-scroll::-webkit-scrollbar,
+.editor-scroll-box::-webkit-scrollbar {
+  width: 8px;
+}
 
+.ad-modal-body-scroll::-webkit-scrollbar-thumb,
+.editor-scroll-box::-webkit-scrollbar-thumb {
+  background: #c7c7c7;
+  border-radius: 10px;
+}
+
+.ad-modal-body-scroll::-webkit-scrollbar-track,
+.editor-scroll-box::-webkit-scrollbar-track {
+  background: #f3f3f3;
+}
 .ad-title {
   font-weight: 900;
 }

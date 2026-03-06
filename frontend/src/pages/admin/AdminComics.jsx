@@ -1,58 +1,125 @@
-import { useEffect,  useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AdminSidebar from "./AdminSidebar";
 import "./adminComics.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Swal from "sweetalert2";
+
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
+import Link from "@tiptap/extension-link";
+import Underline from "@tiptap/extension-underline";
+import Image from "@tiptap/extension-image";
+
+const API_BASE = "http://localhost:5000";
+const LIMIT = 12;
+
 const IMG_BASE = "https://img.otruyenapi.com/uploads/comics/";
+
 function buildThumb(thumb) {
   if (!thumb) return "";
   if (thumb.startsWith("http")) return thumb;
   return IMG_BASE + thumb;
 }
 
+function buildSelfCover(cover) {
+  if (!cover) return "https://via.placeholder.com/500x700?text=No+Cover";
+  if (cover.startsWith("http")) return cover;
+  if (cover.startsWith("data:image")) return cover;
+  if (cover.startsWith("/")) return `${API_BASE}${cover}`;
+  return cover;
+}
+
 function Badge({ children, tone = "dark" }) {
   return <span className={`badge rounded-pill text-bg-${tone}`}>{children}</span>;
 }
 
-const API_BASE = "http://localhost:5000";
-const LIMIT = 12;
+function fmtVND(n) {
+  return new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
+}
 
 export default function AdminComics() {
-  const [tab, setTab] = useState("external"); 
+  const [tab, setTab] = useState("external");
 
-  
+  // ===== EXTERNAL =====
   const [extItems, setExtItems] = useState([]);
   const [extLoading, setExtLoading] = useState(false);
   const [extError, setExtError] = useState("");
 
+  // ===== SELF =====
+  const [selfItems, setSelfItems] = useState([]);
+  const [selfLoading, setSelfLoading] = useState(false);
+  const [selfError, setSelfError] = useState("");
+
+  // search + paging
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Self demo
-  const [myItems] = useState([
-    {
-      id: "my_1",
-      name: "Truyện tự đăng A",
-      status: "ongoing",
-      updatedAt: new Date().toISOString(),
-      thumb: "https://picsum.photos/seed/comicA/500/700",
-    },
-    {
-      id: "my_2",
-      name: "Truyện tự đăng B",
-      status: "completed",
-      updatedAt: new Date().toISOString(),
-      thumb: "https://picsum.photos/seed/comicB/500/700",
-    },
-  ]);
+  // categories
+  const [cats, setCats] = useState([]);
+  const [catId, setCatId] = useState("");
 
-  // Modal state
+  // ===== MODAL: pricing external =====
   const [settingComic, setSettingComic] = useState(null);
   const [settingDraft, setSettingDraft] = useState({ type: "free", price: 0 });
-  const [saving, setSaving] = useState(false);
+  const [savingSetting, setSavingSetting] = useState(false);
 
-  const token = localStorage.getItem("token");
+  // ===== MODAL: create/edit self =====
+  const [selfModalOpen, setSelfModalOpen] = useState(false);
+  const [selfSaving, setSelfSaving] = useState(false);
+  const [editingSelfId, setEditingSelfId] = useState(null);
+
+  const [selfDraft, setSelfDraft] = useState({
+    title: "",
+    cover_image: "",
+    category_id: "",
+    status: 1,
+    is_paid: false,
+    price: 0,
+  });
+
+  const token = localStorage.getItem("token") || "";
+  const fileInputRef = useRef(null);
+  const coverInputRef = useRef(null);
+
+  // ===== TipTap Editor =====
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({
+        placeholder: "Nhập nội dung truyện... (có thể chèn ảnh)",
+      }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+      }),
+      Underline,
+      Image.configure({
+        inline: false,
+        allowBase64: true,
+      }),
+    ],
+    content: "",
+    editorProps: {
+      attributes: {
+        class: "tiptap-content",
+      },
+    },
+  });
+
+  // ================== FETCH ==================
+  const fetchCategories = async () => {
+    try {
+      const r = await fetch(`${API_BASE}/api/categories`);
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) setCats(Array.isArray(j?.data) ? j.data : []);
+    } catch {
+      //
+    }
+  };
 
   const fetchExternalFromDB = async (p = 1) => {
     try {
@@ -65,15 +132,13 @@ export default function AdminComics() {
       if (q.trim()) url.searchParams.set("q", q.trim());
 
       const res = await fetch(url.toString());
-      const data = await res.json();
-
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Lỗi tải truyện từ DB");
 
       setExtItems(Array.isArray(data?.data) ? data.data : []);
       setPage(data.page || p);
       setTotalPages(data.totalPages || 1);
     } catch (e) {
-      console.error(e);
       setExtItems([]);
       setPage(1);
       setTotalPages(1);
@@ -83,56 +148,103 @@ export default function AdminComics() {
     }
   };
 
-const handleSyncToDB = async () => {
-  if (!token) {
-    toast.warning("Bạn cần đăng nhập admin để đồng bộ.");
-    return;
-  }
+  const fetchSelfFromDB = async (p = 1) => {
+    try {
+      setSelfError("");
+      setSelfLoading(true);
 
-  const toastId = toast.loading("Đang đồng bộ dữ liệu...");
+      const url = new URL(`${API_BASE}/api/self-comics`);
+      url.searchParams.set("page", String(p));
+      url.searchParams.set("limit", String(LIMIT));
+      if (q.trim()) url.searchParams.set("q", q.trim());
+      if (catId) url.searchParams.set("categoryId", String(catId));
 
-  try {
-    setExtLoading(true);
+      const res = await fetch(url.toString(), {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.message || "Lỗi tải truyện tự đăng");
 
-    const res = await fetch(`${API_BASE}/api/admin/external-comics/sync`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+      setSelfItems(Array.isArray(data?.data) ? data.data : []);
+      setPage(data.page || p);
+      setTotalPages(data.totalPages || 1);
+    } catch (e) {
+      setSelfItems([]);
+      setPage(1);
+      setTotalPages(1);
+      setSelfError(e.message || "Không tải được");
+    } finally {
+      setSelfLoading(false);
+    }
+  };
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.message || "Đồng bộ thất bại");
+  const handleSyncToDB = async () => {
+    if (!token) {
+      toast.warning("Bạn cần đăng nhập admin để đồng bộ.");
+      return;
+    }
 
-    await fetchExternalFromDB(1);
+    const toastId = toast.loading("Đang đồng bộ dữ liệu...");
+    try {
+      setExtLoading(true);
 
-    toast.update(toastId, {
-      render: `Đồng bộ thành công! ${data?.stats?.upsertedComics || 0} truyện`,
-      type: "success",
-      isLoading: false,
-      autoClose: 3000,
-    });
-  } catch (e) {
-    toast.update(toastId, {
-      render: e.message || "Không đồng bộ được",
-      type: "error",
-      isLoading: false,
-      autoClose: 3000,
-    });
-  } finally {
-    setExtLoading(false);
-  }
-};
+      const res = await fetch(`${API_BASE}/api/admin/external-comics/sync`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
- 
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.message || "Đồng bộ thất bại");
+
+      await fetchExternalFromDB(1);
+
+      toast.update(toastId, {
+        render: `Đồng bộ thành công! ${data?.stats?.upsertedComics || 0} truyện`,
+        type: "success",
+        isLoading: false,
+        autoClose: 3000,
+      });
+    } catch (e) {
+      toast.update(toastId, {
+        render: e.message || "Không đồng bộ được",
+        type: "error",
+        isLoading: false,
+        autoClose: 3000,
+      });
+    } finally {
+      setExtLoading(false);
+    }
+  };
+
+  // ================== EFFECT ==================
   useEffect(() => {
-    if (tab !== "external") return;
-    fetchExternalFromDB(1);
+    if (tab === "external") fetchExternalFromDB(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, q]);
 
-  const current = tab === "external" ? extItems : myItems;
+  useEffect(() => {
+    if (tab !== "self") return;
+    fetchCategories();
+    fetchSelfFromDB(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, q, catId]);
 
+  const current = tab === "external" ? extItems : selfItems;
+
+  // ================== BADGE PRICING ==================
+  const pricingLabel = (comic) => {
+    if (!comic) return null;
+    if (comic.is_paid) {
+      return {
+        text: `Trả phí${comic.price ? ` • ${fmtVND(comic.price)}` : ""}`,
+        tone: "danger",
+      };
+    }
+    return { text: "Miễn phí", tone: "success" };
+  };
+
+  // ================== MODAL: PRICING (EXTERNAL) ==================
   const openSetting = (comic) => {
-  
     const isPaid = !!comic?.is_paid;
     setSettingComic(comic);
     setSettingDraft({
@@ -142,59 +254,270 @@ const handleSyncToDB = async () => {
   };
 
   const closeSetting = () => {
-    if (saving) return;
+    if (savingSetting) return;
     setSettingComic(null);
     setSettingDraft({ type: "free", price: 0 });
   };
 
   const saveSetting = async () => {
+    if (!token) return toast.error("Thiếu token admin.");
     if (!settingComic?.api_id) return;
 
     const isPaid = settingDraft.type === "paid";
     const price = Math.max(0, Number(settingDraft.price || 0));
 
-    if (isPaid && price <= 0) {
-        toast("Giá phải > 0 khi bật trả phí");
-      return;
-    }
+    if (isPaid && price <= 0) return toast.error("Giá phải > 0 khi bật trả phí");
 
     try {
-      setSaving(true);
+      setSavingSetting(true);
 
-      const res = await fetch(`${API_BASE}/api/admin/external-comics/${settingComic.api_id}/pricing`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ is_paid: isPaid, price }),
-      });
+      const res = await fetch(
+        `${API_BASE}/api/admin/external-comics/${settingComic.api_id}/pricing`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ is_paid: isPaid, price }),
+        }
+      );
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Lưu cài đặt thất bại");
 
-      // cập nhật ngay trên UI
       setExtItems((prev) =>
         prev.map((x) =>
           x.api_id === settingComic.api_id
-            ? { ...x, is_paid: data.data.is_paid, price: data.data.price }
+            ? { ...x, is_paid: data?.data?.is_paid, price: data?.data?.price }
             : x
         )
       );
 
+      toast.success("Đã lưu cài đặt giá!");
       closeSetting();
     } catch (e) {
-      console.error(e);
-        toast(e.message || "Lỗi lưu");
+      toast.error(e.message || "Lỗi lưu");
     } finally {
-      setSaving(false);
+      setSavingSetting(false);
     }
   };
 
-  const pricingLabel = (comic) => {
-    if (!comic) return null;
-    if (comic.is_paid) return { text: `Trả phí${comic.price ? ` • ${fmtVND(comic.price)}` : ""}`, tone: "danger" };
-    return { text: "Miễn phí", tone: "success" };
+  // ================== TipTap helpers ==================
+  const setLink = () => {
+    if (!editor) return;
+    const prev = editor.getAttributes("link").href || "";
+    const url = window.prompt("Nhập link:", prev);
+    if (url === null) return;
+
+    const v = url.trim();
+    if (!v) {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: v }).run();
+  };
+
+  const addImageByUrl = () => {
+    if (!editor) return;
+    const url = window.prompt("Nhập URL ảnh:");
+    if (!url) return;
+    const v = url.trim();
+    if (!v) return;
+    editor.chain().focus().setImage({ src: v, alt: "image" }).run();
+  };
+
+  const pickImageFile = () => fileInputRef.current?.click();
+
+  const onUploadImage = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh");
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result;
+      if (typeof base64 === "string") {
+        editor?.chain().focus().setImage({ src: base64, alt: file.name }).run();
+        toast.success("Đã chèn ảnh");
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  // ================== COVER IMAGE ==================
+  const pickCoverFile = () => coverInputRef.current?.click();
+
+  const onUploadCoverImage = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh hợp lệ");
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result;
+      if (typeof base64 === "string") {
+        setSelfDraft((p) => ({ ...p, cover_image: base64 }));
+        toast.success("Đã chọn ảnh chính");
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const removeCoverImage = () => {
+    setSelfDraft((p) => ({ ...p, cover_image: "" }));
+  };
+
+  // ================== SELF COMIC MODAL ==================
+  const resetSelfDraft = () => {
+    setSelfDraft({
+      title: "",
+      cover_image: "",
+      category_id: "",
+      status: 1,
+      is_paid: false,
+      price: 0,
+    });
+    setEditingSelfId(null);
+    setTimeout(() => editor?.commands?.setContent(""), 0);
+  };
+
+  const openSelfModal = () => {
+    if (!token) return toast.warning("Bạn cần đăng nhập để đăng truyện.");
+    resetSelfDraft();
+    setSelfModalOpen(true);
+  };
+
+  const openEditSelfModal = (comic) => {
+    if (!token) return toast.warning("Bạn cần đăng nhập.");
+    setEditingSelfId(comic.id);
+    setSelfDraft({
+      title: comic?.title || "",
+      cover_image: comic?.cover_image || "",
+      category_id: comic?.category_id ? String(comic.category_id) : "",
+      status: Number(comic?.status ?? 1),
+      is_paid: !!comic?.is_paid,
+      price: Number(comic?.price || 0),
+    });
+    setSelfModalOpen(true);
+    setTimeout(() => {
+      editor?.commands?.setContent(comic?.content || "");
+    }, 0);
+  };
+
+  const closeSelfModal = () => {
+    if (selfSaving) return;
+    setSelfModalOpen(false);
+    setEditingSelfId(null);
+  };
+
+  const saveSelfComic = async () => {
+    if (!token) return toast.error("Thiếu token đăng nhập.");
+
+    const title = String(selfDraft.title || "").trim();
+    const coverImage = String(selfDraft.cover_image || "").trim();
+    const contentHTML = editor?.getHTML?.() || "";
+    const plainText = editor?.getText?.().trim() || "";
+
+    if (!title) return toast.error("Vui lòng nhập tiêu đề");
+    if (!coverImage) return toast.error("Vui lòng thêm ảnh chính");
+
+    const hasImage = contentHTML.includes("<img");
+    if (!plainText && !hasImage) {
+      return toast.error("Vui lòng nhập nội dung hoặc chèn ảnh");
+    }
+
+    const isPaid = !!selfDraft.is_paid;
+    const price = Math.max(0, Number(selfDraft.price || 0));
+
+    if (isPaid && price <= 0) {
+      return toast.error("Giá phải > 0 khi bật trả phí");
+    }
+
+    try {
+      setSelfSaving(true);
+
+      const payload = {
+        title,
+        cover_image: coverImage,
+        content: contentHTML,
+        status: Number(selfDraft.status || 1),
+        category_id: selfDraft.category_id ? Number(selfDraft.category_id) : null,
+        is_paid: isPaid,
+        price: isPaid ? price : 0,
+      };
+
+      const isEdit = !!editingSelfId;
+      const url = isEdit
+        ? `${API_BASE}/api/self-comics/${editingSelfId}`
+        : `${API_BASE}/api/self-comics`;
+
+      const method = isEdit ? "PATCH" : "POST";
+
+      const r = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data?.message || (isEdit ? "Cập nhật truyện thất bại" : "Tạo truyện thất bại"));
+
+      toast.success(isEdit ? "Đã cập nhật truyện!" : "Đã tạo truyện!");
+      closeSelfModal();
+      await fetchSelfFromDB(1);
+      setPage(1);
+    } catch (e) {
+      toast.error(e.message || "Lỗi lưu truyện");
+    } finally {
+      setSelfSaving(false);
+    }
+  };
+
+  const deleteSelfComic = async (comic) => {
+    const result = await Swal.fire({
+      title: "Xóa truyện này?",
+      text: `Bạn có chắc muốn xóa "${comic?.title || "truyện này"}" không?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Xóa",
+      cancelButtonText: "Hủy",
+      reverseButtons: true,
+      confirmButtonColor: "#d33",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/self-comics/${comic.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.message || "Xóa truyện thất bại");
+
+      toast.success("Đã xóa truyện!");
+      await fetchSelfFromDB(page);
+    } catch (e) {
+      toast.error(e.message || "Lỗi xóa truyện");
+    }
   };
 
   return (
@@ -202,18 +525,10 @@ const handleSyncToDB = async () => {
       <AdminSidebar />
 
       <main className="ad-main">
-         <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        pauseOnHover
-        theme="colored"
-      />
+        <ToastContainer position="top-right" autoClose={3000} theme="colored" />
+
         <div className="ad-page">
           <div className="container-fluid px-4 py-4">
-            {/* Header */}
             <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
               <div>
                 <h2 className="m-0 ad-title">Quản lý truyện</h2>
@@ -222,7 +537,7 @@ const handleSyncToDB = async () => {
                 </div>
               </div>
 
-              <div className="d-flex gap-2 align-items-center">
+              <div className="d-flex gap-2 align-items-center flex-wrap">
                 <div className="input-group ad-search">
                   <span className="input-group-text bg-white">
                     <i className="bi bi-search" />
@@ -236,10 +551,33 @@ const handleSyncToDB = async () => {
                 </div>
 
                 {tab === "self" ? (
-                  <button className="btn btn-primary d-flex align-items-center gap-2 px-4 rounded-3 text-nowrap" type="button">
-                    <i className="bi bi-plus-lg" />
-                    Thêm truyện
-                  </button>
+                  <>
+                    <select
+                      className="form-select"
+                      style={{ width: 220 }}
+                      value={catId}
+                      onChange={(e) => {
+                        setCatId(e.target.value);
+                        setPage(1);
+                      }}
+                    >
+                      <option value="">Tất cả danh mục</option>
+                      {cats.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      className="btn btn-primary d-flex align-items-center gap-2 px-4 rounded-3 text-nowrap"
+                      type="button"
+                      onClick={openSelfModal}
+                    >
+                      <i className="bi bi-plus-lg" />
+                      Thêm truyện
+                    </button>
+                  </>
                 ) : (
                   <button
                     className="btn btn-outline-dark d-flex align-items-center gap-2 px-4 text-nowrap"
@@ -254,26 +592,39 @@ const handleSyncToDB = async () => {
               </div>
             </div>
 
-            {/* Tabs */}
             <div className="ad-tabs mb-3">
-              <button className={`ad-tab ${tab === "external" ? "active" : ""}`} onClick={() => setTab("external")} type="button">
+              <button
+                className={`ad-tab ${tab === "external" ? "active" : ""}`}
+                onClick={() => setTab("external")}
+                type="button"
+              >
                 <i className="bi bi-globe2 me-2" />
                 Truyện ngoài (DB)
                 <span className="ms-2 badge rounded-pill text-bg-light">{extItems.length}</span>
               </button>
 
-              <button className={`ad-tab ${tab === "self" ? "active" : ""}`} onClick={() => setTab("self")} type="button">
+              <button
+                className={`ad-tab ${tab === "self" ? "active" : ""}`}
+                onClick={() => setTab("self")}
+                type="button"
+              >
                 <i className="bi bi-person-lines-fill me-2" />
                 Truyện tự đăng
-                <span className="ms-2 badge rounded-pill text-bg-light">{myItems.length}</span>
+                <span className="ms-2 badge rounded-pill text-bg-light">{selfItems.length}</span>
               </button>
             </div>
 
-            {/* Status */}
             {tab === "external" && extError ? (
               <div className="alert alert-warning rounded-4">
                 <i className="bi bi-exclamation-triangle me-2" />
                 {extError}
+              </div>
+            ) : null}
+
+            {tab === "self" && selfError ? (
+              <div className="alert alert-warning rounded-4">
+                <i className="bi bi-exclamation-triangle me-2" />
+                {selfError}
               </div>
             ) : null}
 
@@ -286,19 +637,27 @@ const handleSyncToDB = async () => {
               </div>
             ) : null}
 
-            {/* Grid */}
+            {tab === "self" && selfLoading ? (
+              <div className="card border-0 shadow-sm rounded-4">
+                <div className="card-body d-flex align-items-center gap-2">
+                  <div className="spinner-border spinner-border-sm" />
+                  <span className="text-secondary">Đang tải dữ liệu...</span>
+                </div>
+              </div>
+            ) : null}
+
             <div className="row g-3 mt-1">
               {current.map((c) => {
                 const id = c?.api_id || c?.id;
-                const name = c?.name || "Không tên";
+                const name = c?.name || c?.title || "Không tên";
                 const status = c?.status || "unknown";
-                const updatedAt = c?.updated_at || c?.updatedAt;
-                const thumb = tab === "external" ? buildThumb(c?.thumb_url) : c?.thumb;
+                const updatedAt = c?.updated_at || c?.updatedAt || c?.created_at;
+                const priceBadge = pricingLabel(c);
 
-                const cats = tab === "external" ? (c?.categories || []) : [];
-                const latest = tab === "external" ? c?.latest_chapter : null;
-
-                const priceBadge = tab === "external" ? pricingLabel(c) : null;
+                const thumb =
+                  tab === "external"
+                    ? buildThumb(c?.thumb_url)
+                    : buildSelfCover(c?.cover_image);
 
                 return (
                   <div key={id} className="col-12 col-sm-6 col-lg-4 d-flex">
@@ -307,23 +666,60 @@ const handleSyncToDB = async () => {
                         {thumb ? <img src={thumb} alt={name} /> : null}
 
                         <div className="ad-comic-topbadges">
-                          <Badge tone={status === "ongoing" ? "success" : status === "completed" ? "secondary" : "dark"}>
-                            {status === "ongoing" ? "Đang ra" : status === "completed" ? "Hoàn thành" : status}
+                          <Badge
+                            tone={
+                              status === "ongoing"
+                                ? "success"
+                                : status === "completed"
+                                ? "secondary"
+                                : Number(status) === 1
+                                ? "success"
+                                : Number(status) === 0
+                                ? "secondary"
+                                : "dark"
+                            }
+                          >
+                            {status === "ongoing"
+                              ? "Đang ra"
+                              : status === "completed"
+                              ? "Hoàn thành"
+                              : Number(status) === 1
+                              ? "Hiển thị"
+                              : Number(status) === 0
+                              ? "Ẩn"
+                              : String(status)}
                           </Badge>
 
-                          {latest ? <Badge tone="dark">Chap {latest}</Badge> : null}
                           {priceBadge ? <Badge tone={priceBadge.tone}>{priceBadge.text}</Badge> : null}
                         </div>
 
-                        <div className="ad-comic-actions">
-                          
-
+                        <div className="ad-comic-actions d-flex gap-2">
                           {tab === "external" ? (
                             <button className="btn btn-warning btn-sm" type="button" onClick={() => openSetting(c)}>
                               <i className="bi bi-gear me-1" />
                               Cài đặt
                             </button>
-                          ) : null}
+                          ) : (
+                            <>
+                              <button
+                                className="btn btn-primary btn-sm"
+                                type="button"
+                                onClick={() => openEditSelfModal(c)}
+                              >
+                                <i className="bi bi-pencil-square me-1" />
+                                Sửa
+                              </button>
+
+                              <button
+                                className="btn btn-danger btn-sm"
+                                type="button"
+                                onClick={() => deleteSelfComic(c)}
+                              >
+                                <i className="bi bi-trash me-1" />
+                                Xóa
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
 
@@ -332,20 +728,18 @@ const handleSyncToDB = async () => {
                           {name}
                         </div>
 
-                        {cats?.length ? (
-                          <div className="ad-comic-tags mt-2">
-                            {cats.slice(0, 3).map((t) => (
-                              <span className="ad-tag" key={t.api_id || t.slug}>
-                                {t.name}
-                              </span>
-                            ))}
-                            {cats.length > 3 ? <span className="ad-tag more">+{cats.length - 3}</span> : null}
-                          </div>
-                        ) : (
-                          <div className="text-secondary small mt-2">
-                            {tab === "self" ? "Truyện do bạn đăng" : "Không có thể loại"}
-                          </div>
-                        )}
+                        {tab === "self" ? (
+                          <>
+                            <div className="text-secondary small mt-2">
+                              Danh mục: <b>{c?.category_name || "—"}</b>
+                            </div>
+
+                            <div className="text-secondary small mt-2">
+                              Ảnh chính:{" "}
+                              <b>{c?.cover_image ? "Đã có" : "Chưa có"}</b>
+                            </div>
+                          </>
+                        ) : null}
 
                         <div className="ad-comic-meta mt-3">
                           <div className="text-secondary small">
@@ -359,7 +753,7 @@ const handleSyncToDB = async () => {
                 );
               })}
 
-              {!extLoading && current.length === 0 ? (
+              {!extLoading && tab === "external" && current.length === 0 ? (
                 <div className="col-12">
                   <div className="card border-0 shadow-sm rounded-4">
                     <div className="card-body text-center text-secondary">
@@ -369,50 +763,338 @@ const handleSyncToDB = async () => {
                   </div>
                 </div>
               ) : null}
+
+              {!selfLoading && tab === "self" && current.length === 0 ? (
+                <div className="col-12">
+                  <div className="card border-0 shadow-sm rounded-4">
+                    <div className="card-body text-center text-secondary">
+                      <i className="bi bi-inbox fs-3 d-block mb-2" />
+                      Chưa có truyện tự đăng.
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
-            {/* Pagination cho tab external */}
-            {tab === "external" ? (
-              <div className="d-flex justify-content-center mt-4">
-                <nav>
-                  <ul className="pagination mb-0">
-                    <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
-                      <button className="page-link" onClick={() => fetchExternalFromDB(page - 1)} type="button">
-                        «
-                      </button>
-                    </li>
+            <div className="d-flex justify-content-center mt-4">
+              <nav>
+                <ul className="pagination mb-0">
+                  <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
+                    <button
+                      className="page-link"
+                      onClick={() => (tab === "external" ? fetchExternalFromDB(page - 1) : fetchSelfFromDB(page - 1))}
+                      type="button"
+                    >
+                      «
+                    </button>
+                  </li>
 
-                    <li className="page-item active">
-                      <span className="page-link">
-                        {page}/{totalPages}
-                      </span>
-                    </li>
+                  <li className="page-item active">
+                    <span className="page-link">
+                      {page}/{totalPages}
+                    </span>
+                  </li>
 
-                    <li className={`page-item ${page >= totalPages ? "disabled" : ""}`}>
-                      <button className="page-link" onClick={() => fetchExternalFromDB(page + 1)} type="button">
-                        »
-                      </button>
-                    </li>
-                  </ul>
-                </nav>
-              </div>
-            ) : null}
+                  <li className={`page-item ${page >= totalPages ? "disabled" : ""}`}>
+                    <button
+                      className="page-link"
+                      onClick={() => (tab === "external" ? fetchExternalFromDB(page + 1) : fetchSelfFromDB(page + 1))}
+                      type="button"
+                    >
+                      »
+                    </button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
           </div>
         </div>
 
-        {/* Modal cài đặt */}
+        {selfModalOpen ? (
+          <div className="ad-modal-backdrop" onMouseDown={closeSelfModal}>
+            <div className="ad-modal ad-modal-lg" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="ad-modal-header d-flex align-items-start justify-content-between gap-3 mb-2">
+                <div className="min-w-0">
+                  <div className="fw-bold">
+                    {editingSelfId ? "Sửa truyện tự đăng" : "Thêm truyện tự đăng"}
+                  </div>
+                  <div className="text-secondary small">
+                    Có ảnh chính + miễn phí / trả phí + chèn ảnh trong nội dung
+                  </div>
+                </div>
+
+                <button
+                  className="btn btn-light btn-sm"
+                  type="button"
+                  onClick={closeSelfModal}
+                  disabled={selfSaving}
+                >
+                  <i className="bi bi-x-lg" />
+                </button>
+              </div>
+
+              <div className="ad-modal-body-scroll mt-3">
+                <label className="form-label fw-semibold">Tiêu đề</label>
+                <input
+                  className="form-control"
+                  value={selfDraft.title}
+                  onChange={(e) => setSelfDraft((p) => ({ ...p, title: e.target.value }))}
+                  placeholder="Ví dụ: Truyện tự đăng của tôi..."
+                  disabled={selfSaving}
+                />
+
+                <div className="mt-3">
+                  <label className="form-label fw-semibold">Ảnh chính</label>
+
+                  <div className="d-flex flex-wrap gap-2 mb-2">
+                    <input
+                      className="form-control"
+                      value={selfDraft.cover_image}
+                      onChange={(e) => setSelfDraft((p) => ({ ...p, cover_image: e.target.value }))}
+                      placeholder="Nhập URL ảnh chính hoặc upload từ máy..."
+                      disabled={selfSaving}
+                    />
+
+                    <div className="d-flex gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-outline-success btn-sm"
+                        onClick={pickCoverFile}
+                        disabled={selfSaving}
+                      >
+                        <i className="bi bi-upload me-1" />
+                        Upload ảnh chính
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary btn-sm"
+                        onClick={removeCoverImage}
+                        disabled={selfSaving || !selfDraft.cover_image}
+                      >
+                        <i className="bi bi-x-circle me-1" />
+                        Xóa ảnh
+                      </button>
+                    </div>
+                  </div>
+
+                  <input
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={onUploadCoverImage}
+                  />
+
+                  {selfDraft.cover_image ? (
+                    <div className="mt-2">
+                      <img
+                        src={buildSelfCover(selfDraft.cover_image)}
+                        alt="cover preview"
+                        className="self-cover-preview"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-secondary small mt-2">Chưa có ảnh chính.</div>
+                  )}
+                </div>
+
+                <div className="mt-3">
+                  <label className="form-label fw-semibold">Danh mục</label>
+                  <select
+                    className="form-select"
+                    value={selfDraft.category_id}
+                    onChange={(e) => setSelfDraft((p) => ({ ...p, category_id: e.target.value }))}
+                    disabled={selfSaving}
+                  >
+                    <option value="">-- Chọn danh mục --</option>
+                    {cats.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mt-3">
+                  <label className="form-label fw-semibold">Trạng thái</label>
+                  <select
+                    className="form-select"
+                    value={selfDraft.status}
+                    onChange={(e) => setSelfDraft((p) => ({ ...p, status: Number(e.target.value) }))}
+                    disabled={selfSaving}
+                  >
+                    <option value={1}>Hiển thị</option>
+                    <option value={0}>Ẩn</option>
+                  </select>
+                </div>
+
+                <div className="mt-3">
+                  <label className="form-label fw-semibold">Hình thức xem</label>
+                  <select
+                    className="form-select"
+                    value={selfDraft.is_paid ? "paid" : "free"}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setSelfDraft((p) => ({
+                        ...p,
+                        is_paid: v === "paid",
+                        price: v === "paid" ? Number(p.price || 0) : 0,
+                      }));
+                    }}
+                    disabled={selfSaving}
+                  >
+                    <option value="free">Miễn phí</option>
+                    <option value="paid">Trả phí</option>
+                  </select>
+
+                  {selfDraft.is_paid ? (
+                    <div className="mt-2">
+                      <label className="form-label fw-semibold mb-1">Giá (VNĐ)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        className="form-control"
+                        value={selfDraft.price}
+                        onChange={(e) => setSelfDraft((p) => ({ ...p, price: e.target.value }))}
+                        placeholder="Ví dụ: 5000"
+                        disabled={selfSaving}
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-secondary small mt-2">User sẽ được xem miễn phí.</div>
+                  )}
+                </div>
+
+                <div className="mt-3">
+                  <label className="form-label fw-semibold">Nội dung</label>
+
+                  <div className="d-flex flex-wrap gap-2 mb-2">
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${editor?.isActive("bold") ? "btn-dark" : "btn-outline-dark"}`}
+                      onClick={() => editor?.chain().focus().toggleBold().run()}
+                      disabled={!editor}
+                    >
+                      <b>B</b>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${editor?.isActive("italic") ? "btn-dark" : "btn-outline-dark"}`}
+                      onClick={() => editor?.chain().focus().toggleItalic().run()}
+                      disabled={!editor}
+                    >
+                      <i>I</i>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${editor?.isActive("underline") ? "btn-dark" : "btn-outline-dark"}`}
+                      onClick={() => editor?.chain().focus().toggleUnderline().run()}
+                      disabled={!editor}
+                    >
+                      <u>U</u>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${editor?.isActive("bulletList") ? "btn-dark" : "btn-outline-dark"}`}
+                      onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                      disabled={!editor}
+                    >
+                      • List
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-outline-dark btn-sm"
+                      onClick={setLink}
+                      disabled={!editor}
+                    >
+                      <i className="bi bi-link-45deg" /> Link
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary btn-sm"
+                      onClick={addImageByUrl}
+                      disabled={!editor}
+                    >
+                      <i className="bi bi-image" /> Ảnh URL
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-outline-success btn-sm"
+                      onClick={pickImageFile}
+                      disabled={!editor}
+                    >
+                      <i className="bi bi-upload" /> Upload ảnh
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary btn-sm"
+                      onClick={() => editor?.chain().focus().clearContent().run()}
+                      disabled={!editor}
+                    >
+                      Xóa nội dung
+                    </button>
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={onUploadImage}
+                  />
+
+                  <div className="border rounded-3 p-3 bg-white editor-scroll-box">
+                    <EditorContent editor={editor} />
+                  </div>
+
+                  <div className="text-secondary small mt-2">
+                    * Ảnh trong nội dung và ảnh chính upload từ máy đang lưu dạng base64.
+                  </div>
+                </div>
+              </div>
+
+              <div className="ad-modal-actions mt-4">
+                <button
+                  className="btn btn-outline-secondary w-100"
+                  type="button"
+                  onClick={closeSelfModal}
+                  disabled={selfSaving}
+                >
+                  Hủy
+                </button>
+                <button
+                  className="btn btn-primary w-100"
+                  type="button"
+                  onClick={saveSelfComic}
+                  disabled={selfSaving}
+                >
+                  {selfSaving ? "Đang lưu..." : editingSelfId ? "Cập nhật" : "Lưu"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {settingComic ? (
           <div className="ad-modal-backdrop" onMouseDown={closeSetting}>
             <div className="ad-modal" onMouseDown={(e) => e.stopPropagation()}>
               <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
                 <div className="min-w-0">
-                  <div className="fw-bold">Cài đặt truyện</div>
+                  <div className="fw-bold">Cài đặt truyện (Truyện ngoài DB)</div>
                   <div className="text-secondary small text-truncate" title={settingComic?.name}>
                     {settingComic?.name}
                   </div>
                 </div>
 
-                <button className="btn btn-light btn-sm" type="button" onClick={closeSetting} disabled={saving}>
+                <button className="btn btn-light btn-sm" type="button" onClick={closeSetting} disabled={savingSetting}>
                   <i className="bi bi-x-lg" />
                 </button>
               </div>
@@ -423,10 +1105,10 @@ const handleSyncToDB = async () => {
                   className="form-select"
                   value={settingDraft.type}
                   onChange={(e) => setSettingDraft((p) => ({ ...p, type: e.target.value }))}
-                  disabled={saving}
+                  disabled={savingSetting}
                 >
                   <option value="free">Miễn phí</option>
-                  <option value="paid">Yêu cầu thanh toán</option>
+                  <option value="paid">Trả phí</option>
                 </select>
 
                 {settingDraft.type === "paid" ? (
@@ -439,7 +1121,7 @@ const handleSyncToDB = async () => {
                       value={settingDraft.price}
                       onChange={(e) => setSettingDraft((p) => ({ ...p, price: e.target.value }))}
                       placeholder="Ví dụ: 5000"
-                      disabled={saving}
+                      disabled={savingSetting}
                     />
                   </div>
                 ) : (
@@ -447,22 +1129,134 @@ const handleSyncToDB = async () => {
                 )}
 
                 <div className="ad-modal-actions mt-4">
-                  <button className="btn btn-outline-secondary w-100" type="button" onClick={closeSetting} disabled={saving}>
-                    Huỷ
+                  <button className="btn btn-outline-secondary w-100" type="button" onClick={closeSetting} disabled={savingSetting}>
+                    Hủy
                   </button>
-                  <button className="btn btn-primary w-100" type="button" onClick={saveSetting} disabled={saving}>
-                    {saving ? "Đang lưu..." : "Lưu cài đặt"}
+                  <button className="btn btn-primary w-100" type="button" onClick={saveSetting} disabled={savingSetting}>
+                    {savingSetting ? "Đang lưu..." : "Lưu cài đặt"}
                   </button>
                 </div>
               </div>
             </div>
           </div>
         ) : null}
+
+        <style>{`
+          .tiptap-content {
+            min-height: 220px;
+            outline: none;
+            line-height: 1.6;
+          }
+
+          .tiptap-content p {
+            margin: 0 0 10px;
+          }
+
+          .tiptap-content ul {
+            padding-left: 20px;
+            margin: 0 0 10px;
+          }
+
+          .tiptap-content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 12px;
+            margin: 10px 0;
+          }
+
+          .tiptap-content a {
+            text-decoration: underline;
+          }
+
+          .tiptap-content p.is-editor-empty:first-child::before {
+            content: attr(data-placeholder);
+            float: left;
+            color: #999;
+            pointer-events: none;
+            height: 0;
+          }
+
+          .ad-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 1050;
+          }
+
+          .ad-modal {
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+          }
+
+          .ad-modal-lg {
+            max-width: 980px;
+          }
+
+          .ad-modal-header {
+            flex: 0 0 auto;
+          }
+
+          .ad-modal-body-scroll {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding-right: 6px;
+            min-height: 0;
+          }
+
+          .ad-modal-actions {
+            flex: 0 0 auto;
+            display: flex;
+            gap: 12px;
+            border-top: 1px solid #eee;
+            padding-top: 16px;
+            background: #fff;
+          }
+
+          .editor-scroll-box {
+            min-height: 240px;
+            max-height: 320px;
+            overflow-y: auto;
+          }
+
+          .self-cover-preview {
+            width: 150px;
+            height: 210px;
+            object-fit: cover;
+            border-radius: 14px;
+            border: 1px solid #ddd;
+            display: block;
+          }
+
+          .ad-modal-body-scroll::-webkit-scrollbar,
+          .editor-scroll-box::-webkit-scrollbar {
+            width: 8px;
+          }
+
+          .ad-modal-body-scroll::-webkit-scrollbar-thumb,
+          .editor-scroll-box::-webkit-scrollbar-thumb {
+            background: #c7c7c7;
+            border-radius: 10px;
+          }
+
+          .ad-modal-body-scroll::-webkit-scrollbar-track,
+          .editor-scroll-box::-webkit-scrollbar-track {
+            background: #f3f3f3;
+          }
+        `}</style>
       </main>
     </div>
   );
-}
-
-function fmtVND(n) {
-  return new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
 }
