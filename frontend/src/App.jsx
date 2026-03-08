@@ -22,6 +22,7 @@ import NotificationsPage from './pages/user/NotificationsPage';
 import ComicListPage from './pages/user/comicListPage';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminCategories from './pages/admin/AdminCategories';
+import SelfComicListPage from './pages/user/SelfComicListPage';
 
 function App() {
  
@@ -41,7 +42,7 @@ function App() {
  <Route path="/notifications" element={<NotificationsPage />} />
  <Route path="/truyen" element={<ComicListPage />} />
  <Route path="/admin/users" element={<AdminUsers />} />
-
+<Route path="/self-comics/:id" element={<SelfComicListPage />} />
 <Route path="/admin/categories" element={<AdminCategories />} />
     </Routes>
   );

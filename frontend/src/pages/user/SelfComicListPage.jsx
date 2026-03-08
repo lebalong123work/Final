@@ -4,12 +4,11 @@ import "./comicListPage.css";
 import Header from "../../components/Header";
 
 const API_BASE = "http://localhost:5000";
-const IMG_BASE = "https://img.otruyenapi.com/uploads/comics/";
 
-function buildCover(thumbUrl) {
-  if (!thumbUrl) return "https://via.placeholder.com/500x700?text=No+Image";
-  if (thumbUrl.startsWith("http")) return thumbUrl;
-  return IMG_BASE + thumbUrl;
+function buildCover(src) {
+  if (!src) return "https://via.placeholder.com/500x700?text=No+Image";
+  if (src.startsWith("http")) return src;
+  return src;
 }
 
 function fmtUpdated(d) {
@@ -21,25 +20,29 @@ function fmtUpdated(d) {
   }
 }
 
-function normalizeExternalComic(c) {
-  return {
-    id: c.api_id || c.id,
-    name: c.name || "Không tên",
-    slug: c.slug,
-    cover: buildCover(c.thumb_url),
-    tags: (c.categories || []).map((x) => x?.name).filter(Boolean),
-    updated: fmtUpdated(c.updated_at || c.created_at),
-    latest: c.latest_chapter || null,
-    is_paid: !!c.is_paid,
-    price: Number(c.price || 0),
-  };
-}
-
 function fmtVND(n) {
   return new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
 }
 
-async function fetchJSON(url, options) {
+function normalizeSelfComic(c) {
+  return {
+    id: c.id,
+    name: c.title || "Không tên",
+    slug: c.slug || c.id,
+    cover: buildCover(c.cover_image),
+    tags: c.category_name ? [c.category_name] : [],
+    updated: fmtUpdated(c.updated_at || c.created_at),
+    latest: c.total_chapters || null,
+    is_paid: !!c.is_paid,
+    price: Number(c.price || 0),
+    category_id: c.category_id || null,
+    category_name: c.category_name || "",
+    status: Number(c.status || 0),
+    description: c.description || "",
+  };
+}
+
+async function fetchJSON(url, options = {}) {
   const res = await fetch(url, options);
   const text = await res.text();
 
@@ -110,14 +113,15 @@ function Pagination({ page, totalPages, onPage }) {
   );
 }
 
-export default function ComicListPage() {
+export default function SelfComicListPage() {
   const [sp, setSp] = useSearchParams();
 
   const page = Math.max(1, Number(sp.get("page") || 1));
   const q = (sp.get("q") || "").trim();
-  const category = (sp.get("category") || "").trim();
+  const categoryId = (sp.get("categoryId") || sp.get("other_category_id") || "").trim();
 
   const limit = 24;
+  const token = localStorage.getItem("token") || "";
 
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({ page: 1, limit, total: 0, totalPages: 1 });
@@ -128,7 +132,7 @@ export default function ComicListPage() {
   const [catLoading, setCatLoading] = useState(false);
   const [catErr, setCatErr] = useState("");
 
-  const buildDetailUrl = (comic) => `/truyen/${comic.slug || comic.id}`;
+  const buildDetailUrl = (comic) => `/self-comics/${comic.id}`;
 
   const setParam = (key, val) => {
     const next = new URLSearchParams(sp);
@@ -148,16 +152,14 @@ export default function ComicListPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // load danh mục
   useEffect(() => {
     const run = async () => {
       try {
         setCatLoading(true);
         setCatErr("");
 
-        const data = await fetchJSON(`${API_BASE}/api/external-categories`);
+        const data = await fetchJSON(`${API_BASE}/api/categories`);
         const rows = Array.isArray(data?.data) ? data.data : [];
-
         setCategories(rows);
       } catch (e) {
         setCatErr(e?.message || "Lỗi tải danh mục");
@@ -170,24 +172,29 @@ export default function ComicListPage() {
     run();
   }, []);
 
-  // load truyện
   useEffect(() => {
     const run = async () => {
       try {
         setLoading(true);
         setErr("");
 
-        const url = new URL(`${API_BASE}/api/external-comics`);
+        const url = new URL(`${API_BASE}/api/self-comics`);
         url.searchParams.set("page", String(page));
         url.searchParams.set("limit", String(limit));
 
         if (q) url.searchParams.set("q", q);
-        if (category) url.searchParams.set("category", category);
+        if (categoryId) url.searchParams.set("categoryId", categoryId);
 
-        const data = await fetchJSON(url.toString());
+        const data = await fetchJSON(url.toString(), {
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`,
+              }
+            : {},
+        });
 
         const rows = Array.isArray(data?.data) ? data.data : [];
-        setItems(rows.map(normalizeExternalComic));
+        setItems(rows.map(normalizeSelfComic));
 
         setMeta({
           page: Number(data?.page || page),
@@ -205,7 +212,7 @@ export default function ComicListPage() {
     };
 
     run();
-  }, [page, q, category]);
+  }, [page, q, categoryId, token]);
 
   return (
     <div>
@@ -214,7 +221,7 @@ export default function ComicListPage() {
       <div className="clp-wrap">
         <div className="clp-hero">
           <div className="clp-heroLeft">
-            <h1 className="clp-title">Danh sách truyện</h1>
+            <h1 className="clp-title">Truyện tự đăng</h1>
             <div className="clp-sub">
               <i className="bi bi-collection me-2" />
               Tổng: <b className="ms-1">{meta.total}</b>
@@ -230,7 +237,7 @@ export default function ComicListPage() {
               <input
                 value={q}
                 onChange={(e) => setParam("q", e.target.value)}
-                placeholder="Tìm truyện..."
+                placeholder="Tìm truyện tự đăng..."
               />
               {q ? (
                 <button className="clp-x" onClick={() => setParam("q", "")} aria-label="Clear">
@@ -240,15 +247,14 @@ export default function ComicListPage() {
             </div>
 
             <select
-              value={category}
-              onChange={(e) => setParam("category", e.target.value)}
+              value={categoryId}
+              onChange={(e) => setParam("categoryId", e.target.value)}
               className="clp-select"
               disabled={catLoading}
             >
-              <option value="">Tất cả thể loại</option>
-
+              <option value="">Tất cả danh mục</option>
               {categories.map((cat) => (
-                <option key={cat.id} value={cat.slug}>
+                <option key={cat.id} value={cat.id}>
                   {cat.name}
                 </option>
               ))}
@@ -270,7 +276,12 @@ export default function ComicListPage() {
           </div>
         ) : null}
 
-        {loading ? (
+        {!token ? (
+          <div className="clp-alert">
+            <i className="bi bi-exclamation-triangle me-2" />
+            Bạn cần đăng nhập để xem truyện tự đăng.
+          </div>
+        ) : loading ? (
           <div className="clp-loading">
             <div className="spinner-border spinner-border-sm me-2" />
             Đang tải trang {page}...
@@ -287,7 +298,7 @@ export default function ComicListPage() {
                 const detailUrl = buildDetailUrl(c);
 
                 return (
-                <div key={c.id} className="col-12 col-sm-6 col-lg-4">
+                  <div key={c.id} className="col-12 col-sm-6 col-lg-4">
                     <div className="clp-card">
                       <Link to={detailUrl} className="clp-thumbLink" aria-label={`Xem ${c.name}`}>
                         <div className="clp-thumb">
@@ -302,7 +313,7 @@ export default function ComicListPage() {
                           </div>
 
                           <div className="clp-badgesRight">
-                            {c.latest ? <span className="clp-badge dark">Chap {c.latest}</span> : null}
+                            {c.latest ? <span className="clp-badge dark">{c.latest} chap</span> : null}
 
                             {c.is_paid ? (
                               <span className="clp-badge pay">
@@ -328,8 +339,19 @@ export default function ComicListPage() {
                         <div className="clp-name" title={c.name}>
                           {c.name}
                         </div>
+
+                        <div className="clp-meta">
+                          <i className="bi bi-bookmark me-1" />
+                          {c.category_name || "Chưa có danh mục"}
+                        </div>
+
                         <div className="clp-meta">
                           <i className="bi bi-clock me-1" /> {c.updated}
+                        </div>
+
+                        <div className="clp-meta">
+                          <i className="bi bi-card-text me-1" />
+                          {c.status === 1 ? "Đang phát hành" : "Ẩn / nháp"}
                         </div>
                       </div>
                     </div>

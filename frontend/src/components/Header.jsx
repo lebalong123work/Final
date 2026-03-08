@@ -5,6 +5,24 @@ import { io } from "socket.io-client";
 
 const API_BASE = "http://localhost:5000";
 
+async function fetchJSON(url, options) {
+  const res = await fetch(url, options);
+  const text = await res.text();
+
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    //
+  }
+
+  if (!res.ok) {
+    throw new Error(json?.message || `HTTP ${res.status}`);
+  }
+
+  return json;
+}
+
 export default function Header() {
   const navigate = useNavigate();
 
@@ -22,15 +40,26 @@ export default function Header() {
 
   const token = useMemo(() => localStorage.getItem("token") || "", [tick]);
 
-  
   const [notifOpen, setNotifOpen] = useState(false);
   const [unread, setUnread] = useState(0);
-  const [notifs, setNotifs] = useState([]); // [{id,title,body,url,created_at,read_at,...}]
+  const [notifs, setNotifs] = useState([]);
 
   const socketRef = useRef(null);
   const notifHoverTimerRef = useRef(null);
 
-  // storage sync giữa nhiều tab
+  // external categories
+  const [categories, setCategories] = useState([]);
+  const [catLoading, setCatLoading] = useState(false);
+  const [catErr, setCatErr] = useState("");
+
+  const visibleCategories = categories.slice(0, 5);
+  const moreCategories = categories.slice(5);
+
+  // other categories: /api/categories
+  const [otherCategories, setOtherCategories] = useState([]);
+  const [otherCatLoading, setOtherCatLoading] = useState(false);
+  const [otherCatErr, setOtherCatErr] = useState("");
+
   useEffect(() => {
     const onStorage = (e) => {
       if (e.key === "user" || e.key === "token") setTick((t) => t + 1);
@@ -43,7 +72,6 @@ export default function Header() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 
-    // đóng socket
     if (socketRef.current) {
       try {
         socketRef.current.disconnect();
@@ -59,7 +87,6 @@ export default function Header() {
     navigate("/");
   };
 
-
   const fetchNotifications = async () => {
     if (!token) return;
     try {
@@ -70,16 +97,59 @@ export default function Header() {
       if (r.ok && Array.isArray(j?.data)) {
         setNotifs(j.data);
       }
-    } catch  {
-      // ignore
+    } catch {
+      //
     }
   };
 
- 
+  // load external categories
   useEffect(() => {
-   
+    const run = async () => {
+      try {
+        setCatLoading(true);
+        setCatErr("");
+
+        const data = await fetchJSON(`${API_BASE}/api/external-categories`);
+        const rows = Array.isArray(data?.data) ? data.data : [];
+
+        setCategories(rows);
+      } catch (e) {
+        console.error("Load external categories error:", e);
+        setCatErr(e?.message || "Lỗi tải danh mục");
+        setCategories([]);
+      } finally {
+        setCatLoading(false);
+      }
+    };
+
+    run();
+  }, []);
+
+  // load "khác" categories
+  useEffect(() => {
+    const run = async () => {
+      try {
+        setOtherCatLoading(true);
+        setOtherCatErr("");
+
+        const data = await fetchJSON(`${API_BASE}/api/categories`);
+        const rows = Array.isArray(data?.data) ? data.data : [];
+
+        setOtherCategories(rows);
+      } catch (e) {
+        console.error("Load other categories error:", e);
+        setOtherCatErr(e?.message || "Lỗi tải mục khác");
+        setOtherCategories([]);
+      } finally {
+        setOtherCatLoading(false);
+      }
+    };
+
+    run();
+  }, []);
+
+  useEffect(() => {
     if (!token || !user?.id) {
-   
       if (socketRef.current) {
         try {
           socketRef.current.disconnect();
@@ -93,7 +163,6 @@ export default function Header() {
       return;
     }
 
-    // tạo socket 1 lần
     if (!socketRef.current) {
       socketRef.current = io(API_BASE, {
         transports: ["websocket", "polling"],
@@ -102,7 +171,6 @@ export default function Header() {
       });
 
       socketRef.current.on("connect", () => {
-        // hỏi unread ngay khi connect
         socketRef.current?.emit("notif:unread:get");
       });
 
@@ -110,24 +178,20 @@ export default function Header() {
         console.log("socket connect_error:", e.message);
       });
     } else {
-      // cập nhật token nếu đổi
       socketRef.current.auth = { token };
       if (!socketRef.current.connected) socketRef.current.connect();
     }
 
     const s = socketRef.current;
 
-    // unread badge realtime
     const onUnread = (payload) => {
       if (typeof payload?.unread === "number") setUnread(payload.unread);
     };
 
-    // notif realtime: new / updated
     const onNotifNew = (payload) => {
       const n = payload?.notification;
       if (!n?.id) return;
       setNotifs((prev) => {
-        // upsert theo id + đưa lên đầu
         const existedIdx = prev.findIndex((x) => Number(x.id) === Number(n.id));
         const copy = [...prev];
         if (existedIdx >= 0) copy.splice(existedIdx, 1);
@@ -144,9 +208,9 @@ export default function Header() {
         if (idx < 0) return [n, ...prev];
         const copy = [...prev];
         copy[idx] = { ...copy[idx], ...n };
-        // đưa lên đầu cho “mới nhất”
+        const moved = copy[idx];
         copy.splice(idx, 1);
-        copy.unshift(copy[idx] || n);
+        copy.unshift(moved);
         return copy;
       });
     };
@@ -155,7 +219,6 @@ export default function Header() {
     s.on("notif:new", onNotifNew);
     s.on("notif:updated", onNotifUpdated);
 
-    // load list lần đầu (REST)
     fetchNotifications();
 
     return () => {
@@ -163,27 +226,21 @@ export default function Header() {
       s.off("notif:new", onNotifNew);
       s.off("notif:updated", onNotifUpdated);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user?.id]);
 
-  // =========================
-  // ✅ UI: hover open/close dropdown notification
-  // =========================
   const openNotif = () => {
     if (notifHoverTimerRef.current) clearTimeout(notifHoverTimerRef.current);
     setNotifOpen(true);
   };
+
   const closeNotif = () => {
     if (notifHoverTimerRef.current) clearTimeout(notifHoverTimerRef.current);
-    // delay nhẹ để user rê chuột xuống list không bị đóng
     notifHoverTimerRef.current = setTimeout(() => setNotifOpen(false), 180);
   };
 
-  
   const markReadAndGo = (notif) => {
     if (!notif?.id) return;
 
-   
     setNotifs((prev) =>
       prev.map((x) =>
         Number(x.id) === Number(notif.id)
@@ -192,9 +249,7 @@ export default function Header() {
       )
     );
 
-
     socketRef.current?.emit("notif:read", { notifId: notif.id });
-
 
     if (notif?.url) {
       setNotifOpen(false);
@@ -213,18 +268,23 @@ export default function Header() {
     <header className="zt-header border-bottom bg-white">
       <nav className="navbar navbar-expand-lg navbar-light">
         <div className="container-fluid px-4">
-          {/* Brand */}
           <Link to="/" className="navbar-brand d-flex align-items-center gap-2">
             <div className="d-flex align-items-center gap-2 mb-0">
-               <a href="/"><img  className="hero-logo" src="https://i.ibb.co/4wJ9F49W/logo-fotor-bg-remover-202603048410-1.png" alt="logo-fotor-bg-remover-202603048410-1" border="0"/></a>
-          
+              <a href="/">
+                <img
+                  className="hero-logo"
+                  src="https://i.ibb.co/4wJ9F49W/logo-fotor-bg-remover-202603048410-1.png"
+                  alt="logo"
+                  border="0"
+                />
+              </a>
+
               <span className="brand-text">
                 <span className="brand-z">R</span>eadink
               </span>
             </div>
           </Link>
 
-          {/* Toggle */}
           <button
             className="navbar-toggler"
             type="button"
@@ -235,55 +295,68 @@ export default function Header() {
           </button>
 
           <div className="collapse navbar-collapse" id="ztNav">
-            {/* Menu */}
             <ul className="navbar-nav mx-auto mb-2 mb-lg-0 zt-nav">
-              <li className="nav-item">
-                <NavLink className="nav-link" to="#">
-                  Thể loại
-                </NavLink>
-              </li>
-              <li className="nav-item">
-                <NavLink className="nav-link" to="#">
-                  Đang phát hành
-                </NavLink>
-              </li>
-              <li className="nav-item">
-                <NavLink className="nav-link" to="#">
-                  Hoàn thành
-                </NavLink>
-              </li>
-              <li className="nav-item">
-                <NavLink className="nav-link" to="#">
-                  Sắp ra mắt
-                </NavLink>
-              </li>
-              <li className="nav-item">
-                <NavLink className="nav-link" to="#">
-                  Truyện mới
-                </NavLink>
+              {visibleCategories.map((cat) => (
+                <li className="nav-item" key={cat.id}>
+                  <NavLink className="nav-link" to={`/truyen?category=${cat.slug}`}>
+                    {cat.name}
+                  </NavLink>
+                </li>
+              ))}
+
+              {moreCategories.length > 0 ? (
+                <li className="nav-item dropdown zt-catMore">
+                  <span className="nav-link zt-catMoreBtn">
+                    Xem thêm <i className="bi bi-chevron-down ms-1" />
+                  </span>
+
+                  <div className="zt-catDropdown">
+                    <div className="zt-catGrid">
+                      {moreCategories.map((cat) => (
+                        <Link
+                          key={cat.id}
+                          className="zt-catItem"
+                          to={`/truyen?category=${cat.slug}`}
+                        >
+                          {cat.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </li>
+              ) : null}
+
+              {/* MỤC KHÁC */}
+              <li className="nav-item dropdown zt-catMore">
+                <span className="nav-link zt-catMoreBtn">
+                  Khác <i className="bi bi-chevron-down ms-1" />
+                </span>
+
+                <div className="zt-catDropdown">
+                  {otherCatLoading ? (
+                    <div className="zt-catStatus">Đang tải...</div>
+                  ) : otherCatErr ? (
+                    <div className="zt-catStatus text-danger">{otherCatErr}</div>
+                  ) : otherCategories.length === 0 ? (
+                    <div className="zt-catStatus">Chưa có dữ liệu.</div>
+                  ) : (
+                    <div className="zt-catGrid">
+                      {otherCategories.map((cat) => (
+                        <Link
+                          key={cat.id}
+                          className="zt-catItem"
+                          to={`/self-comics/=${cat.id}`}
+                        >
+                          {cat.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </li>
             </ul>
 
-            {/* Search + Notifications + User */}
             <div className="d-flex align-items-center gap-3">
-              {/* Search */}
-              <form
-                className="d-flex align-items-center zt-search"
-                onSubmit={(e) => e.preventDefault()}
-              >
-                <div className="input-group zt-search-group">
-                  <input
-                    type="search"
-                    className="form-control zt-search-input"
-                    placeholder="Tìm truyện..."
-                  />
-                  <button className="btn zt-search-btn" type="button">
-                    <i className="bi bi-search" />
-                  </button>
-                </div>
-              </form>
-
-             
               <div
                 className="zt-notifWrap"
                 onMouseEnter={openNotif}
@@ -298,13 +371,10 @@ export default function Header() {
                 >
                   <i className="bi bi-bell fs-5" />
                   {user && unread > 0 ? (
-                    <span className="zt-notifBadge">
-                      {unread > 99 ? "99+" : unread}
-                    </span>
+                    <span className="zt-notifBadge">{unread > 99 ? "99+" : unread}</span>
                   ) : null}
                 </button>
 
-                {/* dropdown */}
                 {notifOpen && user ? (
                   <div className="zt-notifDropdown">
                     <div className="zt-notifHead">
@@ -343,13 +413,9 @@ export default function Header() {
                                   {isUnread ? <span className="dot" /> : null}
                                   {n.title || "Thông báo"}
                                 </div>
-                                <div className="zt-notifItemTime">
-                                  {fmtTime(n.created_at)}
-                                </div>
+                                <div className="zt-notifItemTime">{fmtTime(n.created_at)}</div>
                               </div>
-                              {n.body ? (
-                                <div className="zt-notifItemBody">{n.body}</div>
-                              ) : null}
+                              {n.body ? <div className="zt-notifItemBody">{n.body}</div> : null}
                             </button>
                           );
                         })
@@ -357,7 +423,11 @@ export default function Header() {
                     </div>
 
                     <div className="zt-notifFoot">
-                      <Link className="zt-notifAll" to="/notifications" onClick={() => setNotifOpen(false)}>
+                      <Link
+                        className="zt-notifAll"
+                        to="/notifications"
+                        onClick={() => setNotifOpen(false)}
+                      >
                         Xem tất cả <i className="bi bi-chevron-right ms-1" />
                       </Link>
                     </div>
@@ -365,7 +435,6 @@ export default function Header() {
                 ) : null}
               </div>
 
-              {/* User Dropdown */}
               <div className="dropdown">
                 <button
                   className="btn user-btn dropdown-toggle"
@@ -404,13 +473,13 @@ export default function Header() {
                       </li>
 
                       {(user.role === "admin" || user.role === "sub_admin") && (
-      <li>
-        <Link className="dropdown-item text-danger" to="/admin">
-          <i className="bi bi-speedometer2 me-2"></i>
-          Quản trị
-        </Link>
-      </li>
-    )}
+                        <li>
+                          <Link className="dropdown-item text-danger" to="/admin">
+                            <i className="bi bi-speedometer2 me-2"></i>
+                            Quản trị
+                          </Link>
+                        </li>
+                      )}
 
                       <li>
                         <hr className="dropdown-divider" />
@@ -426,10 +495,12 @@ export default function Header() {
                   )}
                 </ul>
               </div>
-              {/* end user dropdown */}
             </div>
           </div>
         </div>
+
+        {catErr ? <div className="px-4 pb-2 text-danger small">Lỗi danh mục: {catErr}</div> : null}
+        {catLoading ? <div className="px-4 pb-2 text-muted small">Đang tải danh mục...</div> : null}
       </nav>
     </header>
   );

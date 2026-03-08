@@ -17,7 +17,7 @@ const ratingsRoutes = require("./routes/ratings")
 const notificationsRoutes = require("./routes/notifications");
 const adminFinanceRoutes = require("./routes/adminFinance");
 const selfChaptersRoutes = require("./routes/selfChapters");
-
+const externalCategoriesRoutes = require("./routes/externalCategories");
 const { initSocket } = require("./socket");
 
 const app = express();
@@ -59,6 +59,7 @@ app.use("/api/admin", adminFinanceRoutes);
 app.use("/api/categories", require("./routes/categories"));
 app.use("/api/self-comics", selfComicsRoutes);
 app.use("/api/self-chapters", selfChaptersRoutes);
+app.use("/api/external-categories", externalCategoriesRoutes);
 const PORT = process.env.PORT || 5000;
 
 
