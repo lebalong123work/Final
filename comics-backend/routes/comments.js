@@ -17,6 +17,40 @@ function isValidChapterType(type) {
 }
 
 // ======================================================
+// GET /api/comments/me/stats
+// lấy tổng số bình luận của user hiện tại
+// ======================================================
+router.get("/me/stats", auth, async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
+
+    const result = await db.query(
+      `
+      SELECT
+        COUNT(*)::int AS total_comments,
+        COUNT(CASE WHEN chapter_type = 'external' THEN 1 END)::int AS external_comments,
+        COUNT(CASE WHEN chapter_type = 'self' THEN 1 END)::int AS self_comments
+      FROM chapter_comments
+      WHERE user_id = $1
+      `,
+      [userId]
+    );
+
+    return res.json({
+      success: true,
+      data: result.rows[0] || {
+        total_comments: 0,
+        external_comments: 0,
+        self_comments: 0,
+      },
+    });
+  } catch (e) {
+    console.error("GET /api/comments/me/stats error:", e);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ======================================================
 // GET /api/comments?chapterType=external&chapterId=abc
 // GET /api/comments?chapterType=self&chapterId=12
 // ======================================================

@@ -1,203 +1,381 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import "./profileWallet.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-const MOCK_LIBRARY = [
-  { id: 1, title: "Kiếm Thần Trở Lại", cover: "https://picsum.photos/500/800?random=41", status: "Đang phát hành", lastRead: "Chap 86" },
-  { id: 2, title: "Bí Mật Thanh Xuân", cover: "https://picsum.photos/500/800?random=42", status: "Hoàn thành", lastRead: "Chap 120" },
-  { id: 3, title: "Hệ Thống Bá Đạo", cover: "https://picsum.photos/500/800?random=43", status: "Đang phát hành", lastRead: "Chap 37" },
-  { id: 4, title: "Ta Có Một Thành Phố", cover: "https://picsum.photos/500/800?random=44", status: "Sắp ra mắt", lastRead: "Chưa đọc" },
-];
-
-
 
 const API_BASE = "http://localhost:5000";
-
-export default function ProfileWallet() {
-  const [tab, setTab] = useState("profile"); 
-  const [q, setQ] = useState("");
-const [showTopupModal, setShowTopupModal] = useState(false);
-const [topupAmount, setTopupAmount] = useState("");
-  const [me, setMe] = useState(null);          
-  const [wallet, setWallet] = useState(null);  
-  const [loading, setLoading] = useState(true);
-  const [loadErr, setLoadErr] = useState("");
-const [topupSubmitting, setTopupSubmitting] = useState(false);
-  const token = localStorage.getItem("token");
 const TX_LIMIT = 5;
 
-const [recentTx, setRecentTx] = useState([]);
-const [txList, setTxList] = useState([]);
-const [txPage, setTxPage] = useState(1);
-const [txTotalPages, setTxTotalPages] = useState(1);
-const [txLoading, setTxLoading] = useState(false);
-  const fmtVND = (n) =>
-    new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
+async function fetchJSON(url, options = {}) {
+  const res = await fetch(url, options);
+  const text = await res.text();
 
-  
-  const uiUser = useMemo(() => {
-    const username = me?.username || "User";
-    const email = me?.email || "";
-    return {
-      name: username,
-      username: email ? email : "@" + username,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`,
-      level: 1,
-      xp: 0,
-      nextXp: 100,
-    
-      stats: [
-        { label: "Truyện theo dõi", value: 0, icon: "bi-bookmark-heart" },
-        { label: "Chap đã đọc", value: 0, icon: "bi-lightning-charge" },
-        { label: "Bình luận", value: 0, icon: "bi-chat-dots" },
-      ],
-    };
-  }, [me]);
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    const err = new Error(
+      `API không trả JSON. URL: ${url} | Status: ${res.status} | Body: ${text.slice(0, 150)}`
+    );
+    err.status = res.status;
+    err.raw = text;
+    throw err;
+  }
 
-  const fmtDate = (iso) => {
+  if (!res.ok) {
+    const err = new Error(json?.message || `HTTP ${res.status}`);
+    err.status = res.status;
+    err.raw = text;
+    throw err;
+  }
+
+  return json;
+}
+
+function fmtVND(n) {
+  return new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
+}
+
+function mapTxNote(note) {
+  const raw = String(note || "").trim().toLowerCase();
+
+  if (raw === "topup_momo") return "Nạp tiền MoMo thành công";
+  if (raw === "topup") return "Nạp tiền thành công";
+  if (raw === "purchase_comic") return "Mua truyện thành công";
+
+  return note || "-";
+}
+
+function fmtDate(iso) {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString("vi-VN");
-};
+}
 
-
-
-
-const badgeClass = (status) => {
+function badgeClass(status) {
   if (status === "success") return "text-bg-success";
   if (status === "pending") return "text-bg-warning";
   if (status === "failed") return "text-bg-danger";
   return "text-bg-secondary";
-};
+}
 
-const fetchRecentTx = async () => {
-  if (!token) return;
-  try {
-    const res = await fetch(`${API_BASE}/api/wallet/transactions?page=1&limit=5`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.message || "Lỗi tải giao dịch");
-    setRecentTx(Array.isArray(data?.data) ? data.data : []);
-  } catch (e) {
-    console.error(e);
-    setRecentTx([]);
-  }
-};
-
-const fetchTxPage = async (page) => {
-  if (!token) return;
-  try {
-    setTxLoading(true);
-    const res = await fetch(
-      `${API_BASE}/api/wallet/transactions?page=${page}&limit=${TX_LIMIT}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.message || "Lỗi tải lịch sử giao dịch");
-
-    setTxList(Array.isArray(data?.data) ? data.data : []);
-    setTxPage(data.page || page);
-    setTxTotalPages(data.totalPages || 1);
-  } catch (e) {
-    console.error(e);
-    setTxList([]);
-    setTxTotalPages(1);
-  } finally {
-    setTxLoading(false);
-  }
-};
-
-useEffect(() => {
-  if (!token) return;
-
-  if (tab === "wallet") {
-    fetchRecentTx(); // lấy 5 giao dịch mới nhất
+function mapLibraryStatus(item) {
+  if (item?.comic_type === "self") {
+    return Number(item?.status) === 1 ? "Đang hiển thị" : "Ẩn / nháp";
   }
 
-  if (tab === "transactions") {
-    fetchTxPage(txPage); // load trang hiện tại
+  const raw = String(item?.status || "").toLowerCase();
+  if (raw === "ongoing") return "Đang phát hành";
+  if (raw === "completed") return "Hoàn thành";
+  if (raw === "coming_soon") return "Sắp ra mắt";
+  return item?.status || "—";
+}
+
+function buildLibraryCover(item) {
+  if (!item?.cover_image) return "https://via.placeholder.com/500x700?text=No+Cover";
+
+  if (item.comic_type === "self") {
+    const cover = item.cover_image;
+    if (cover.startsWith("http")) return cover;
+    if (cover.startsWith("data:image")) return cover;
+    if (cover.startsWith("/")) return `${API_BASE}${cover}`;
+    return cover;
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [tab, token]);
 
-// khi đổi trang ở tab transactions
-useEffect(() => {
-  if (!token) return;
-  if (tab !== "transactions") return;
-  fetchTxPage(txPage);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [txPage]);
-useEffect(() => {
-  const url = new URL(window.location.href);
-  const resultCode = url.searchParams.get("resultCode");
-  const orderId = url.searchParams.get("orderId");
+  if (String(item.cover_image).startsWith("http")) return item.cover_image;
+  return `https://img.otruyenapi.com/uploads/comics/${item.cover_image}`;
+}
 
- 
-  
-  if (!resultCode || !orderId) return;
+function buildLastReadText(item) {
+  if (item?.comic_type === "self") {
+    if (item?.last_read_chapter_no) {
+      return `Chap ${item.last_read_chapter_no}${item?.last_read_chapter_title ? ` • ${item.last_read_chapter_title}` : ""}`;
+    }
+    return "Chưa đọc";
+  }
 
- 
-  const payload = Object.fromEntries(url.searchParams.entries());
+  if (item?.last_read_chapter_title) {
+    return `Chap ${item.last_read_chapter_title}`;
+  }
 
-  (async () => {
+  return "Chưa đọc";
+}
+
+function buildReadUrl(item) {
+  if (item?.comic_type === "self") {
+    if (!item?.id || !item?.last_read_chapter_id) {
+      return `/self-comics/${item?.id}`;
+    }
+
+    return `/doc-self?comicId=${encodeURIComponent(
+      item.id
+    )}&chapterId=${encodeURIComponent(item.last_read_chapter_id)}`;
+  }
+
+  if (!item?.slug) return "#";
+
+  const chapValue = item?.last_read_chapter_api || "";
+
+  if (!chapValue) return `/truyen/${item.slug}`;
+
+  return `/doc?slug=${encodeURIComponent(item.slug)}&chap=${encodeURIComponent(
+    chapValue
+  )}`;
+}
+
+function buildDetailUrl(item) {
+  if (item?.comic_type === "self") {
+    return `/self-comics/${item?.id}`;
+  }
+  return `/truyen/${item?.slug}`;
+}
+
+export default function ProfileWallet() {
+  const navigate = useNavigate();
+
+  const [tab, setTab] = useState("profile");
+  const [q, setQ] = useState("");
+
+  const [showTopupModal, setShowTopupModal] = useState(false);
+  const [topupAmount, setTopupAmount] = useState("");
+  const [topupSubmitting, setTopupSubmitting] = useState(false);
+
+  const [me, setMe] = useState(null);
+  const [wallet, setWallet] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState("");
+
+  const token = localStorage.getItem("token") || "";
+const [followStats, setFollowStats] = useState({
+  followers: 0,
+  following: 0,
+});
+  const [recentTx, setRecentTx] = useState([]);
+  const [txList, setTxList] = useState([]);
+  const [txPage, setTxPage] = useState(1);
+  const [txTotalPages, setTxTotalPages] = useState(1);
+  const [txLoading, setTxLoading] = useState(false);
+
+  const [library, setLibrary] = useState([]);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryErr, setLibraryErr] = useState("");
+const [commentStats, setCommentStats] = useState({
+  total_comments: 0,
+  external_comments: 0,
+  self_comments: 0,
+});
+  const [readingStats, setReadingStats] = useState({
+    total_chapters_read: 0,
+    total_self_comics_read: 0,
+    total_external_comics_read: 0,
+    total_comics_read: 0,
+  });
+
+  const fetchRecentTx = async () => {
+    if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/api/momo/return-confirm`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const data = await fetchJSON(`${API_BASE}/api/wallet/transactions?page=1&limit=5`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data?.message || "Xác nhận giao dịch thất bại");
-        return;
-      }
-
-      if (data.status === "success") {
-        toast.success("Nạp tiền thành công! Đang cập nhật số dư...");
-
-
-  window.history.replaceState({}, "", "/profile");
-
-
-  setTimeout(() => {
-    window.location.reload();
-  }, 1200);
-        const meRes = await fetch(`${API_BASE}/api/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const meData = await meRes.json();
-        if (meRes.ok) setWallet(meData.wallet);
-
-      } else if (data.status === "failed") {
-        toast.error("Thanh toán thất bại");
-      } else {
-        toast.info("Giao dịch đã được xử lý trước đó");
-      }
-
-      // xoá query khỏi URL để tránh confirm lại khi F5
-      window.history.replaceState({}, "", "/profile");
+      setRecentTx(Array.isArray(data?.data) ? data.data : []);
     } catch (e) {
       console.error(e);
-      toast.error("Không kết nối được server");
+      setRecentTx([]);
     }
-  })();
-}, [token]);
-  const xpPercent = useMemo(() => {
-    const p = Math.round((uiUser.xp / uiUser.nextXp) * 100);
-    return Math.min(100, Math.max(0, p));
-  }, [uiUser]);
+  };
+  const fetchFollowStats = async () => {
+  if (!token) return;
 
-  const balance = wallet?.balance ?? 0;
+  try {
+    const data = await fetchJSON(`${API_BASE}/api/follows/me/stats`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-  const filteredLibrary = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return MOCK_LIBRARY;
-    return MOCK_LIBRARY.filter((x) => x.title.toLowerCase().includes(s));
-  }, [q]);
+    setFollowStats({
+      followers: Number(data?.data?.followers || 0),
+      following: Number(data?.data?.following || 0),
+    });
+  } catch (e) {
+    console.error(e);
+    setFollowStats({
+      followers: 0,
+      following: 0,
+    });
+  }
+};
+  const fetchTxPage = async (page) => {
+    if (!token) return;
+    try {
+      setTxLoading(true);
+
+      const data = await fetchJSON(
+        `${API_BASE}/api/wallet/transactions?page=${page}&limit=${TX_LIMIT}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      setTxList(Array.isArray(data?.data) ? data.data : []);
+      setTxPage(Number(data?.page || page));
+      setTxTotalPages(Number(data?.totalPages || 1));
+    } catch (e) {
+      console.error(e);
+      setTxList([]);
+      setTxTotalPages(1);
+    } finally {
+      setTxLoading(false);
+    }
+  };
+
+  const fetchLibrary = async () => {
+    if (!token) return;
+
+    try {
+      setLibraryLoading(true);
+      setLibraryErr("");
+
+      const data = await fetchJSON(`${API_BASE}/api/reading-history/library`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setLibrary(Array.isArray(data?.data) ? data.data : []);
+    } catch (e) {
+      console.error(e);
+      setLibrary([]);
+      setLibraryErr(e.message || "Lỗi tải tủ truyện");
+    } finally {
+      setLibraryLoading(false);
+    }
+  };
+const fetchCommentStats = async () => {
+  if (!token) return;
+
+  try {
+    const data = await fetchJSON(`${API_BASE}/api/comments/me/stats`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    setCommentStats(
+      data?.data || {
+        total_comments: 0,
+        external_comments: 0,
+        self_comments: 0,
+      }
+    );
+  } catch (e) {
+    console.error(e);
+    setCommentStats({
+      total_comments: 0,
+      external_comments: 0,
+      self_comments: 0,
+    });
+  }
+};
+  const fetchReadingStats = async () => {
+    if (!token) return;
+
+    try {
+      const data = await fetchJSON(`${API_BASE}/api/reading-history/stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setReadingStats(
+        data?.data || {
+          total_chapters_read: 0,
+          total_self_comics_read: 0,
+          total_external_comics_read: 0,
+          total_comics_read: 0,
+        }
+      );
+    } catch (e) {
+      console.error(e);
+      setReadingStats({
+        total_chapters_read: 0,
+        total_self_comics_read: 0,
+        total_external_comics_read: 0,
+        total_comics_read: 0,
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!token) return;
+
+    if (tab === "wallet") {
+      fetchRecentTx();
+    }
+
+    if (tab === "transactions") {
+      fetchTxPage(txPage);
+    }
+
+    if (tab === "library") {
+      fetchLibrary();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, token]);
+
+  useEffect(() => {
+    if (!token) return;
+    if (tab !== "transactions") return;
+    fetchTxPage(txPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txPage]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const resultCode = url.searchParams.get("resultCode");
+    const orderId = url.searchParams.get("orderId");
+
+    if (!resultCode || !orderId) return;
+
+    const payload = Object.fromEntries(url.searchParams.entries());
+
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/momo/return-confirm`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          toast.error(data?.message || "Xác nhận giao dịch thất bại");
+          return;
+        }
+
+        if (data.status === "success") {
+          toast.success("Nạp tiền thành công! Đang cập nhật số dư...");
+
+          window.history.replaceState({}, "", "/profile");
+
+          setTimeout(() => {
+            window.location.reload();
+          }, 1200);
+
+          const meData = await fetchJSON(`${API_BASE}/api/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          setWallet(meData.wallet);
+        } else if (data.status === "failed") {
+          toast.error("Thanh toán thất bại");
+        } else {
+          toast.info("Giao dịch đã được xử lý trước đó");
+        }
+
+        window.history.replaceState({}, "", "/profile");
+      } catch (e) {
+        console.error(e);
+        toast.error("Không kết nối được server");
+      }
+    })();
+  }, [token]);
 
   useEffect(() => {
     if (!token) {
@@ -210,33 +388,163 @@ useEffect(() => {
         setLoadErr("");
         setLoading(true);
 
-        const res = await fetch(`${API_BASE}/api/me`, {
+        const data = await fetchJSON(`${API_BASE}/api/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const data = await res.json();
-
-        if (!res.ok) {
-          // token hết hạn / sai
-          setLoadErr(data.message || "Không lấy được dữ liệu");
-          setMe(null);
-          setWallet(null);
-          return;
-        }
-
         setMe(data.user);
-       console.log("user =", JSON.stringify(data.user, null, 2));
         setWallet(data.wallet);
+
+       await Promise.all([
+  fetchReadingStats(),
+  fetchLibrary(),
+  fetchFollowStats(),
+  fetchCommentStats(),
+]);
       } catch (e) {
         console.error(e);
-        setLoadErr("Không kết nối được server");
+        setLoadErr(e.message || "Không kết nối được server");
+        setMe(null);
+        setWallet(null);
       } finally {
         setLoading(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // UI khi chưa login
+  const handleConfirmTopup = async () => {
+    const amount = Number(topupAmount);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.warn("Vui lòng nhập số tiền hợp lệ");
+      return;
+    }
+
+    if (!token) {
+      toast.warn("Bạn cần đăng nhập");
+      return;
+    }
+
+    let loadingToastId = null;
+
+    try {
+      setTopupSubmitting(true);
+      loadingToastId = toast.loading("Đang tạo thanh toán MoMo...");
+
+      const res = await fetch(`${API_BASE}/api/wallet/topup/momo`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ amount }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.update(loadingToastId, {
+          render: data?.message || "Tạo thanh toán thất bại",
+          type: "error",
+          isLoading: false,
+          autoClose: 2500,
+        });
+        return;
+      }
+
+      setShowTopupModal(false);
+      setTopupAmount("");
+
+      if (data?.payUrl) {
+        toast.update(loadingToastId, {
+          render: "Tạo thanh toán thành công! Đang chuyển sang MoMo...",
+          type: "success",
+          isLoading: false,
+          autoClose: 1200,
+        });
+
+        setTimeout(() => {
+          window.location.href = data.payUrl;
+        }, 800);
+
+        return;
+      }
+
+      toast.update(loadingToastId, {
+        render: "Không nhận được payUrl từ server",
+        type: "error",
+        isLoading: false,
+        autoClose: 2500,
+      });
+    } catch (e) {
+      console.error(e);
+
+      if (loadingToastId) {
+        toast.update(loadingToastId, {
+          render: "Không kết nối được server",
+          type: "error",
+          isLoading: false,
+          autoClose: 2500,
+        });
+      } else {
+        toast.error("Không kết nối được server");
+      }
+    } finally {
+      setTopupSubmitting(false);
+    }
+  };
+
+  const uiUser = useMemo(() => {
+    const username = me?.username || "User";
+    const email = me?.email || "";
+
+    return {
+      name: username,
+      username: email ? email : "@" + username,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`,
+      level: 1,
+      xp: 0,
+      nextXp: 100,
+      stats: [
+        {   label: "Lượt theo dõi",
+    value: Number(followStats?.followers || 0),
+    icon: "bi-bookmark-heart" },
+        {
+          label: "Chap đã đọc",
+          value: Number(readingStats?.total_chapters_read || 0),
+          icon: "bi-lightning-charge",
+        },
+      {
+  label: "Bình luận",
+  value: Number(commentStats?.total_comments || 0),
+  icon: "bi-chat-dots",
+},
+      ],
+    };
+  }, [me, readingStats, followStats, commentStats]);
+
+  const xpPercent = useMemo(() => {
+    const p = Math.round((uiUser.xp / uiUser.nextXp) * 100);
+    return Math.min(100, Math.max(0, p));
+  }, [uiUser]);
+
+  const balance = wallet?.balance ?? 0;
+
+  const filteredLibrary = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return library;
+
+    return library.filter((x) => {
+      const title = String(x?.title || "").toLowerCase();
+      return title.includes(s);
+    });
+  }, [q, library]);
+
+  const quickLibrary = useMemo(() => {
+    return library.slice(0, 3);
+  }, [library]);
+
   if (!token) {
     return (
       <div className="pw-page">
@@ -250,7 +558,6 @@ useEffect(() => {
     );
   }
 
-  // UI loading
   if (loading) {
     return (
       <div className="pw-page">
@@ -263,7 +570,6 @@ useEffect(() => {
     );
   }
 
-  // UI lỗi load
   if (loadErr) {
     return (
       <div className="pw-page">
@@ -279,95 +585,13 @@ useEffect(() => {
       </div>
     );
   }
-const handleConfirmTopup = async () => {
-  const amount = Number(topupAmount);
 
-  if (!Number.isFinite(amount) || amount <= 0) {
-    toast.warn("Vui lòng nhập số tiền hợp lệ");
-    return;
-  }
-
-  if (!token) {
-    toast.warn("Bạn cần đăng nhập");
-    return;
-  }
-
-  let loadingToastId = null;
-
-  try {
-    setTopupSubmitting(true);
-    loadingToastId = toast.loading("Đang tạo thanh toán MoMo...");
-
-    const res = await fetch(`${API_BASE}/api/wallet/topup/momo`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ amount }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      toast.update(loadingToastId, {
-        render: data?.message || "Tạo thanh toán thất bại",
-        type: "error",
-        isLoading: false,
-        autoClose: 2500,
-      });
-      return;
-    }
-
-    // đóng modal + reset
-    setShowTopupModal(false);
-    setTopupAmount("");
-
-    if (data?.payUrl) {
-      toast.update(loadingToastId, {
-        render: "Tạo thanh toán thành công! Đang chuyển sang MoMo...",
-        type: "success",
-        isLoading: false,
-        autoClose: 1200,
-      });
-
-      // chờ 0.8s cho người dùng thấy toast rồi chuyển trang
-      setTimeout(() => {
-        window.location.href = data.payUrl;
-      }, 800);
-
-      return;
-    }
-
-    toast.update(loadingToastId, {
-      render: "Không nhận được payUrl từ server",
-      type: "error",
-      isLoading: false,
-      autoClose: 2500,
-    });
-  } catch (e) {
-    console.error(e);
-
-    if (loadingToastId) {
-      toast.update(loadingToastId, {
-        render: "Không kết nối được server",
-        type: "error",
-        isLoading: false,
-        autoClose: 2500,
-      });
-    } else {
-      toast.error("Không kết nối được server");
-    }
-  } finally {
-    setTopupSubmitting(false);
-  }
-};
   return (
     <div className="pw-page">
       <Header />
+      <ToastContainer position="top-right" autoClose={2500} />
 
       <div className="container-fluid px-4 py-4">
-        {/* Top header */}
         <div className="pw-top card border-0 shadow-sm">
           <div className="card-body p-3 p-md-4">
             <div className="row g-3 align-items-center">
@@ -384,7 +608,6 @@ const handleConfirmTopup = async () => {
                   <span className="pw-username">{uiUser.username}</span>
                 </div>
 
-                {/* Level progress */}
                 <div className="pw-xp mt-2">
                   <div className="d-flex justify-content-between small text-secondary">
                     <span>Level {uiUser.level}</span>
@@ -403,12 +626,8 @@ const handleConfirmTopup = async () => {
                     />
                   </div>
                 </div>
-
-               
-               
               </div>
 
-              {/* Wallet summary */}
               <div className="col-12 col-md-auto">
                 <div className="pw-wallet-mini">
                   <div className="text-secondary small">Số dư ví</div>
@@ -425,7 +644,6 @@ const handleConfirmTopup = async () => {
               </div>
             </div>
 
-            {/* Stats */}
             <div className="row g-3 mt-1">
               {uiUser.stats.map((s) => (
                 <div className="col-12 col-sm-4" key={s.label}>
@@ -444,7 +662,6 @@ const handleConfirmTopup = async () => {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="pw-tabs mt-4">
           <div className="btn-group pw-tab-group" role="group" aria-label="tabs">
             <button
@@ -482,7 +699,6 @@ const handleConfirmTopup = async () => {
           </div>
         </div>
 
-        {/* Content */}
         <div className="mt-4">
           {tab === "profile" && (
             <div className="row g-3">
@@ -522,22 +738,37 @@ const handleConfirmTopup = async () => {
                 <div className="card border-0 shadow-sm">
                   <div className="card-body">
                     <h5 className="fw-bold mb-3">Tủ truyện nhanh</h5>
-                    <div className="pw-mini-shelf">
-                      {MOCK_LIBRARY.slice(0, 3).map((c) => (
-                        <div className="pw-mini-item" key={c.id}>
-                          <img className="pw-mini-cover" src={c.cover} alt={c.title} />
-                          <div className="min-w-0">
-                            <div className="fw-semibold text-truncate">{c.title}</div>
-                            <div className="small text-secondary">
-                              {c.status} • {c.lastRead}
+
+                    {libraryLoading ? (
+                      <div className="text-secondary">Đang tải tủ truyện...</div>
+                    ) : quickLibrary.length === 0 ? (
+                      <div className="text-secondary">Bạn chưa có truyện nào trong tủ.</div>
+                    ) : (
+                      <div className="pw-mini-shelf">
+                        {quickLibrary.map((c) => (
+                          <div className="pw-mini-item" key={`${c.comic_type}-${c.id}`}>
+                            <img
+                              className="pw-mini-cover"
+                              src={buildLibraryCover(c)}
+                              alt={c.title}
+                            />
+                            <div className="min-w-0">
+                              <div className="fw-semibold text-truncate">{c.title}</div>
+                              <div className="small text-secondary">
+                                {mapLibraryStatus(c)} • {buildLastReadText(c)}
+                              </div>
                             </div>
+                            <button
+                              className="btn btn-outline-primary btn-sm"
+                              type="button"
+                              onClick={() => navigate(buildReadUrl(c))}
+                            >
+                              Đọc
+                            </button>
                           </div>
-                          <button className="btn btn-outline-primary btn-sm" type="button">
-                            Đọc
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
 
                     <button
                       className="btn btn-primary w-100 mt-3"
@@ -571,36 +802,65 @@ const handleConfirmTopup = async () => {
                   </div>
                 </div>
 
-                <div className="row g-3 mt-2">
-                  {filteredLibrary.map((c) => (
-                    <div className="col-12 col-sm-6 col-lg-3" key={c.id}>
-                      <div className="pw-comic">
-                        <div className="pw-comic-thumb">
-                          <img src={c.cover} alt={c.title} />
-                          <span className="pw-comic-chip">{c.status}</span>
-                        </div>
-                        <div className="mt-2">
-                          <div className="fw-bold text-truncate">{c.title}</div>
-                          <div className="small text-secondary">{c.lastRead}</div>
-                          <div className="d-flex gap-2 mt-2">
-                            <button className="btn btn-primary btn-sm w-100" type="button">
-                              Đọc tiếp
-                            </button>
-                            <button className="btn btn-outline-secondary btn-sm" type="button">
-                              <i className="bi bi-three-dots" />
-                            </button>
+                {libraryErr ? (
+                  <div className="alert alert-danger mt-3 mb-0">{libraryErr}</div>
+                ) : null}
+
+                {libraryLoading ? (
+                  <div className="text-center text-secondary py-5">Đang tải tủ truyện...</div>
+                ) : (
+                  <div className="row g-3 mt-2">
+                    {filteredLibrary.map((c) => (
+                      <div className="col-12 col-sm-6 col-lg-3" key={`${c.comic_type}-${c.id}`}>
+                        <div className="pw-comic">
+                          <div className="pw-comic-thumb">
+                            <img src={buildLibraryCover(c)} alt={c.title} />
+                            <span className="pw-comic-chip">{mapLibraryStatus(c)}</span>
+                          </div>
+
+                          <div className="mt-2">
+                            <div className="fw-bold text-truncate" title={c.title}>
+                              {c.title}
+                            </div>
+
+                            <div className="small text-secondary">
+                              {buildLastReadText(c)}
+                            </div>
+
+                            <div className="small text-secondary mt-1">
+                              Đọc {Number(c.read_count || 0)} chap • {fmtDate(c.last_read_at)}
+                            </div>
+
+                            <div className="d-flex gap-2 mt-2">
+                              <button
+                                className="btn btn-primary btn-sm w-100"
+                                type="button"
+                                onClick={() => navigate(buildReadUrl(c))}
+                              >
+                                Đọc tiếp
+                              </button>
+
+                              <button
+                                className="btn btn-outline-secondary btn-sm"
+                                type="button"
+                                onClick={() => navigate(buildDetailUrl(c))}
+                                title="Xem chi tiết"
+                              >
+                                <i className="bi bi-three-dots" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
 
-                  {filteredLibrary.length === 0 && (
-                    <div className="text-center text-secondary py-5">
-                      Không tìm thấy truyện trong tủ 
-                    </div>
-                  )}
-                </div>
+                    {!libraryLoading && filteredLibrary.length === 0 && (
+                      <div className="text-center text-secondary py-5">
+                        Không tìm thấy truyện trong tủ
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -615,19 +875,16 @@ const handleConfirmTopup = async () => {
                       <div className="text-white-50 small">Số dư hiện tại</div>
                       <div className="pw-wallet-balance">{fmtVND(balance)}</div>
                       <div className="pw-wallet-actions">
-                       <button
-  className="btn btn-light fw-semibold"
-  type="button"
-  onClick={() => setShowTopupModal(true)}
->
-  <i className="bi bi-plus-circle me-2" />
-  Nạp tiền
-</button>
-                        
+                        <button
+                          className="btn btn-light fw-semibold"
+                          type="button"
+                          onClick={() => setShowTopupModal(true)}
+                        >
+                          <i className="bi bi-plus-circle me-2" />
+                          Nạp tiền
+                        </button>
                       </div>
                     </div>
-
-                    
                   </div>
                 </div>
               </div>
@@ -657,40 +914,40 @@ const handleConfirmTopup = async () => {
                             <th className="text-end">Trạng thái</th>
                           </tr>
                         </thead>
-                       <tbody>
-  {recentTx.map((t) => (
-    <tr key={t.id}>
-      <td className="fw-semibold">{t.order_id || `TX${t.id}`}</td>
-      <td>
-        <div className="fw-semibold">{t.note}</div>
-        
-      </td>
-      <td className="small text-secondary">{fmtDate(t.created_at)}</td>
+                        <tbody>
+                          {recentTx.map((t) => (
+                            <tr key={t.id}>
+                              <td className="fw-semibold">{t.order_id || `TX${t.id}`}</td>
+                              <td>
+                          <div className="fw-semibold">{mapTxNote(t.note)}</div>
+                              </td>
+                              <td className="small text-secondary">{fmtDate(t.created_at)}</td>
+                              <td
+                                className={`text-end fw-bold ${
+                                  Number(t.amount) < 0 ? "pw-neg" : "pw-pos"
+                                }`}
+                              >
+                                {Number(t.amount) < 0 ? "-" : "+"}
+                                {fmtVND(Math.abs(Number(t.amount) || 0))}
+                              </td>
+                              <td className="text-end">
+                                <span className={`badge ${badgeClass(t.status)}`}>
+                                  {t.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
 
-      <td className={`text-end fw-bold ${Number(t.amount) < 0 ? "pw-neg" : "pw-pos"}`}>
-        {Number(t.amount) < 0 ? "-" : "+"}
-        {fmtVND(Math.abs(Number(t.amount) || 0))}
-      </td>
-
-      <td className="text-end">
-        <span className={`badge ${badgeClass(t.status)}`}>
-          {t.status}
-        </span>
-      </td>
-    </tr>
-  ))}
-
-  {recentTx.length === 0 && (
-    <tr>
-      <td colSpan={5} className="text-center text-secondary py-4">
-        Chưa có giao dịch
-      </td>
-    </tr>
-  )}
-</tbody>
+                          {recentTx.length === 0 && (
+                            <tr>
+                              <td colSpan={5} className="text-center text-secondary py-4">
+                                Chưa có giao dịch
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
                       </table>
                     </div>
-
                   </div>
                 </div>
               </div>
@@ -702,10 +959,7 @@ const handleConfirmTopup = async () => {
               <div className="card-body">
                 <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center">
                   <h5 className="fw-bold m-0">Lịch sử giao dịch</h5>
-                  <div className="d-flex gap-2">
-                   
-                    
-                  </div>
+                  <div className="d-flex gap-2"></div>
                 </div>
 
                 <div className="table-responsive mt-3">
@@ -713,7 +967,6 @@ const handleConfirmTopup = async () => {
                     <thead>
                       <tr className="text-secondary small">
                         <th>Mã</th>
-                      
                         <th>Nội dung</th>
                         <th>Phương thức</th>
                         <th>Thời gian</th>
@@ -721,153 +974,148 @@ const handleConfirmTopup = async () => {
                         <th className="text-end">Trạng thái</th>
                       </tr>
                     </thead>
-               <tbody>
-  {txLoading ? (
-    <tr>
-      <td colSpan={7} className="text-center text-secondary py-4">
-        Đang tải...
-      </td>
-    </tr>
-  ) : txList.map((t) => (
-    <tr key={t.id}>
-      <td className="fw-semibold">{t.order_id || `TX${t.id}`}</td>
-      <td>{t.note}</td>
-     
-      <td className="small text-secondary">{t.type}</td>
-      <td className="small text-secondary">{fmtDate(t.created_at)}</td>
-      <td className={`text-end fw-bold ${Number(t.amount) < 0 ? "pw-neg" : "pw-pos"}`}>
-        {Number(t.amount) < 0 ? "-" : "+"}
-        {fmtVND(Math.abs(Number(t.amount) || 0))}
-      </td>
-      <td className="text-end">
-        <span className={`badge ${badgeClass(t.status)}`}>{t.status}</span>
-      </td>
-    </tr>
-  ))}
+                    <tbody>
+                      {txLoading ? (
+                        <tr>
+                          <td colSpan={7} className="text-center text-secondary py-4">
+                            Đang tải...
+                          </td>
+                        </tr>
+                      ) : (
+                        txList.map((t) => (
+                          <tr key={t.id}>
+                            <td className="fw-semibold">{t.order_id || `TX${t.id}`}</td>
+                            <td>{t.note}</td>
+                            <td className="small text-secondary">{t.type}</td>
+                            <td className="small text-secondary">{fmtDate(t.created_at)}</td>
+                            <td
+                              className={`text-end fw-bold ${
+                                Number(t.amount) < 0 ? "pw-neg" : "pw-pos"
+                              }`}
+                            >
+                              {Number(t.amount) < 0 ? "-" : "+"}
+                              {fmtVND(Math.abs(Number(t.amount) || 0))}
+                            </td>
+                            <td className="text-end">
+                              <span className={`badge ${badgeClass(t.status)}`}>{t.status}</span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
 
-  {!txLoading && txList.length === 0 && (
-    <tr>
-      <td colSpan={7} className="text-center text-secondary py-4">
-        Chưa có giao dịch
-      </td>
-    </tr>
-  )}
-</tbody>
+                      {!txLoading && txList.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="text-center text-secondary py-4">
+                            Chưa có giao dịch
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
                   </table>
+
                   <div className="d-flex justify-content-between align-items-center mt-3">
-  <div className="small text-secondary">
-    Trang {txPage}/{txTotalPages} - 5 dòng/trang
-  </div>
+                    <div className="small text-secondary">
+                      Trang {txPage}/{txTotalPages} - 5 dòng/trang
+                    </div>
 
-  <div className="btn-group">
-    <button
-      className="btn btn-outline-dark btn-sm"
-      disabled={txPage <= 1 || txLoading}
-      onClick={() => setTxPage((p) => Math.max(1, p - 1))}
-      type="button"
-    >
-      <i className="bi bi-chevron-left" /> Trước
-    </button>
+                    <div className="btn-group">
+                      <button
+                        className="btn btn-outline-dark btn-sm"
+                        disabled={txPage <= 1 || txLoading}
+                        onClick={() => setTxPage((p) => Math.max(1, p - 1))}
+                        type="button"
+                      >
+                        <i className="bi bi-chevron-left" /> Trước
+                      </button>
 
-    <button
-      className="btn btn-outline-dark btn-sm"
-      disabled={txPage >= txTotalPages || txLoading}
-      onClick={() => setTxPage((p) => Math.min(txTotalPages, p + 1))}
-      type="button"
-    >
-      Sau <i className="bi bi-chevron-right" />
-    </button>
-  </div>
-</div>
+                      <button
+                        className="btn btn-outline-dark btn-sm"
+                        disabled={txPage >= txTotalPages || txLoading}
+                        onClick={() => setTxPage((p) => Math.min(txTotalPages, p + 1))}
+                        type="button"
+                      >
+                        Sau <i className="bi bi-chevron-right" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-
               </div>
             </div>
           )}
         </div>
       </div>
-{showTopupModal && (
-  <>
-    {/* Overlay */}
-    <div
-      className="modal-backdrop fade show"
-      onClick={() => setShowTopupModal(false)}
-    />
 
-    {/* Modal */}
-    <div className="modal fade show d-block" tabIndex="-1">
-      <div className="modal-dialog modal-dialog-centered">
-        <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">
-              <i className="bi bi-wallet2 me-2 text-primary" />
-              Nạp tiền vào ví
-            </h5>
-            <button
-              type="button"
-              className="btn-close"
-              onClick={() => setShowTopupModal(false)}
-            />
-          </div>
+      {showTopupModal && (
+        <>
+          <div className="modal-backdrop fade show" onClick={() => setShowTopupModal(false)} />
 
-          <div className="modal-body">
-            <label className="form-label fw-semibold">
-              Nhập số tiền muốn nạp
-            </label>
+          <div className="modal fade show d-block" tabIndex="-1">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    <i className="bi bi-wallet2 me-2 text-primary" />
+                    Nạp tiền vào ví
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setShowTopupModal(false)}
+                  />
+                </div>
 
-            <input
-              type="number"
-              className="form-control"
-              placeholder="Ví dụ: 100000"
-              value={topupAmount}
-              onChange={(e) => setTopupAmount(e.target.value)}
-            />
+                <div className="modal-body">
+                  <label className="form-label fw-semibold">Nhập số tiền muốn nạp</label>
 
-            <div className="mt-3 d-flex gap-2 flex-wrap">
-              {[50000, 100000, 200000, 500000].map((amount) => (
-                <button
-                  key={amount}
-                  className="btn btn-outline-primary btn-sm"
-                  onClick={() => setTopupAmount(amount)}
-                >
-                  {fmtVND(amount)}
-                </button>
-              ))}
+                  <input
+                    type="number"
+                    className="form-control"
+                    placeholder="Ví dụ: 100000"
+                    value={topupAmount}
+                    onChange={(e) => setTopupAmount(e.target.value)}
+                  />
+
+                  <div className="mt-3 d-flex gap-2 flex-wrap">
+                    {[50000, 100000, 200000, 500000].map((amount) => (
+                      <button
+                        key={amount}
+                        className="btn btn-outline-primary btn-sm"
+                        onClick={() => setTopupAmount(amount)}
+                      >
+                        {fmtVND(amount)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={() => setShowTopupModal(false)}>
+                    Hủy
+                  </button>
+
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleConfirmTopup}
+                    disabled={topupSubmitting}
+                  >
+                    {topupSubmitting ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" />
+                        Đang tạo thanh toán...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-check-circle me-2" />
+                        Xác nhận nạp
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-
-          <div className="modal-footer">
-            <button
-              className="btn btn-secondary"
-              onClick={() => setShowTopupModal(false)}
-            >
-              Hủy
-            </button>
-
-       <button
-  className="btn btn-primary"
-  onClick={handleConfirmTopup}
-  disabled={topupSubmitting}
->
-  {topupSubmitting ? (
-    <>
-      <span className="spinner-border spinner-border-sm me-2" />
-      Đang tạo thanh toán...
-    </>
-  ) : (
-    <>
-      <i className="bi bi-check-circle me-2" />
-      Xác nhận nạp
-    </>
-  )}
-</button>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
-  </>
-)}
-    </div>
-    
   );
 }

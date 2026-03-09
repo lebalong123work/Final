@@ -18,6 +18,10 @@ const notificationsRoutes = require("./routes/notifications");
 const adminFinanceRoutes = require("./routes/adminFinance");
 const selfChaptersRoutes = require("./routes/selfChapters");
 const externalCategoriesRoutes = require("./routes/externalCategories");
+const readingHistoryRoutes = require("./routes/readingHistory");
+const trafficRoutes = require("./routes/traffic");
+const adminDashboard = require("./routes/adminDashboard");
+
 const { initSocket } = require("./socket");
 
 const app = express();
@@ -43,6 +47,7 @@ app.use("/api/admin", require("./routes/adminExternalComics"));
 app.use("/api/external-comics", require("./routes/externalComics"));
 app.use("/api/purchases", require("./routes/purchaseComic"));
 app.use("/api/purchases", require("./routes/purchases"));
+app.use("/api/admin", adminDashboard);
 app.use("/levels", levelsRoute);
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
@@ -60,6 +65,8 @@ app.use("/api/categories", require("./routes/categories"));
 app.use("/api/self-comics", selfComicsRoutes);
 app.use("/api/self-chapters", selfChaptersRoutes);
 app.use("/api/external-categories", externalCategoriesRoutes);
+app.use("/api/reading-history", readingHistoryRoutes);
+app.use("/api/traffic", trafficRoutes);
 const PORT = process.env.PORT || 5000;
 
 

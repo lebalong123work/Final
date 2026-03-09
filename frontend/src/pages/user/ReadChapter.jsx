@@ -38,7 +38,7 @@ export default function ReadChapter() {
 
   const slug = sp.get("slug") || "";
   const chapterApi = sp.get("chap") || "";
-
+  const comicDbId = Number(sp.get("comicId") || 0) || null;
   const token = localStorage.getItem("token") || "";
 
   const me = useMemo(() => {
@@ -123,6 +123,43 @@ export default function ReadChapter() {
     })();
   }, [chapterApi]);
 
+useEffect(() => {
+  if (!token) return;
+  if (!comicDbId) return;
+  if (!chapterId) return;
+  if (!chapterApi) return;
+
+  const timer = setTimeout(async () => {
+    try {
+      await fetchJSON(`${API_BASE}/api/reading-history/mark`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          comicType: "external",
+          comicId: comicDbId,
+          chapterId: chapterId,
+          chapterApi: chapterApi,
+          chapterTitle: chapterName,
+        }),
+      });
+
+      console.log("Đã lưu lịch sử đọc external:", {
+        comicType: "external",
+        comicId: comicDbId,
+        chapterId,
+        chapterApi,
+        chapterTitle: chapterName,
+      });
+    } catch (e) {
+      console.error("mark read external error:", e);
+    }
+  }, 1200);
+
+  return () => clearTimeout(timer);
+}, [token, comicDbId, chapterId, chapterApi, chapterName]);
   // 3) build pages
   const pages = useMemo(() => {
     const domain = chapterData?.domain_cdn;

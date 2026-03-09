@@ -25,10 +25,13 @@ import AdminCategories from './pages/admin/AdminCategories';
 import SelfComicListPage from './pages/user/SelfComicListPage';
 import ComicSelfDetail from './pages/user/ComicSelfDetail';
 import ReadSelfChapter from './pages/user/ReadSelfChapter';
+import TrafficTracker from './components/TrafficTracker';
 
 function App() {
  
  return (
+   <>
+   <TrafficTracker />
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
@@ -50,6 +53,7 @@ function App() {
 
   <Route path="/doc-self" element={<ReadSelfChapter />} />
     </Routes>
+    </>
   );
 
   

@@ -104,6 +104,7 @@ export default function ReadSelfChapter() {
     localStorage.setItem("self_reader_settings", JSON.stringify(readerSettings));
   }, [readerSettings]);
 
+  // load dữ liệu comic + access + chapter list + current chapter
   useEffect(() => {
     const run = async () => {
       try {
@@ -121,14 +122,15 @@ export default function ReadSelfChapter() {
               }
             : {},
         });
+
         const comicData = d1?.data || null;
         setComic(comicData);
 
         const paid = !!comicData?.is_paid;
         const ownerId = Number(comicData?.user_id || 0);
-        const isOwner = !!(ownerId && myId && ownerId === myId);
+        const isOwnerNow = !!(ownerId && myId && ownerId === myId);
 
-        if (!paid || isOwner) {
+        if (!paid || isOwnerNow) {
           setHasAccess(true);
         } else if (!token) {
           setHasAccess(false);
@@ -195,6 +197,43 @@ export default function ReadSelfChapter() {
   const isOwner = !!(ownerUserId && myId && ownerUserId === myId);
   const locked = isPaid && !hasAccess;
 
+  // ====== THÊM API LỊCH SỬ ĐỌC Ở ĐÂY ======
+  useEffect(() => {
+    if (!token) return;
+    if (!comicId) return;
+    if (!chapterId) return;
+    if (locked) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        await fetchJSON(`${API_BASE}/api/reading-history/mark`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            comicType: "self",
+            comicId: comicId,
+            chapterId: chapterId,
+          }),
+        });
+
+        console.log("Đã lưu lịch sử đọc self:", {
+          comicType: "self",
+          comicId,
+          chapterId,
+        });
+      } catch (e) {
+        console.error("mark read self error:", e);
+      }
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [token, comicId, chapterId, locked]);
+  // ====== END ======
+
+  // socket
   useEffect(() => {
     if (!chapterId) return;
 
@@ -275,6 +314,7 @@ export default function ReadSelfChapter() {
     };
   }, [chapterId, token]);
 
+  // load comments + reactions
   useEffect(() => {
     if (!chapterId) return;
 
@@ -563,7 +603,11 @@ export default function ReadSelfChapter() {
                 <i className="bi bi-sliders me-2" />
                 Tùy chỉnh đọc truyện
               </div>
-              <button className="btn btn-sm btn-outline-secondary" onClick={resetReaderSettings} type="button">
+              <button
+                className="btn btn-sm btn-outline-secondary"
+                onClick={resetReaderSettings}
+                type="button"
+              >
                 Mặc định
               </button>
             </div>

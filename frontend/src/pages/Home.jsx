@@ -66,10 +66,9 @@ export default function Home() {
   return (
     <div className="container-fluid px-4 py-4">
          <Header/>
-                <FeaturedBanner />
+        <FeaturedBanner />
            
-             
-         
+      
       <ComicSlider title="Truyện ngoài" items={COMICS} perPage={4} className="py-3" />
         <Footer />
     </div>

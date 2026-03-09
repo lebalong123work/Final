@@ -116,10 +116,10 @@ export default function ComicDetail() {
 
         setComicDbId(finalComicId);
 
-      
-console.log("pricing data:", pr);
-console.log("owner data:", ownerData);
-console.log("finalComicId:", Number(pr?.id || pr?.comic_id || ownerData?.comic_id || 0) || null);
+        console.log("pricing data:", pr);
+        console.log("owner data:", ownerData);
+        console.log("finalComicId:", finalComicId);
+
         // 5) rating summary
         if (finalComicId) {
           try {
@@ -149,9 +149,12 @@ console.log("finalComicId:", Number(pr?.id || pr?.comic_id || ownerData?.comic_i
         // 6) follow status
         if (token && ownerData?.owner_user_id) {
           try {
-            const jf = await fetchJSON(`${API_BASE}/api/follows/${ownerData.owner_user_id}/status`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
+            const jf = await fetchJSON(
+              `${API_BASE}/api/follows/${ownerData.owner_user_id}/status`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
 
             setFollowing(!!jf?.data?.following);
             setFollowersCount(Number(jf?.data?.followers || 0));
@@ -192,7 +195,6 @@ console.log("finalComicId:", Number(pr?.id || pr?.comic_id || ownerData?.comic_i
     };
 
     run();
-    
   }, [slug, token]);
 
   const item = detail?.item;
@@ -214,7 +216,14 @@ console.log("finalComicId:", Number(pr?.id || pr?.comic_id || ownerData?.comic_i
   const isFree = !isPaid;
   const isBought = isPaid && hasAccess;
 
-  const fmtVND = (n) => new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
+  const fmtVND = (n) =>
+    new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
+
+  const firstChapterLink = `/doc?slug=${encodeURIComponent(
+    slug
+  )}&chap=${encodeURIComponent(chapters?.[0]?.api || "")}&comicId=${encodeURIComponent(
+    comicDbId || ""
+  )}`;
 
   const handleBuy = async () => {
     if (!token) {
@@ -237,7 +246,12 @@ console.log("finalComicId:", Number(pr?.id || pr?.comic_id || ownerData?.comic_i
 
   const goRead = (chapterApi) => {
     if (locked) return;
-    nav(`/doc?slug=${encodeURIComponent(slug)}&chap=${encodeURIComponent(chapterApi)}`);
+
+    nav(
+      `/doc?slug=${encodeURIComponent(slug)}&chap=${encodeURIComponent(
+        chapterApi
+      )}&comicId=${encodeURIComponent(comicDbId || "")}`
+    );
   };
 
   const toggleFollow = async () => {
@@ -307,7 +321,6 @@ console.log("finalComicId:", Number(pr?.id || pr?.comic_id || ownerData?.comic_i
             className={`cd-starBtn ${v >= s ? "on" : ""} ${clickable ? "clickable" : ""}`}
             onClick={clickable ? () => setRating(s) : undefined}
             title={clickable ? `Chấm ${s} sao` : ""}
-            disabled={false}
           >
             <i className={`bi ${v >= s ? "bi-star-fill" : "bi-star"}`} />
           </button>
@@ -345,7 +358,10 @@ console.log("finalComicId:", Number(pr?.id || pr?.comic_id || ownerData?.comic_i
 
       <div className="cd-wrap">
         <div className="cd-hero">
-          <div className="cd-hero-bg" style={{ backgroundImage: `url(${buildThumb(item.thumb_url)})` }} />
+          <div
+            className="cd-hero-bg"
+            style={{ backgroundImage: `url(${buildThumb(item.thumb_url)})` }}
+          />
 
           <div className="cd-hero-content">
             <div className="cd-cover">
@@ -392,7 +408,10 @@ console.log("finalComicId:", Number(pr?.id || pr?.comic_id || ownerData?.comic_i
                   <button
                     className={`btn btn-sm ${following ? "btn-outline-success" : "btn-success"}`}
                     onClick={toggleFollow}
-                    disabled={!owner?.owner_user_id || Number(owner?.owner_user_id) === Number(myId)}
+                    disabled={
+                      !owner?.owner_user_id ||
+                      Number(owner?.owner_user_id) === Number(myId)
+                    }
                     title={!token ? "Đăng nhập để theo dõi" : ""}
                   >
                     <i className={`bi ${following ? "bi-check2" : "bi-plus-lg"} me-2`} />
@@ -418,10 +437,7 @@ console.log("finalComicId:", Number(pr?.id || pr?.comic_id || ownerData?.comic_i
 
               <div className="cd-actions">
                 {isFree && (
-                  <Link
-                    className="btn btn-success cd-btn"
-                    to={`/doc?slug=${encodeURIComponent(slug)}&chap=${encodeURIComponent(chapters?.[0]?.api || "")}`}
-                  >
+                  <Link className="btn btn-success cd-btn" to={firstChapterLink}>
                     <i className="bi bi-unlock-fill me-2" />
                     Miễn phí
                   </Link>
@@ -433,15 +449,14 @@ console.log("finalComicId:", Number(pr?.id || pr?.comic_id || ownerData?.comic_i
                       <i className="bi bi-lock-fill me-2" />
                       Mua truyện {fmtVND(pricing.price)}
                     </button>
-                    <div className="cd-hint">Truyện này đang khóa. Bạn cần mua để xem chapter.</div>
+                    <div className="cd-hint">
+                      Truyện này đang khóa. Bạn cần mua để xem chapter.
+                    </div>
                   </>
                 )}
 
                 {isBought && (
-                  <Link
-                    className="btn btn-dark cd-btn"
-                    to={`/doc?slug=${encodeURIComponent(slug)}&chap=${encodeURIComponent(chapters?.[0]?.api || "")}`}
-                  >
+                  <Link className="btn btn-dark cd-btn" to={firstChapterLink}>
                     <i className="bi bi-book me-2" />
                     Đã mua
                   </Link>
@@ -466,7 +481,9 @@ console.log("finalComicId:", Number(pr?.id || pr?.comic_id || ownerData?.comic_i
               </div>
               <div className="cd-locktext">
                 <div className="fw-bold">Nội dung bị khóa</div>
-                <div className="text-secondary">Mua truyện để mở khóa danh sách chapter và đọc ảnh.</div>
+                <div className="text-secondary">
+                  Mua truyện để mở khóa danh sách chapter và đọc ảnh.
+                </div>
               </div>
               <button className="btn btn-danger" onClick={handleBuy}>
                 Mua truyện • {fmtVND(pricing.price)}
