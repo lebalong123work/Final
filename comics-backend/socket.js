@@ -33,7 +33,7 @@ const followers = fr.rows.map((x) => x.follower_id);
 
   const type = "NEW_COMIC";
   const title = "Tác giả bạn theo dõi vừa đăng truyện mới";
-  const body = comicName ? `🆕 ${comicName}` : "🆕 Có truyện mới";
+  const body = comicName ? `${comicName}` : "Có truyện mới";
   const url = `/truyen/${comicSlug}`;
 
   for (const uid of followers) {

@@ -8,6 +8,8 @@ const API_BASE = "http://localhost:5000";
 function buildCover(src) {
   if (!src) return "https://via.placeholder.com/500x700?text=No+Image";
   if (src.startsWith("http")) return src;
+  if (src.startsWith("data:image")) return src;
+  if (src.startsWith("/")) return `${API_BASE}${src}`;
   return src;
 }
 
@@ -28,7 +30,6 @@ function normalizeSelfComic(c) {
   return {
     id: c.id,
     name: c.title || "Không tên",
-    slug: c.slug || c.id,
     cover: buildCover(c.cover_image),
     tags: c.category_name ? [c.category_name] : [],
     updated: fmtUpdated(c.updated_at || c.created_at),
@@ -37,6 +38,7 @@ function normalizeSelfComic(c) {
     price: Number(c.price || 0),
     category_id: c.category_id || null,
     category_name: c.category_name || "",
+    author: c.author || "",
     status: Number(c.status || 0),
     description: c.description || "",
   };
@@ -336,8 +338,15 @@ export default function SelfComicListPage() {
                       </Link>
 
                       <div className="clp-body">
-                        <div className="clp-name" title={c.name}>
-                          {c.name}
+                        <Link to={detailUrl} className="text-decoration-none text-dark">
+                          <div className="clp-name" title={c.name}>
+                            {c.name}
+                          </div>
+                        </Link>
+
+                        <div className="clp-meta">
+                          <i className="bi bi-person me-1" />
+                          {c.author || "Chưa có tác giả"}
                         </div>
 
                         <div className="clp-meta">
@@ -352,6 +361,13 @@ export default function SelfComicListPage() {
                         <div className="clp-meta">
                           <i className="bi bi-card-text me-1" />
                           {c.status === 1 ? "Đang phát hành" : "Ẩn / nháp"}
+                        </div>
+
+                        <div className="mt-3">
+                          <Link to={detailUrl} className="btn btn-dark btn-sm w-100">
+                            <i className="bi bi-eye me-2" />
+                            Xem chi tiết
+                          </Link>
                         </div>
                       </div>
                     </div>

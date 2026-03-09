@@ -1,18 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Header from "../../components/Header";
-import "./readChapter.css";
+import "./readSelfChapter.css";
 import { io } from "socket.io-client";
 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const API_BASE = "http://localhost:5000";
-const CHAPTER_TYPE = "external";
+const CHAPTER_TYPE = "self";
 
-function buildPageUrl(domain, chapterPath, file) {
-  return `${domain}/${chapterPath}/${file}`;
-}
+const DEFAULT_READER_SETTINGS = {
+  fontFamily: "system",
+  fontSize: 19,
+  lineHeight: 1.9,
+  contentWidth: 820,
+  theme: "light",
+};
 
 async function fetchJSON(url, options = {}) {
   const res = await fetch(url, options);
@@ -32,12 +36,37 @@ async function fetchJSON(url, options = {}) {
   return json;
 }
 
-export default function ReadChapter() {
+function fmtTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("vi-VN");
+}
+
+function fmtVND(n) {
+  return new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
+}
+
+function getSavedReaderSettings() {
+  try {
+    const raw = localStorage.getItem("self_reader_settings");
+    if (!raw) return DEFAULT_READER_SETTINGS;
+    const parsed = JSON.parse(raw);
+    return {
+      ...DEFAULT_READER_SETTINGS,
+      ...parsed,
+    };
+  } catch {
+    return DEFAULT_READER_SETTINGS;
+  }
+}
+
+export default function ReadSelfChapter() {
   const [sp] = useSearchParams();
   const nav = useNavigate();
 
-  const slug = sp.get("slug") || "";
-  const chapterApi = sp.get("chap") || "";
+  const comicId = Number(sp.get("comicId") || 0);
+  const chapterId = Number(sp.get("chapterId") || 0);
 
   const token = localStorage.getItem("token") || "";
 
@@ -48,108 +77,124 @@ export default function ReadChapter() {
       return null;
     }
   }, []);
-  const myId = me?.id || null;
+  const myId = Number(me?.id || 0) || null;
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-  const [chapterData, setChapterData] = useState(null);
 
+  const [comic, setComic] = useState(null);
+  const [chapterData, setChapterData] = useState(null);
   const [chapters, setChapters] = useState([]);
+
+  const [hasAccess, setHasAccess] = useState(false);
 
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
 
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
+  const [replyTo, setReplyTo] = useState(null);
 
-  const [replyTo, setReplyTo] = useState(null); // { rootId, replyName }
+  const [readerSettings, setReaderSettings] = useState(getSavedReaderSettings);
 
   const listRef = useRef(null);
   const socketRef = useRef(null);
 
-  // chapterId dùng cho comment/reaction/socket
-  const chapterId = chapterData?.item?._id || "";
-  const chapterName = chapterData?.item?.chapter_name || "";
-  const comicName = chapterData?.item?.comic_name || "";
-
-  // 1) load danh sách chapter để prev/next
   useEffect(() => {
-    if (!slug) return;
+    localStorage.setItem("self_reader_settings", JSON.stringify(readerSettings));
+  }, [readerSettings]);
 
-    (async () => {
-      try {
-        const r = await fetch(`https://otruyenapi.com/v1/api/truyen-tranh/${slug}`);
-        const j = await r.json();
-        const item = j?.data?.item;
-
-        const list = (item?.chapters || [])
-          .flatMap((sv) =>
-            (sv?.server_data || []).map((ch) => ({
-              name: ch.chapter_name,
-              api: ch.chapter_api_data,
-            }))
-          )
-          .sort((a, b) => Number(a.name) - Number(b.name));
-
-        setChapters(list);
-      } catch (e) {
-        console.error(e);
-        setChapters([]);
-      }
-    })();
-  }, [slug]);
-
-  // 2) load chapter detail/images
   useEffect(() => {
-    if (!chapterApi) return;
-
-    (async () => {
+    const run = async () => {
       try {
-        setErr("");
         setLoading(true);
+        setErr("");
 
-        const res = await fetch(chapterApi);
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.message || "Không tải được chapter");
+        if (!comicId || !chapterId) {
+          throw new Error("Thiếu comicId hoặc chapterId.");
+        }
 
-        setChapterData(json?.data || null);
+        const d1 = await fetchJSON(`${API_BASE}/api/self-comics/${comicId}`, {
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`,
+              }
+            : {},
+        });
+        const comicData = d1?.data || null;
+        setComic(comicData);
+
+        const paid = !!comicData?.is_paid;
+        const ownerId = Number(comicData?.user_id || 0);
+        const isOwner = !!(ownerId && myId && ownerId === myId);
+
+        if (!paid || isOwner) {
+          setHasAccess(true);
+        } else if (!token) {
+          setHasAccess(false);
+        } else {
+          try {
+            const acc = await fetchJSON(`${API_BASE}/api/purchases/access-self/${comicId}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            setHasAccess(!!acc?.hasAccess);
+          } catch (e) {
+            console.error("access self error:", e);
+            setHasAccess(false);
+          }
+        }
+
+        const d2 = await fetchJSON(`${API_BASE}/api/self-chapters/comic/${comicId}`);
+        const chapterRows = Array.isArray(d2?.data) ? d2.data : [];
+        setChapters(chapterRows);
+
+        const d3 = await fetchJSON(`${API_BASE}/api/self-chapters/${chapterId}`);
+        setChapterData(d3?.data || null);
       } catch (e) {
         console.error(e);
-        setErr(e.message || "Lỗi");
+        setErr(e.message || "Lỗi tải chapter");
+        setComic(null);
         setChapterData(null);
+        setChapters([]);
       } finally {
         setLoading(false);
       }
-    })();
-  }, [chapterApi]);
+    };
 
-  // 3) build pages
-  const pages = useMemo(() => {
-    const domain = chapterData?.domain_cdn;
-    const item = chapterData?.item;
-    if (!domain || !item?.chapter_path) return [];
+    run();
+  }, [comicId, chapterId, token, myId]);
 
-    const images = Array.isArray(item.chapter_image) ? item.chapter_image : [];
-    return [...images]
-      .sort((a, b) => (a.image_page || 0) - (b.image_page || 0))
-      .map((img) => buildPageUrl(domain, item.chapter_path, img.image_file));
-  }, [chapterData]);
+  const sortedChapters = useMemo(() => {
+    return [...chapters].sort(
+      (a, b) => Number(a.chapter_no || 0) - Number(b.chapter_no || 0)
+    );
+  }, [chapters]);
 
-  // prev/next chapter
   const currentIndex = useMemo(() => {
-    if (!chapters.length || !chapterApi) return -1;
-    return chapters.findIndex((c) => c.api === chapterApi);
-  }, [chapters, chapterApi]);
+    if (!sortedChapters.length || !chapterId) return -1;
+    return sortedChapters.findIndex((c) => Number(c.id) === Number(chapterId));
+  }, [sortedChapters, chapterId]);
 
-  const prevChap = currentIndex > 0 ? chapters[currentIndex - 1] : null;
-  const nextChap = currentIndex >= 0 && currentIndex < chapters.length - 1 ? chapters[currentIndex + 1] : null;
+  const prevChap = currentIndex > 0 ? sortedChapters[currentIndex - 1] : null;
+  const nextChap =
+    currentIndex >= 0 && currentIndex < sortedChapters.length - 1
+      ? sortedChapters[currentIndex + 1]
+      : null;
 
-  const goChap = (api) => {
-    nav(`/doc?slug=${encodeURIComponent(slug)}&chap=${encodeURIComponent(api)}`);
+  const goChap = (nextChapterId) => {
+    nav(
+      `/doc-self?comicId=${encodeURIComponent(comicId)}&chapterId=${encodeURIComponent(
+        nextChapterId
+      )}`
+    );
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // 4) socket connect + join room
+  const isPaid = !!comic?.is_paid;
+  const ownerUserId = Number(comic?.user_id || 0) || null;
+  const isOwner = !!(ownerUserId && myId && ownerUserId === myId);
+  const locked = isPaid && !hasAccess;
+
   useEffect(() => {
     if (!chapterId) return;
 
@@ -179,7 +224,7 @@ export default function ReadChapter() {
 
     s.emit("chapter:join", {
       chapterType: CHAPTER_TYPE,
-      chapterId,
+      chapterId: String(chapterId),
       room: roomKey,
     });
 
@@ -224,20 +269,21 @@ export default function ReadChapter() {
 
       s.emit("chapter:leave", {
         chapterType: CHAPTER_TYPE,
-        chapterId,
+        chapterId: String(chapterId),
         room: roomKey,
       });
     };
   }, [chapterId, token]);
 
-  // 5) load comments + reactions
   useEffect(() => {
     if (!chapterId) return;
 
     (async () => {
       try {
         const rc = await fetchJSON(
-          `${API_BASE}/api/comments?chapterType=${encodeURIComponent(CHAPTER_TYPE)}&chapterId=${encodeURIComponent(chapterId)}`
+          `${API_BASE}/api/comments?chapterType=${encodeURIComponent(
+            CHAPTER_TYPE
+          )}&chapterId=${encodeURIComponent(chapterId)}`
         );
         setComments(Array.isArray(rc?.data) ? rc.data : []);
 
@@ -289,7 +335,7 @@ export default function ReadChapter() {
 
       socketRef.current?.emit("reaction:toggle", {
         chapterType: CHAPTER_TYPE,
-        chapterId,
+        chapterId: String(chapterId),
       });
     } catch (e) {
       setLiked(prevLiked);
@@ -318,7 +364,7 @@ export default function ReadChapter() {
         },
         body: JSON.stringify({
           chapterType: CHAPTER_TYPE,
-          chapterId,
+          chapterId: String(chapterId),
           text: finalText,
           parentId: replyTo?.rootId || null,
         }),
@@ -334,7 +380,7 @@ export default function ReadChapter() {
 
         socketRef.current?.emit("comment:create", {
           chapterType: CHAPTER_TYPE,
-          chapterId,
+          chapterId: String(chapterId),
           comment: newComment,
         });
       }
@@ -365,7 +411,7 @@ export default function ReadChapter() {
 
       socketRef.current?.emit("comment:delete", {
         chapterType: CHAPTER_TYPE,
-        chapterId,
+        chapterId: String(chapterId),
         commentId,
       });
 
@@ -375,11 +421,36 @@ export default function ReadChapter() {
     }
   };
 
-  const fmtTime = (iso) => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "";
-    return d.toLocaleString("vi-VN");
+  const handleBuy = async () => {
+    if (!token) {
+      toast.info("Bạn cần đăng nhập để mua truyện");
+      return;
+    }
+
+    try {
+      const data = await fetchJSON(`${API_BASE}/api/purchases/buy-self/${comicId}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setHasAccess(true);
+      toast.success(`Mua thành công! Số dư còn lại: ${data?.data?.balance || 0}`);
+    } catch (e) {
+      toast.error(e.message || "Lỗi mua truyện");
+    }
+  };
+
+  const updateReaderSetting = (key, value) => {
+    setReaderSettings((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const resetReaderSettings = () => {
+    setReaderSettings(DEFAULT_READER_SETTINGS);
   };
 
   const rootComments = useMemo(() => comments.filter((c) => !c.parent_id), [comments]);
@@ -395,13 +466,15 @@ export default function ReadChapter() {
     return map;
   }, [comments]);
 
+  const readerClassName = `rsc-page theme-${readerSettings.theme} font-${readerSettings.fontFamily}`;
+
   if (loading) {
     return (
-      <div className="rc-page">
+      <div className={readerClassName}>
         <Header />
         <ToastContainer position="top-right" autoClose={2000} />
-        <div className="rc-wrap">
-          <div className="rc-loading">
+        <div className="rsc-wrap">
+          <div className="rsc-loading">
             <div className="spinner-border spinner-border-sm me-2" />
             Đang tải chapter...
           </div>
@@ -412,10 +485,10 @@ export default function ReadChapter() {
 
   if (err) {
     return (
-      <div className="rc-page">
+      <div className={readerClassName}>
         <Header />
         <ToastContainer position="top-right" autoClose={2000} />
-        <div className="rc-wrap">
+        <div className="rsc-wrap">
           <div className="alert alert-danger">{err}</div>
         </div>
       </div>
@@ -423,33 +496,35 @@ export default function ReadChapter() {
   }
 
   return (
-    <div className="rc-page">
+    <div className={readerClassName}>
       <Header />
       <ToastContainer position="top-right" autoClose={2000} />
 
-      <div className="rc-topbar">
-        <div className="rc-topbar-inner">
-          <Link className="rc-back" to={`/truyen/${slug}`}>
+      <div className="rsc-topbar">
+        <div className="rsc-topbar-inner">
+          <Link className="rsc-back" to={`/self-comics/${comicId}`}>
             <i className="bi bi-arrow-left" /> Quay lại truyện
           </Link>
 
-          <div className="rc-title">
-            <div className="rc-comic">{comicName || "—"}</div>
-            <div className="rc-chap">Chap {chapterName || ""}</div>
+          <div className="rsc-title">
+            <div className="rsc-comic">{comic?.title || "—"}</div>
+            <div className="rsc-chap">
+              {chapterData?.chapter_title || `Chap ${chapterData?.chapter_no || ""}`}
+            </div>
           </div>
 
-          <div className="rc-nav">
+          <div className="rsc-nav">
             <button
               className="btn btn-outline-dark btn-sm"
               disabled={!prevChap}
-              onClick={() => prevChap && goChap(prevChap.api)}
+              onClick={() => prevChap && goChap(prevChap.id)}
             >
               <i className="bi bi-chevron-left" /> Chap trước
             </button>
             <button
               className="btn btn-outline-dark btn-sm"
               disabled={!nextChap}
-              onClick={() => nextChap && goChap(nextChap.api)}
+              onClick={() => nextChap && goChap(nextChap.id)}
             >
               Chap sau <i className="bi bi-chevron-right" />
             </button>
@@ -457,10 +532,10 @@ export default function ReadChapter() {
         </div>
       </div>
 
-      <div className="rc-wrap">
-        <div className="rc-actionsBar">
+      <div className="rsc-wrap">
+        <div className="rsc-actionsBar">
           <button
-            className={`rc-likeBtn ${liked ? "active" : ""}`}
+            className={`rsc-likeBtn ${liked ? "active" : ""}`}
             type="button"
             onClick={toggleLike}
             title={liked ? "Bỏ tim" : "Thả tim"}
@@ -469,34 +544,154 @@ export default function ReadChapter() {
             <span>{likeCount}</span>
           </button>
 
-          <div className="rc-actionsMeta">
-            <span className="rc-pill">
+          <div className="rsc-actionsMeta">
+            <span className="rsc-pill">
               <i className="bi bi-chat-dots me-2" />
               {comments.length} bình luận
             </span>
-            <span className="rc-pill">
-              <i className="bi bi-images me-2" />
-              {pages.length} trang
+            <span className="rsc-pill">
+              <i className="bi bi-journal-text me-2" />
+              Chap {chapterData?.chapter_no || "—"}
             </span>
           </div>
         </div>
 
-        <div className="rc-reader">
-          {pages.map((src, idx) => (
-            <div className="rc-pageImg" key={src}>
-              <div className="page-wrapper">
-                <img src={src} alt={`page-${idx + 1}`} loading="lazy" />
+        {!locked ? (
+          <div className="rsc-readerTools">
+            <div className="rsc-toolsHead">
+              <div className="rsc-toolsTitle">
+                <i className="bi bi-sliders me-2" />
+                Tùy chỉnh đọc truyện
+              </div>
+              <button className="btn btn-sm btn-outline-secondary" onClick={resetReaderSettings} type="button">
+                Mặc định
+              </button>
+            </div>
+
+            <div className="rsc-toolsGrid">
+              <div className="rsc-toolItem">
+                <label>Font chữ</label>
+                <select
+                  value={readerSettings.fontFamily}
+                  onChange={(e) => updateReaderSetting("fontFamily", e.target.value)}
+                  className="form-select"
+                >
+                  <option value="system">Mặc định</option>
+                  <option value="serif">Serif</option>
+                  <option value="sans">Sans</option>
+                  <option value="mono">Mono</option>
+                </select>
               </div>
 
-              <div className="rc-pageNo">
-                {idx + 1}/{pages.length}
+              <div className="rsc-toolItem">
+                <label>Nền đọc</label>
+                <select
+                  value={readerSettings.theme}
+                  onChange={(e) => updateReaderSetting("theme", e.target.value)}
+                  className="form-select"
+                >
+                  <option value="light">Sáng</option>
+                  <option value="sepia">Sepia</option>
+                  <option value="dark">Tối</option>
+                </select>
+              </div>
+
+              <div className="rsc-toolItem">
+                <label>Cỡ chữ: {readerSettings.fontSize}px</label>
+                <input
+                  type="range"
+                  min="15"
+                  max="28"
+                  step="1"
+                  value={readerSettings.fontSize}
+                  onChange={(e) => updateReaderSetting("fontSize", Number(e.target.value))}
+                  className="form-range"
+                />
+              </div>
+
+              <div className="rsc-toolItem">
+                <label>Giãn dòng: {readerSettings.lineHeight}</label>
+                <input
+                  type="range"
+                  min="1.4"
+                  max="2.4"
+                  step="0.1"
+                  value={readerSettings.lineHeight}
+                  onChange={(e) => updateReaderSetting("lineHeight", Number(e.target.value))}
+                  className="form-range"
+                />
+              </div>
+
+              <div className="rsc-toolItem">
+                <label>Chiều rộng: {readerSettings.contentWidth}px</label>
+                <input
+                  type="range"
+                  min="640"
+                  max="1100"
+                  step="10"
+                  value={readerSettings.contentWidth}
+                  onChange={(e) => updateReaderSetting("contentWidth", Number(e.target.value))}
+                  className="form-range"
+                />
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        ) : null}
 
-        <div className="rc-bottomNav">
-          <button className="btn btn-dark" disabled={!prevChap} onClick={() => prevChap && goChap(prevChap.api)}>
+        {locked ? (
+          <div className="rsc-lockbox">
+            <div className="rsc-lockicon">
+              <i className="bi bi-lock" />
+            </div>
+            <div className="rsc-locktext">
+              <div className="fw-bold">Nội dung bị khóa</div>
+              <div className="text-secondary">
+                {isOwner
+                  ? "Bạn là chủ truyện nên luôn có quyền đọc."
+                  : "Mua truyện để mở khóa nội dung chapter này."}
+              </div>
+            </div>
+
+            {!isOwner ? (
+              <button className="btn btn-danger" onClick={handleBuy}>
+                Mua truyện • {fmtVND(comic?.price)}
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <div className="rsc-reader">
+            <div
+              className="rsc-content card shadow-sm"
+              style={{ maxWidth: `${readerSettings.contentWidth}px`, margin: "0 auto" }}
+            >
+              <div className="card-body">
+                <div className="rsc-chapterHeader">
+                  <h2>{chapterData?.chapter_title || `Chap ${chapterData?.chapter_no || ""}`}</h2>
+                  <div className="rsc-subInfo">
+                    <span>{comic?.title || "Truyện tự đăng"}</span>
+                    <span>•</span>
+                    <span>{fmtTime(chapterData?.created_at)}</span>
+                  </div>
+                </div>
+
+                <div
+                  className="rsc-htmlContent"
+                  style={{
+                    fontSize: `${readerSettings.fontSize}px`,
+                    lineHeight: readerSettings.lineHeight,
+                  }}
+                  dangerouslySetInnerHTML={{
+                    __html:
+                      chapterData?.content || "<p>Chưa có nội dung cho chapter này.</p>",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="rsc-bottomNav">
+          <button className="btn btn-dark" disabled={!prevChap} onClick={() => prevChap && goChap(prevChap.id)}>
             <i className="bi bi-chevron-left me-2" />
             Chap trước
           </button>
@@ -508,32 +703,32 @@ export default function ReadChapter() {
             <i className="bi bi-arrow-up" />
           </button>
 
-          <button className="btn btn-dark" disabled={!nextChap} onClick={() => nextChap && goChap(nextChap.api)}>
+          <button className="btn btn-dark" disabled={!nextChap} onClick={() => nextChap && goChap(nextChap.id)}>
             Chap sau <i className="bi bi-chevron-right ms-2" />
           </button>
         </div>
 
-        <div className="rc-comments">
-          <div className="rc-commentsHead">
-            <div className="rc-commentsTitle">
+        <div className="rsc-comments">
+          <div className="rsc-commentsHead">
+            <div className="rsc-commentsTitle">
               <i className="bi bi-chat-left-text me-2" />
               Bình luận
             </div>
-            <div className="rc-commentsHint">Bình luận sẽ hiện ngay cho mọi người.</div>
+            <div className="rsc-commentsHint">Bình luận sẽ hiện ngay cho mọi người.</div>
           </div>
 
-          <div className="rc-composer">
+          <div className="rsc-composer">
             {replyTo ? (
-              <div className="rc-replyTo">
+              <div className="rsc-replyTo">
                 Đang trả lời <b>{replyTo.replyName || "user"}</b>
-                <button className="rc-x" onClick={() => setReplyTo(null)} type="button">
+                <button className="rsc-x" onClick={() => setReplyTo(null)} type="button">
                   <i className="bi bi-x" />
                 </button>
               </div>
             ) : null}
 
             <textarea
-              className="rc-input"
+              className="rsc-input"
               rows={3}
               placeholder={token ? "Viết bình luận..." : "Đăng nhập để bình luận..."}
               value={commentText}
@@ -541,7 +736,7 @@ export default function ReadChapter() {
               disabled={!token}
             />
 
-            <div className="rc-composerActions">
+            <div className="rsc-composerActions">
               <button
                 className="btn btn-outline-light"
                 type="button"
@@ -562,9 +757,9 @@ export default function ReadChapter() {
             </div>
           </div>
 
-          <div className="rc-commentList rc-scroll5" ref={listRef}>
+          <div className="rsc-commentList rsc-scroll5" ref={listRef}>
             {rootComments.length === 0 ? (
-              <div className="rc-empty">
+              <div className="rsc-empty">
                 <i className="bi bi-chat-square-dots" />
                 <div>Chưa có bình luận. Hãy là người đầu tiên!</div>
               </div>
@@ -574,8 +769,8 @@ export default function ReadChapter() {
                 const isMine = Number(c.user_id) === Number(myId);
 
                 return (
-                  <div className="rc-cmt" key={c.id}>
-                    <div className="rc-cmtAvatar">
+                  <div className="rsc-cmt" key={c.id}>
+                    <div className="rsc-cmtAvatar">
                       <img
                         src={
                           c.avatar ||
@@ -587,20 +782,17 @@ export default function ReadChapter() {
                       />
                     </div>
 
-                    <div className="rc-cmtBody">
-                      <div className="rc-cmtTop">
-                        <div className="rc-cmtName">{c.user_name || "User"}</div>
-                        <div className="rc-cmtTime">{fmtTime(c.created_at)}</div>
+                    <div className="rsc-cmtBody">
+                      <div className="rsc-cmtTop">
+                        <div className="rsc-cmtName">{c.user_name || "User"}</div>
+                        <div className="rsc-cmtTime">{fmtTime(c.created_at)}</div>
                       </div>
 
-                      <div className="rc-cmtText">{c.text}</div>
+                      <div className="rsc-cmtText">{c.text}</div>
 
-                      <div
-                        className="rc-cmtActions"
-                        style={{ display: "flex", gap: 10, alignItems: "center" }}
-                      >
+                      <div className="rsc-cmtActions">
                         <button
-                          className="rc-linkBtn"
+                          className="rsc-linkBtn"
                           type="button"
                           onClick={() => setReplyTo({ rootId: c.id, replyName: c.user_name })}
                           disabled={!token}
@@ -611,7 +803,7 @@ export default function ReadChapter() {
 
                         {isMine ? (
                           <button
-                            className="rc-iconBtn danger"
+                            className="rsc-iconBtn danger"
                             type="button"
                             onClick={() => deleteComment(c.id)}
                             title="Xóa bình luận"
@@ -622,23 +814,20 @@ export default function ReadChapter() {
                       </div>
 
                       {replies.length ? (
-                        <div className="rc-replies">
+                        <div className="rsc-replies">
                           {replies.map((r) => {
                             const isMineReply = Number(r.user_id) === Number(myId);
                             return (
-                              <div className="rc-reply" key={r.id}>
-                                <div
-                                  className="rc-replyTop"
-                                  style={{ display: "flex", justifyContent: "space-between" }}
-                                >
+                              <div className="rsc-reply" key={r.id}>
+                                <div className="rsc-replyTop">
                                   <div>
-                                    <span className="rc-replyName">{r.user_name || "User"}</span>{" "}
-                                    <span className="rc-replyTime">{fmtTime(r.created_at)}</span>
+                                    <span className="rsc-replyName">{r.user_name || "User"}</span>{" "}
+                                    <span className="rsc-replyTime">{fmtTime(r.created_at)}</span>
                                   </div>
 
                                   {isMineReply ? (
                                     <button
-                                      className="rc-iconBtn danger"
+                                      className="rsc-iconBtn danger"
                                       type="button"
                                       onClick={() => deleteComment(r.id)}
                                       title="Xóa bình luận"
@@ -648,11 +837,11 @@ export default function ReadChapter() {
                                   ) : null}
                                 </div>
 
-                                <div className="rc-replyText">{r.text}</div>
+                                <div className="rsc-replyText">{r.text}</div>
 
-                                <div className="rc-replyActions">
+                                <div className="rsc-replyActions">
                                   <button
-                                    className="rc-linkBtn"
+                                    className="rsc-linkBtn"
                                     type="button"
                                     onClick={() => setReplyTo({ rootId: c.id, replyName: r.user_name })}
                                     disabled={!token}

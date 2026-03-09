@@ -23,6 +23,8 @@ import ComicListPage from './pages/user/comicListPage';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminCategories from './pages/admin/AdminCategories';
 import SelfComicListPage from './pages/user/SelfComicListPage';
+import ComicSelfDetail from './pages/user/ComicSelfDetail';
+import ReadSelfChapter from './pages/user/ReadSelfChapter';
 
 function App() {
  
@@ -42,8 +44,11 @@ function App() {
  <Route path="/notifications" element={<NotificationsPage />} />
  <Route path="/truyen" element={<ComicListPage />} />
  <Route path="/admin/users" element={<AdminUsers />} />
-<Route path="/self-comics/:id" element={<SelfComicListPage />} />
+<Route path="/self-comics-category/:id" element={<SelfComicListPage />} />
 <Route path="/admin/categories" element={<AdminCategories />} />
+<Route path="/self-comics/:id" element={<ComicSelfDetail />} />
+
+  <Route path="/doc-self" element={<ReadSelfChapter />} />
     </Routes>
   );
 

@@ -345,7 +345,7 @@ export default function Header() {
                         <Link
                           key={cat.id}
                           className="zt-catItem"
-                          to={`/self-comics/=${cat.id}`}
+                          to={`/self-comics-category/=${cat.id}`}
                         >
                           {cat.name}
                         </Link>

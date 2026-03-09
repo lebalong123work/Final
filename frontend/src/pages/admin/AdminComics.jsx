@@ -88,6 +88,7 @@ export default function AdminComics() {
 
   const [selfDraft, setSelfDraft] = useState({
     title: "",
+    author: "",
     cover_image: "",
     description: "",
     total_chapters: 1,
@@ -464,6 +465,7 @@ export default function AdminComics() {
   const resetSelfDraft = () => {
     setSelfDraft({
       title: "",
+      author: "",
       cover_image: "",
       description: "",
       total_chapters: 1,
@@ -488,6 +490,7 @@ export default function AdminComics() {
 
     setSelfDraft({
       title: comic?.title || "",
+      author: comic?.author || "",
       cover_image: comic?.cover_image || "",
       description: comic?.description || "",
       total_chapters: Number(comic?.total_chapters || 1),
@@ -513,6 +516,7 @@ export default function AdminComics() {
     if (!token) return toast.error("Thiếu token đăng nhập.");
 
     const title = String(selfDraft.title || "").trim();
+    const author = String(selfDraft.author || "").trim();
     const coverImage = String(selfDraft.cover_image || "").trim();
     const descriptionHTML = descEditor?.getHTML?.() || "";
     const totalChapters = Math.max(1, Number(selfDraft.total_chapters || 1));
@@ -533,6 +537,7 @@ export default function AdminComics() {
 
       const payload = {
         title,
+        author: author || null,
         cover_image: coverImage,
         description: descriptionHTML || null,
         total_chapters: totalChapters,
@@ -986,6 +991,10 @@ export default function AdminComics() {
                         {tab === "self" ? (
                           <>
                             <div className="text-secondary small mt-2">
+                              Tác giả: <b>{c?.author || "—"}</b>
+                            </div>
+
+                            <div className="text-secondary small mt-2">
                               Tổng chương: <b>{c?.total_chapters || 1}</b>
                             </div>
 
@@ -1077,7 +1086,7 @@ export default function AdminComics() {
                     {editingSelfId ? "Sửa truyện tự đăng" : "Thêm truyện tự đăng"}
                   </div>
                   <div className="text-secondary small">
-                    Ảnh chính + mô tả + tổng số chương + miễn phí / trả phí
+                    Ảnh chính + mô tả + tác giả + tổng số chương + miễn phí / trả phí
                   </div>
                 </div>
 
@@ -1100,6 +1109,20 @@ export default function AdminComics() {
                   placeholder="Ví dụ: Truyện tự đăng của tôi..."
                   disabled={selfSaving}
                 />
+
+                <div className="mt-3">
+                  <label className="form-label fw-semibold">Tác giả</label>
+                  <input
+                    className="form-control"
+                    value={selfDraft.author}
+                    onChange={(e) => setSelfDraft((p) => ({ ...p, author: e.target.value }))}
+                    placeholder="Ví dụ: Nguyễn Văn A"
+                    disabled={selfSaving}
+                  />
+                  <div className="text-secondary small mt-1">
+                    Có thể để trống nếu chưa muốn thêm tác giả.
+                  </div>
+                </div>
 
                 <div className="mt-3">
                   <label className="form-label fw-semibold">Ảnh chính</label>

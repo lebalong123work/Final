@@ -97,24 +97,45 @@ router.get("/", async (req, res) => {
   }
 });
 
+
 router.get("/:slug/pricing", async (req, res) => {
   try {
     const { slug } = req.params;
 
     const r = await db.query(
-      `SELECT api_id, slug, name, is_paid, price
-       FROM external_comics
-       WHERE slug = $1 OR api_id = $1
-       LIMIT 1`,
+      `
+      SELECT
+        id,
+        api_id,
+        slug,
+        name,
+        is_paid,
+        price
+      FROM external_comics
+      WHERE slug = $1 OR api_id = $1
+      LIMIT 1
+      `,
       [slug]
     );
 
     if (!r.rows.length) {
-   
-      return res.json({ success: true, data: { is_paid: false, price: 0 } });
+      return res.json({
+        success: true,
+        data: {
+          id: null,
+          api_id: null,
+          slug: slug,
+          name: null,
+          is_paid: false,
+          price: 0,
+        },
+      });
     }
 
-    return res.json({ success: true, data: r.rows[0] });
+    return res.json({
+      success: true,
+      data: r.rows[0],
+    });
   } catch (err) {
     console.error("GET pricing error:", err);
     return res.status(500).json({ message: "Server error" });
@@ -122,20 +143,39 @@ router.get("/:slug/pricing", async (req, res) => {
 });
 
 router.get("/:slug/owner", async (req, res) => {
-  const slug = req.params.slug;
+  try {
+    const slug = req.params.slug;
 
-  const r = await db.query(
-    `
-    SELECT ec.slug, ec.owner_user_id, u.username
-    FROM external_comics ec
-    LEFT JOIN users u ON u.id = ec.owner_user_id
-    WHERE ec.slug=$1
-    `,
-    [slug]
-  );
+    const r = await db.query(
+      `
+      SELECT
+        ec.id AS comic_id,
+        ec.slug,
+        ec.owner_user_id,
+        u.username
+      FROM external_comics ec
+      LEFT JOIN users u ON u.id = ec.owner_user_id
+      WHERE ec.slug = $1 OR ec.api_id = $1
+      LIMIT 1
+      `,
+      [slug]
+    );
 
-  if (r.rowCount === 0) return res.json({ data: { owner_user_id: null, username: null } });
-  return res.json({ data: r.rows[0] });
+    if (r.rowCount === 0) {
+      return res.json({
+        data: {
+          comic_id: null,
+          owner_user_id: null,
+          username: null,
+        },
+      });
+    }
+
+    return res.json({ data: r.rows[0] });
+  } catch (err) {
+    console.error("GET owner error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
 });
 
 module.exports = router;
