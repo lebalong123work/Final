@@ -1,47 +1,157 @@
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Carousel } from "bootstrap";
 import "./featuredBanner.css";
 
-const slides = [
-  {
-    id: 1,
-    title: "Hệ Thống Bá Đạo",
-    subtitle: "Top 1 tuần • Full HD",
-    cover:
-      "https://cdn-media.sforum.vn/storage/app/media/wp-content/uploads/2022/05/Destiny-Girl-codes.jpg",
-    badge: "HOT",
-  },
-  {
-    id: 2,
-    title: "Ta Có Một Thành Phố",
-    subtitle: "Đang phát hành • Chap mới",
-    cover:
-      "https://cdn-media.sforum.vn/storage/app/media/wp-content/uploads/2022/05/Destiny-Girl-codes.jpg",
-    badge: "NEW",
-  },
-  {
-    id: 3,
-    title: "Kiếm Thần Trở Lại",
-    subtitle: "Hành động • Tu tiên",
-    cover:
-      "https://cdn-media.sforum.vn/storage/app/media/wp-content/uploads/2022/05/Destiny-Girl-codes.jpg",
-    badge: "TOP",
-  },
-];
+const API_BASE = "http://localhost:5000";
+const IMG_BASE = "https://img.otruyenapi.com/uploads/comics/";
+
+async function fetchJSON(url, options = {}) {
+  const res = await fetch(url, options);
+  const text = await res.text();
+
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    throw new Error(`API không trả JSON: ${url}`);
+  }
+
+  if (!res.ok) {
+    throw new Error(json?.message || `HTTP ${res.status}`);
+  }
+
+  return json;
+}
+
+function buildCover(item) {
+  if (!item?.cover_image) {
+    return "https://via.placeholder.com/1200x500?text=No+Cover";
+  }
+
+  if (item.comic_type === "self") {
+    const cover = item.cover_image;
+    if (cover.startsWith("http")) return cover;
+    if (cover.startsWith("data:image")) return cover;
+    if (cover.startsWith("/")) return `${API_BASE}${cover}`;
+    return cover;
+  }
+
+  if (String(item.cover_image).startsWith("http")) return item.cover_image;
+  return `${IMG_BASE}${item.cover_image}`;
+}
+
+function buildDetailUrl(item) {
+  if (item?.comic_type === "self") {
+    return `/self-comics/${item?.id}`;
+  }
+  return `/truyen/${item?.slug}`;
+}
+
+function buildSubtitle(item, idx) {
+  const topText =
+    idx === 0 ? "Top 1 đọc nhiều" : idx === 1 ? "Top 2 nổi bật" : "Top 3 xu hướng";
+
+  let statusText = "Đang cập nhật";
+  if (item?.comic_type === "self") {
+    statusText = Number(item?.status) === 1 ? "Đang hiển thị" : "Ẩn / nháp";
+  } else {
+    const raw = String(item?.status || "").toLowerCase();
+    if (raw === "ongoing") statusText = "Đang phát hành";
+    else if (raw === "completed") statusText = "Hoàn thành";
+    else if (raw === "coming_soon") statusText = "Sắp ra mắt";
+  }
+
+  return `${topText} • ${statusText} • ${Number(item?.read_count || 0)} lượt đọc`;
+}
 
 export default function FeaturedBanner() {
+  const navigate = useNavigate();
+  const carouselRef = useRef(null);
+  const carouselInstanceRef = useRef(null);
+
+  const [slides, setSlides] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    const run = async () => {
+      try {
+        setLoading(true);
+        setErr("");
+
+        const data = await fetchJSON(`${API_BASE}/api/reading-history/top-comics?limit=3`);
+        setSlides(Array.isArray(data?.data) ? data.data : []);
+      } catch (e) {
+        console.error(e);
+        setErr(e.message || "Lỗi tải banner");
+        setSlides([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    run();
+  }, []);
+
+  useEffect(() => {
+    if (!carouselRef.current) return;
+    if (!slides.length) return;
+
+    if (carouselInstanceRef.current) {
+      carouselInstanceRef.current.dispose();
+      carouselInstanceRef.current = null;
+    }
+
+    carouselInstanceRef.current = new Carousel(carouselRef.current, {
+      interval: 3000,
+      ride: "carousel",
+      pause: false,
+      wrap: true,
+      touch: true,
+    });
+
+    carouselInstanceRef.current.cycle();
+
+    return () => {
+      if (carouselInstanceRef.current) {
+        carouselInstanceRef.current.dispose();
+        carouselInstanceRef.current = null;
+      }
+    };
+  }, [slides]);
+
+  if (loading) {
+    return (
+      <section className="fb-wrap">
+        <div className="container-fluid px-4 py-4 text-secondary">Đang tải banner...</div>
+      </section>
+    );
+  }
+
+  if (err) {
+    return (
+      <section className="fb-wrap">
+        <div className="container-fluid px-4 py-4">
+          <div className="alert alert-danger mb-0">{err}</div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!slides.length) return null;
+
   return (
     <section className="fb-wrap">
       <div
         id="featuredCarousel"
+        ref={carouselRef}
         className="carousel slide fb-carousel"
-        data-bs-ride="carousel"
-        data-bs-interval="3000"
-        data-bs-pause="false"
       >
-        {/* Indicators */}
         <div className="carousel-indicators">
           {slides.map((s, idx) => (
             <button
-              key={s.id}
+              key={`${s.comic_type}-${s.id}`}
               type="button"
               data-bs-target="#featuredCarousel"
               data-bs-slide-to={idx}
@@ -52,35 +162,32 @@ export default function FeaturedBanner() {
           ))}
         </div>
 
-        {/* Slides */}
         <div className="carousel-inner">
           {slides.map((s, idx) => (
             <div
-              key={s.id}
+              key={`${s.comic_type}-${s.id}`}
               className={`carousel-item ${idx === 0 ? "active" : ""}`}
             >
               <div className="fb-slide">
-                {/* Background image */}
-                <img src={s.cover} className="fb-bg" alt={s.title} />
-
-                {/* overlay */}
+                <img src={buildCover(s)} className="fb-bg-blur" alt="" aria-hidden="true" />
+                <img src={buildCover(s)} className="fb-bg" alt={s.title} />
                 <div className="fb-overlay" />
 
-                {/* content */}
                 <div className="fb-content container-fluid px-4">
-                  <span className={`fb-badge fb-${s.badge.toLowerCase()}`}>
-                    {s.badge}
+                  <span className={`fb-badge fb-${String(s.badge || "top").toLowerCase()}`}>
+                    {s.badge || "TOP"}
                   </span>
 
                   <h2 className="fb-title">{s.title}</h2>
-                  <p className="fb-sub">{s.subtitle}</p>
+                  <p className="fb-sub">{buildSubtitle(s, idx)}</p>
 
                   <div className="fb-actions">
-                    <button className="btn btn-primary fb-btn">
+                    <button
+                      className="btn btn-primary fb-btn"
+                      type="button"
+                      onClick={() => navigate(buildDetailUrl(s))}
+                    >
                       Đọc ngay
-                    </button>
-                    <button className="btn btn-outline-light fb-btn">
-                      Xem chi tiết
                     </button>
                   </div>
                 </div>
@@ -89,7 +196,6 @@ export default function FeaturedBanner() {
           ))}
         </div>
 
-        {/* Controls */}
         <button
           className="carousel-control-prev"
           type="button"

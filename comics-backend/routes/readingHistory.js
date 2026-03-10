@@ -452,4 +452,93 @@ router.get("/library", auth, async (req, res) => {
   }
 });
 
+
+router.get("/top-comics", async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(20, Number(req.query.limit || 3)));
+
+    // TOP SELF
+    const selfResult = await db.query(
+      `
+      SELECT
+        'self' AS comic_type,
+        sc.id,
+        sc.title,
+        sc.cover_image,
+        sc.status,
+        sc.updated_at,
+        sc.created_at,
+        sc.id::text AS slug,
+        COUNT(*)::int AS read_count
+      FROM user_chapter_reads ucr
+      JOIN self_comics sc
+        ON sc.id = ucr.self_comic_id
+      WHERE ucr.comic_type = 'self'
+        AND ucr.self_comic_id IS NOT NULL
+      GROUP BY
+        sc.id,
+        sc.title,
+        sc.cover_image,
+        sc.status,
+        sc.updated_at,
+        sc.created_at
+      `
+    );
+
+    // TOP EXTERNAL
+    const externalResult = await db.query(
+      `
+      SELECT
+        'external' AS comic_type,
+        ec.id,
+        ec.name AS title,
+        ec.thumb_url AS cover_image,
+        ec.status,
+        ec.updated_at,
+        ec.created_at,
+        ec.slug,
+        COUNT(*)::int AS read_count
+      FROM user_chapter_reads ucr
+      JOIN external_comics ec
+        ON ec.id = ucr.external_comic_id
+      WHERE ucr.comic_type = 'external'
+        AND ucr.external_comic_id IS NOT NULL
+      GROUP BY
+        ec.id,
+        ec.name,
+        ec.thumb_url,
+        ec.status,
+        ec.updated_at,
+        ec.created_at,
+        ec.slug
+      `
+    );
+
+    const selfRows = selfResult.rows || [];
+    const externalRows = externalResult.rows || [];
+
+    const merged = [...selfRows, ...externalRows]
+      .sort((a, b) => {
+        const readDiff = Number(b.read_count || 0) - Number(a.read_count || 0);
+        if (readDiff !== 0) return readDiff;
+
+        const bt = new Date(b.updated_at || b.created_at || 0).getTime();
+        const at = new Date(a.updated_at || a.created_at || 0).getTime();
+        return bt - at;
+      })
+      .slice(0, limit)
+      .map((item, idx) => ({
+        ...item,
+        badge: idx === 0 ? "HOT" : idx === 1 ? "TOP" : "NEW",
+      }));
+
+    return res.json({
+      success: true,
+      data: merged,
+    });
+  } catch (err) {
+    console.error("GET /api/reading-history/top-comics error:", err);
+    return res.status(500).json({ message: "Lỗi server khi lấy top truyện" });
+  }
+});
 module.exports = router;

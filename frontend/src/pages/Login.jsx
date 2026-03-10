@@ -164,14 +164,7 @@ const onSubmit = async (e) => {
 
                   <div className="d-flex justify-content-between align-items-center mt-3 mb-4">
                     <div className="form-check">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="remember"
-                      />
-                      <label className="form-check-label" htmlFor="remember">
-                        Ghi nhớ
-                      </label>
+                      
                     </div>
                     <Link
                       to="/forgot-password"

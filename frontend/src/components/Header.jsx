@@ -59,7 +59,8 @@ export default function Header() {
   const [otherCategories, setOtherCategories] = useState([]);
   const [otherCatLoading, setOtherCatLoading] = useState(false);
   const [otherCatErr, setOtherCatErr] = useState("");
-
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+const userMenuRef = useRef(null);
   useEffect(() => {
     const onStorage = (e) => {
       if (e.key === "user" || e.key === "token") setTick((t) => t + 1);
@@ -101,7 +102,17 @@ export default function Header() {
       //
     }
   };
+useEffect(() => {
+  const handleClickOutside = (e) => {
+    if (!userMenuRef.current) return;
+    if (!userMenuRef.current.contains(e.target)) {
+      setUserMenuOpen(false);
+    }
+  };
 
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, []);
   // load external categories
   useEffect(() => {
     const run = async () => {
@@ -268,22 +279,19 @@ export default function Header() {
     <header className="zt-header border-bottom bg-white">
       <nav className="navbar navbar-expand-lg navbar-light">
         <div className="container-fluid px-4">
-          <Link to="/" className="navbar-brand d-flex align-items-center gap-2">
-            <div className="d-flex align-items-center gap-2 mb-0">
-              <a href="/">
-                <img
-                  className="hero-logo"
-                  src="https://i.ibb.co/4wJ9F49W/logo-fotor-bg-remover-202603048410-1.png"
-                  alt="logo"
-                  border="0"
-                />
-              </a>
+        <Link to="/" className="navbar-brand d-flex align-items-center gap-2">
+  <div className="d-flex align-items-center gap-2 mb-0">
+    <img
+      className="hero-logo"
+      src="https://i.ibb.co/4wJ9F49W/logo-fotor-bg-remover-202603048410-1.png"
+      alt="logo"
+    />
 
-              <span className="brand-text">
-                <span className="brand-z">R</span>eadink
-              </span>
-            </div>
-          </Link>
+    <span className="brand-text">
+      <span className="brand-z">R</span>eadink
+    </span>
+  </div>
+</Link>
 
           <button
             className="navbar-toggler"
@@ -435,66 +443,92 @@ export default function Header() {
                 ) : null}
               </div>
 
-              <div className="dropdown">
-                <button
-                  className="btn user-btn dropdown-toggle"
-                  type="button"
-                  data-bs-toggle="dropdown"
-                >
-                  <i className="bi bi-person-circle fs-4 me-1"></i>
-                  {user ? user.username : ""}
-                </button>
+             <div className="zt-userMenu" ref={userMenuRef}>
+  <button
+    className="btn user-btn zt-userToggle"
+    type="button"
+    onClick={() => setUserMenuOpen((v) => !v)}
+  >
+    <i className="bi bi-person-circle fs-4 me-1"></i>
+    {user ? user.username : "Tài khoản"}
+    <i className={`bi ms-1 ${userMenuOpen ? "bi-chevron-up" : "bi-chevron-down"}`}></i>
+  </button>
 
-                <ul className="dropdown-menu dropdown-menu-end">
-                  {!user && (
-                    <>
-                      <li>
-                        <Link className="dropdown-item" to="/login">
-                          <i className="bi bi-box-arrow-in-right me-2"></i>
-                          Đăng nhập
-                        </Link>
-                      </li>
-                      <li>
-                        <Link className="dropdown-item" to="/register">
-                          <i className="bi bi-person-plus me-2"></i>
-                          Đăng ký
-                        </Link>
-                      </li>
-                    </>
-                  )}
+  {userMenuOpen && (
+    <ul className="zt-userDropdown">
+      {!user && (
+        <>
+          <li>
+            <Link
+              className="zt-userItem"
+              to="/login"
+              onClick={() => setUserMenuOpen(false)}
+            >
+              <i className="bi bi-box-arrow-in-right me-2"></i>
+              Đăng nhập
+            </Link>
+          </li>
+          <li>
+            <Link
+              className="zt-userItem"
+              to="/register"
+              onClick={() => setUserMenuOpen(false)}
+            >
+              <i className="bi bi-person-plus me-2"></i>
+              Đăng ký
+            </Link>
+          </li>
+        </>
+      )}
 
-                  {user && (
-                    <>
-                      <li>
-                        <Link className="dropdown-item" to="/profile">
-                          <i className="bi bi-person me-2"></i>
-                          Trang cá nhân
-                        </Link>
-                      </li>
+      {user && (
+        <>
+          <li>
+            <Link
+              className="zt-userItem"
+              to="/profile"
+              onClick={() => setUserMenuOpen(false)}
+            >
+              <i className="bi bi-person me-2"></i>
+              Trang cá nhân
+            </Link>
+          </li>
 
-                      {(user.role === "admin" || user.role === "sub_admin") && (
-                        <li>
-                          <Link className="dropdown-item text-danger" to="/admin">
-                            <i className="bi bi-speedometer2 me-2"></i>
-                            Quản trị
-                          </Link>
-                        </li>
-                      )}
+          {(user.role === "admin" || user.role === "sub_admin") && (
+            <li>
+              <Link
+                className="zt-userItem text-danger"
+                to="/admin"
+                onClick={() => setUserMenuOpen(false)}
+              >
+                <i className="bi bi-speedometer2 me-2"></i>
+                Quản trị
+              </Link>
+            </li>
+          )}
 
-                      <li>
-                        <hr className="dropdown-divider" />
-                      </li>
+          <li>
+            <hr className="dropdown-divider" />
+          </li>
 
-                      <li>
-                        <button className="dropdown-item" onClick={handleLogout}>
-                          <i className="bi bi-box-arrow-right me-2"></i>
-                          Đăng xuất
-                        </button>
-                      </li>
-                    </>
-                  )}
-                </ul>
-              </div>
+          <li>
+            <button
+              className="zt-userItem zt-userBtn"
+              type="button"
+              onClick={() => {
+                setUserMenuOpen(false);
+                handleLogout();
+              }}
+            >
+              <i className="bi bi-box-arrow-right me-2"></i>
+              Đăng xuất
+            </button>
+          </li>
+        </>
+      )}
+    </ul>
+  )}
+</div>
             </div>
           </div>
         </div>

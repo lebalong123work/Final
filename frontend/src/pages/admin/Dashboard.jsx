@@ -30,15 +30,6 @@ function fmtNum(n) {
   return new Intl.NumberFormat("vi-VN").format(Number(n || 0));
 }
 
-function Delta({ value = 0 }) {
-  const up = value >= 0;
-  return (
-    <span className={`ad-delta ${up ? "up" : "down"}`}>
-      <i className={`bi ${up ? "bi-arrow-up-right" : "bi-arrow-down-right"}`} />
-      {Math.abs(Number(value || 0))}%
-    </span>
-  );
-}
 
 function dayLabelFromDate(dateStr) {
   const d = new Date(dateStr);
@@ -286,7 +277,7 @@ export default function Dashboard() {
                       <div className="ad-kpi-icon">
                         <i className="bi bi-cash-coin" />
                       </div>
-                      <Delta value={0} />
+                
                     </div>
 
                     <div className="text-secondary small mt-3">Doanh thu toàn sàn</div>
@@ -305,7 +296,7 @@ export default function Dashboard() {
                       <div className="ad-kpi-icon">
                         <i className="bi bi-person-plus" />
                       </div>
-                      <Delta value={0} />
+                      
                     </div>
 
                     <div className="text-secondary small mt-3">User mới</div>
@@ -324,7 +315,7 @@ export default function Dashboard() {
                       <div className="ad-kpi-icon">
                         <i className="bi bi-receipt" />
                       </div>
-                      <Delta value={0} />
+                     
                     </div>
 
                     <div className="text-secondary small mt-3">Giao dịch</div>

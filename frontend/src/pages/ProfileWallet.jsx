@@ -153,6 +153,15 @@ const [followStats, setFollowStats] = useState({
   followers: 0,
   following: 0,
 });
+
+const [levelProgress, setLevelProgress] = useState({
+  total_topup: 0,
+  current_level: null,
+  next_level: null,
+  progress_percent: 0,
+  progress_current: 0,
+  progress_needed: 0,
+});
   const [recentTx, setRecentTx] = useState([]);
   const [txList, setTxList] = useState([]);
   const [txPage, setTxPage] = useState(1);
@@ -203,6 +212,37 @@ const [commentStats, setCommentStats] = useState({
     setFollowStats({
       followers: 0,
       following: 0,
+    });
+  }
+};
+
+const fetchLevelProgress = async () => {
+  if (!token) return;
+
+  try {
+    const data = await fetchJSON(`${API_BASE}/levels/me-progress`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    setLevelProgress(
+      data?.data || {
+        total_topup: 0,
+        current_level: null,
+        next_level: null,
+        progress_percent: 0,
+        progress_current: 0,
+        progress_needed: 0,
+      }
+    );
+  } catch (e) {
+    console.error(e);
+    setLevelProgress({
+      total_topup: 0,
+      current_level: null,
+      next_level: null,
+      progress_percent: 0,
+      progress_current: 0,
+      progress_needed: 0,
     });
   }
 };
@@ -395,11 +435,12 @@ const fetchCommentStats = async () => {
         setMe(data.user);
         setWallet(data.wallet);
 
-       await Promise.all([
+     await Promise.all([
   fetchReadingStats(),
   fetchLibrary(),
   fetchFollowStats(),
   fetchCommentStats(),
+  fetchLevelProgress(),
 ]);
       } catch (e) {
         console.error(e);
@@ -496,38 +537,45 @@ const fetchCommentStats = async () => {
   };
 
   const uiUser = useMemo(() => {
-    const username = me?.username || "User";
-    const email = me?.email || "";
+  const username = me?.username || "User";
+  const email = me?.email || "";
 
-    return {
-      name: username,
-      username: email ? email : "@" + username,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`,
-      level: 1,
-      xp: 0,
-      nextXp: 100,
-      stats: [
-        {   label: "Lượt theo dõi",
-    value: Number(followStats?.followers || 0),
-    icon: "bi-bookmark-heart" },
-        {
-          label: "Chap đã đọc",
-          value: Number(readingStats?.total_chapters_read || 0),
-          icon: "bi-lightning-charge",
-        },
+  return {
+    name: username,
+    username: email ? email : "@" + username,
+    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`,
+    level: Number(levelProgress?.current_level?.level_no || 1),
+    totalTopup: Number(levelProgress?.total_topup || 0),
+    nextTopup: Number(
+      levelProgress?.next_level?.min_total_topup ||
+        levelProgress?.progress_needed ||
+        levelProgress?.total_topup ||
+        0
+    ),
+    stats: [
       {
-  label: "Bình luận",
-  value: Number(commentStats?.total_comments || 0),
-  icon: "bi-chat-dots",
-},
-      ],
-    };
-  }, [me, readingStats, followStats, commentStats]);
+        label: "Lượt theo dõi",
+        value: Number(followStats?.followers || 0),
+        icon: "bi-bookmark-heart",
+      },
+      {
+        label: "Chap đã đọc",
+        value: Number(readingStats?.total_chapters_read || 0),
+        icon: "bi-lightning-charge",
+      },
+      {
+        label: "Bình luận",
+        value: Number(commentStats?.total_comments || 0),
+        icon: "bi-chat-dots",
+      },
+    ],
+  };
+}, [me, readingStats, followStats, commentStats, levelProgress]);
+  
 
-  const xpPercent = useMemo(() => {
-    const p = Math.round((uiUser.xp / uiUser.nextXp) * 100);
-    return Math.min(100, Math.max(0, p));
-  }, [uiUser]);
+const topupPercent = useMemo(() => {
+  return Math.min(100, Math.max(0, Number(levelProgress?.progress_percent || 0)));
+}, [levelProgress]);
 
   const balance = wallet?.balance ?? 0;
 
@@ -608,24 +656,51 @@ const fetchCommentStats = async () => {
                   <span className="pw-username">{uiUser.username}</span>
                 </div>
 
-                <div className="pw-xp mt-2">
-                  <div className="d-flex justify-content-between small text-secondary">
-                    <span>Level {uiUser.level}</span>
-                    <span>
-                      {uiUser.xp}/{uiUser.nextXp} XP
-                    </span>
-                  </div>
-                  <div className="progress pw-progress mt-1">
-                    <div
-                      className="progress-bar"
-                      role="progressbar"
-                      style={{ width: `${xpPercent}%` }}
-                      aria-valuenow={xpPercent}
-                      aria-valuemin="0"
-                      aria-valuemax="100"
-                    />
-                  </div>
-                </div>
+         <div className="pw-xp mt-2">
+  <div className="d-flex justify-content-between small text-secondary">
+    <span>
+      Level {uiUser.level}
+      {levelProgress?.current_level?.name ? ` • ${levelProgress.current_level.name}` : ""}
+    </span>
+
+    <span>
+      {fmtVND(levelProgress?.progress_current || 0)}
+      {levelProgress?.next_level ? ` / ${fmtVND(levelProgress?.progress_needed || 0)}` : ""}
+    </span>
+  </div>
+
+  <div className="progress pw-progress mt-1">
+    <div
+      className="progress-bar bg-success"
+      role="progressbar"
+      style={{ width: `${topupPercent}%` }}
+      aria-valuenow={topupPercent}
+      aria-valuemin="0"
+      aria-valuemax="100"
+    />
+  </div>
+
+  <div className="small text-secondary mt-1">
+    Tổng đã nạp: <b>{fmtVND(levelProgress?.total_topup || 0)}</b>
+    {levelProgress?.next_level ? (
+      <>
+        {" "}Cần thêm{" "}
+        <b>
+          {fmtVND(
+            Math.max(
+              0,
+              Number(levelProgress?.next_level?.min_total_topup || 0) -
+                Number(levelProgress?.total_topup || 0)
+            )
+          )}
+        </b>{" "}
+        để lên level {levelProgress?.next_level?.level_no}
+      </>
+    ) : (
+      <> </>
+    )}
+  </div>
+</div>
               </div>
 
               <div className="col-12 col-md-auto">
