@@ -187,7 +187,7 @@ export default function FeaturedBanner() {
                       type="button"
                       onClick={() => navigate(buildDetailUrl(s))}
                     >
-                      Đọc ngay
+                     Xem chi tiết
                     </button>
                   </div>
                 </div>

@@ -78,7 +78,12 @@ export default function AdminComics() {
 
   // ===== MODAL: pricing external =====
   const [settingComic, setSettingComic] = useState(null);
-  const [settingDraft, setSettingDraft] = useState({ type: "free", price: 0 });
+ const [settingDraft, setSettingDraft] = useState({
+  tab: "pricing", // pricing | translator
+  type: "free",
+  price: 0,
+  translator: "",
+});
   const [savingSetting, setSavingSetting] = useState(false);
 
   // ===== MODAL: create/edit self comic =====
@@ -323,21 +328,27 @@ export default function AdminComics() {
     return { text: "Miễn phí", tone: "success" };
   };
 
-  // ================== MODAL: PRICING (EXTERNAL) ==================
   const openSetting = (comic) => {
-    const isPaid = !!comic?.is_paid;
-    setSettingComic(comic);
-    setSettingDraft({
-      type: isPaid ? "paid" : "free",
-      price: Number(comic?.price || 0),
-    });
-  };
+  const isPaid = !!comic?.is_paid;
+  setSettingComic(comic);
+  setSettingDraft({
+    tab: "pricing",
+    type: isPaid ? "paid" : "free",
+    price: Number(comic?.price || 0),
+    translator: comic?.translator || "",
+  });
+};
 
   const closeSetting = () => {
-    if (savingSetting) return;
-    setSettingComic(null);
-    setSettingDraft({ type: "free", price: 0 });
-  };
+  if (savingSetting) return;
+  setSettingComic(null);
+  setSettingDraft({
+    tab: "pricing",
+    type: "free",
+    price: 0,
+    translator: "",
+  });
+};
 
   const saveSetting = async () => {
     if (!token) return toast.error("Thiếu token admin.");
@@ -383,6 +394,67 @@ export default function AdminComics() {
     }
   };
 
+
+  const saveTranslator = async () => {
+  if (!token) return toast.error("Thiếu token admin.");
+  if (!settingComic?.slug && !settingComic?.api_id) {
+    return toast.error("Không tìm thấy định danh truyện.");
+  }
+
+  const comicKey = settingComic?.slug || settingComic?.api_id;
+  const translator = String(settingDraft.translator || "").trim();
+
+  try {
+    setSavingSetting(true);
+
+    const res = await fetch(
+      `${API_BASE}/api/external-comics/${encodeURIComponent(comicKey)}/translator`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          translator: translator || null,
+        }),
+      }
+    );
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data?.message || "Lưu translator thất bại");
+    }
+
+    setExtItems((prev) =>
+      prev.map((x) =>
+        (x.api_id === settingComic.api_id || x.slug === settingComic.slug)
+          ? { ...x, translator: data?.data?.translator ?? null }
+          : x
+      )
+    );
+
+    setSettingComic((prev) =>
+      prev
+        ? {
+            ...prev,
+            translator: data?.data?.translator ?? null,
+          }
+        : prev
+    );
+
+    setSettingDraft((prev) => ({
+      ...prev,
+      translator: data?.data?.translator || "",
+    }));
+
+    toast.success(data?.message || "Đã cập nhật translator");
+  } catch (e) {
+    toast.error(e.message || "Lỗi lưu translator");
+  } finally {
+    setSavingSetting(false);
+  }
+};
   // ================== Editor helpers ==================
   const setEditorLink = (editor) => {
     if (!editor) return;
@@ -987,7 +1059,11 @@ export default function AdminComics() {
                         <div className="fw-bold ad-comic-title" title={name}>
                           {name}
                         </div>
-
+                       {tab === "external" ? (
+    <div className="text-secondary small mt-2">
+      Dịch bởi: <b>{c?.translator || "—"}</b>
+    </div>
+  ) : null}
                         {tab === "self" ? (
                           <>
                             <div className="text-secondary small mt-2">
@@ -1659,63 +1735,157 @@ export default function AdminComics() {
           </div>
         ) : null}
 
-        {settingComic ? (
-          <div className="ad-modal-backdrop" onMouseDown={closeSetting}>
-            <div className="ad-modal" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
-                <div className="min-w-0">
-                  <div className="fw-bold">Cài đặt truyện (Truyện ngoài DB)</div>
-                  <div className="text-secondary small text-truncate" title={settingComic?.name}>
-                    {settingComic?.name}
-                  </div>
-                </div>
+ {settingComic ? (
+  <div className="ad-modal-backdrop" onMouseDown={closeSetting}>
+    <div className="ad-modal" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
+        <div className="min-w-0">
+          <div className="fw-bold">Cài đặt truyện (Truyện ngoài DB)</div>
+          <div className="text-secondary small text-truncate" title={settingComic?.name}>
+            {settingComic?.name}
+          </div>
+        </div>
 
-                <button className="btn btn-light btn-sm" type="button" onClick={closeSetting} disabled={savingSetting}>
-                  <i className="bi bi-x-lg" />
-                </button>
-              </div>
+        <button
+          className="btn btn-light btn-sm"
+          type="button"
+          onClick={closeSetting}
+          disabled={savingSetting}
+        >
+          <i className="bi bi-x-lg" />
+        </button>
+      </div>
 
+      <div className="mt-3">
+        <div className="d-flex gap-2 flex-wrap mb-3">
+          <button
+            type="button"
+            className={`btn ${
+              settingDraft.tab === "pricing" ? "btn-dark" : "btn-outline-dark"
+            }`}
+            onClick={() => setSettingDraft((p) => ({ ...p, tab: "pricing" }))}
+            disabled={savingSetting}
+          >
+            <i className="bi bi-cash-coin me-2" />
+            Giá truyện
+          </button>
+
+          <button
+            type="button"
+            className={`btn ${
+              settingDraft.tab === "translator" ? "btn-dark" : "btn-outline-dark"
+            }`}
+            onClick={() => setSettingDraft((p) => ({ ...p, tab: "translator" }))}
+            disabled={savingSetting}
+          >
+            <i className="bi bi-translate me-2" />
+            Dịch bởi
+          </button>
+        </div>
+
+        {settingDraft.tab === "pricing" ? (
+          <>
+            <label className="form-label fw-semibold">Hình thức xem</label>
+            <select
+              className="form-select"
+              value={settingDraft.type}
+              onChange={(e) =>
+                setSettingDraft((p) => ({ ...p, type: e.target.value }))
+              }
+              disabled={savingSetting}
+            >
+              <option value="free">Miễn phí</option>
+              <option value="paid">Trả phí</option>
+            </select>
+
+            {settingDraft.type === "paid" ? (
               <div className="mt-3">
-                <label className="form-label fw-semibold">Hình thức xem</label>
-                <select
-                  className="form-select"
-                  value={settingDraft.type}
-                  onChange={(e) => setSettingDraft((p) => ({ ...p, type: e.target.value }))}
+                <label className="form-label fw-semibold">Giá (VNĐ)</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="form-control"
+                  value={settingDraft.price}
+                  onChange={(e) =>
+                    setSettingDraft((p) => ({ ...p, price: e.target.value }))
+                  }
+                  placeholder="Ví dụ: 5000"
                   disabled={savingSetting}
-                >
-                  <option value="free">Miễn phí</option>
-                  <option value="paid">Trả phí</option>
-                </select>
+                />
+              </div>
+            ) : (
+              <div className="text-secondary small mt-2">
+                User sẽ được xem miễn phí.
+              </div>
+            )}
 
-                {settingDraft.type === "paid" ? (
-                  <div className="mt-3">
-                    <label className="form-label fw-semibold">Giá (VNĐ)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      className="form-control"
-                      value={settingDraft.price}
-                      onChange={(e) => setSettingDraft((p) => ({ ...p, price: e.target.value }))}
-                      placeholder="Ví dụ: 5000"
-                      disabled={savingSetting}
-                    />
-                  </div>
-                ) : (
-                  <div className="text-secondary small mt-2">User sẽ được xem miễn phí.</div>
-                )}
+            <div className="ad-modal-actions mt-4">
+              <button
+                className="btn btn-outline-secondary w-100"
+                type="button"
+                onClick={closeSetting}
+                disabled={savingSetting}
+              >
+                Hủy
+              </button>
+              <button
+                className="btn btn-primary w-100"
+                type="button"
+                onClick={saveSetting}
+                disabled={savingSetting}
+              >
+                {savingSetting ? "Đang lưu..." : "Lưu cài đặt"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <label className="form-label fw-semibold">Dịch bởi</label>
+            <input
+              className="form-control"
+              value={settingDraft.translator}
+              onChange={(e) =>
+                setSettingDraft((p) => ({ ...p, translator: e.target.value }))
+              }
+              placeholder="Ví dụ: Nhóm dịch ABC"
+              disabled={savingSetting}
+            />
 
-                <div className="ad-modal-actions mt-4">
-                  <button className="btn btn-outline-secondary w-100" type="button" onClick={closeSetting} disabled={savingSetting}>
-                    Hủy
-                  </button>
-                  <button className="btn btn-primary w-100" type="button" onClick={saveSetting} disabled={savingSetting}>
-                    {savingSetting ? "Đang lưu..." : "Lưu cài đặt"}
-                  </button>
-                </div>
+            <div className="text-secondary small mt-2">
+              Có thể để trống để xóa thông tin translator.
+            </div>
+
+            <div className="mt-3 p-3 rounded-3 border bg-light">
+              <div className="small text-secondary">Giá trị hiện tại</div>
+              <div className="fw-semibold">
+                {String(settingDraft.translator || "").trim() || "—"}
               </div>
             </div>
-          </div>
-        ) : null}
+
+            <div className="ad-modal-actions mt-4">
+              <button
+                className="btn btn-outline-secondary w-100"
+                type="button"
+                onClick={closeSetting}
+                disabled={savingSetting}
+              >
+                Hủy
+              </button>
+              <button
+                className="btn btn-primary w-100"
+                type="button"
+                onClick={saveTranslator}
+                disabled={savingSetting}
+              >
+                {savingSetting ? "Đang lưu..." : "Lưu dịch giả"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  </div>
+) : null}
 
         <style>{`
           .tiptap-content {

@@ -65,10 +65,11 @@ export default function ComicDetail() {
   const [comicDbId, setComicDbId] = useState(null);
 
   const [owner, setOwner] = useState({
-    owner_user_id: null,
-    username: null,
-    comic_id: null,
-  });
+  owner_user_id: null,
+  username: null,
+  comic_id: null,
+  translator: null,
+});
 
   const [following, setFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
@@ -103,11 +104,12 @@ export default function ComicDetail() {
 
         // 3) owner
         const jo = await fetchJSON(`${API_BASE}/api/external-comics/${slug}/owner`);
-        const ownerData = jo?.data || {
-          owner_user_id: null,
-          username: null,
-          comic_id: null,
-        };
+       const ownerData = jo?.data || {
+  owner_user_id: null,
+  username: null,
+  comic_id: null,
+  translator: null,
+};
         setOwner(ownerData);
 
         // 4) lấy comic id trong DB chắc chắn hơn
@@ -387,6 +389,13 @@ export default function ComicDetail() {
                   <i className="bi bi-person me-2" />
                   {(item.author || []).join(", ") || "—"}
                 </div>
+
+                <div>
+    <i className="bi bi-translate me-2" />
+    {owner?.translator || "—"}
+  </div>
+
+
                 <div>
                   <i className="bi bi-tags me-2" />
                   {(item.category || []).map((x) => x.name).join(", ") || "—"}

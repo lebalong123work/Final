@@ -7,7 +7,7 @@ const { sendNewPasswordMail } = require("../middleware/mailer");
 const router = express.Router();
 const { OAuth2Client } = require("google-auth-library");
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key";
-
+const { auth } = require("../middleware/auth");
 function signToken(user) {
   return jwt.sign(
     { id: user.id, role: user.role_code, provider: user.provider },
@@ -69,7 +69,7 @@ router.post("/register", async (req, res) => {
   } catch (err) {
     console.error("register error:", err);
 
-    // 🔥 BẮT LỖI TRÙNG
+
     if (err.code === "23505") {
       if (err.constraint === "ux_users_username") {
         return res.status(409).json({
@@ -90,6 +90,88 @@ router.post("/register", async (req, res) => {
   }
 });
 
+
+router.post("/change-password", auth, async (req, res) => {
+  try {
+    const userId = Number(req.user.id || 0);
+    const {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    } = req.body || {};
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ message: "Thiếu dữ liệu" });
+    }
+
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ message: "Mật khẩu mới tối thiểu 6 ký tự" });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: "Xác nhận mật khẩu không khớp" });
+    }
+
+    const { rows } = await db.query(
+      `
+      SELECT id, email, provider, password_hash, status
+      FROM users
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [userId]
+    );
+
+    const user = rows[0];
+
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy tài khoản" });
+    }
+
+    if (Number(user.status) === 0) {
+      return res.status(403).json({ message: "Tài khoản đã bị khóa" });
+    }
+
+    if (user.provider !== "local") {
+      return res.status(400).json({
+        message: "Tài khoản Google không dùng chức năng đổi mật khẩu local",
+      });
+    }
+
+    const ok = await bcrypt.compare(currentPassword, user.password_hash || "");
+    if (!ok) {
+      return res.status(400).json({ message: "Mật khẩu hiện tại không đúng" });
+    }
+
+    const sameAsOld = await bcrypt.compare(newPassword, user.password_hash || "");
+    if (sameAsOld) {
+      return res.status(400).json({ message: "Mật khẩu mới không được trùng mật khẩu cũ" });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+
+    await db.query(
+      `
+      UPDATE users
+      SET password_hash = $1
+      WHERE id = $2
+      `,
+      [newHash, userId]
+    );
+
+    return res.json({
+      success: true,
+      message: "Đổi mật khẩu thành công",
+    });
+  } catch (err) {
+    console.error("change-password error:", err);
+    return res.status(500).json({ message: "Lỗi server" });
+  }
+});
 
 /**
  * POST /api/auth/login

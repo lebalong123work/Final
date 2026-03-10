@@ -149,19 +149,21 @@ export default function ProfileWallet() {
   const [loadErr, setLoadErr] = useState("");
 
   const token = localStorage.getItem("token") || "";
-const [followStats, setFollowStats] = useState({
-  followers: 0,
-  following: 0,
-});
 
-const [levelProgress, setLevelProgress] = useState({
-  total_topup: 0,
-  current_level: null,
-  next_level: null,
-  progress_percent: 0,
-  progress_current: 0,
-  progress_needed: 0,
-});
+  const [followStats, setFollowStats] = useState({
+    followers: 0,
+    following: 0,
+  });
+
+  const [levelProgress, setLevelProgress] = useState({
+    total_topup: 0,
+    current_level: null,
+    next_level: null,
+    progress_percent: 0,
+    progress_current: 0,
+    progress_needed: 0,
+  });
+
   const [recentTx, setRecentTx] = useState([]);
   const [txList, setTxList] = useState([]);
   const [txPage, setTxPage] = useState(1);
@@ -171,16 +173,31 @@ const [levelProgress, setLevelProgress] = useState({
   const [library, setLibrary] = useState([]);
   const [libraryLoading, setLibraryLoading] = useState(false);
   const [libraryErr, setLibraryErr] = useState("");
-const [commentStats, setCommentStats] = useState({
-  total_comments: 0,
-  external_comments: 0,
-  self_comments: 0,
-});
+
+  const [commentStats, setCommentStats] = useState({
+    total_comments: 0,
+    external_comments: 0,
+    self_comments: 0,
+  });
+
   const [readingStats, setReadingStats] = useState({
     total_chapters_read: 0,
     total_self_comics_read: 0,
     total_external_comics_read: 0,
     total_comics_read: 0,
+  });
+
+  // ===== state đổi mật khẩu =====
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [pwSubmitting, setPwSubmitting] = useState(false);
+  const [showPw, setShowPw] = useState({
+    current: false,
+    next: false,
+    confirm: false,
   });
 
   const fetchRecentTx = async () => {
@@ -195,57 +212,59 @@ const [commentStats, setCommentStats] = useState({
       setRecentTx([]);
     }
   };
+
   const fetchFollowStats = async () => {
-  if (!token) return;
+    if (!token) return;
 
-  try {
-    const data = await fetchJSON(`${API_BASE}/api/follows/me/stats`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    try {
+      const data = await fetchJSON(`${API_BASE}/api/follows/me/stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    setFollowStats({
-      followers: Number(data?.data?.followers || 0),
-      following: Number(data?.data?.following || 0),
-    });
-  } catch (e) {
-    console.error(e);
-    setFollowStats({
-      followers: 0,
-      following: 0,
-    });
-  }
-};
+      setFollowStats({
+        followers: Number(data?.data?.followers || 0),
+        following: Number(data?.data?.following || 0),
+      });
+    } catch (e) {
+      console.error(e);
+      setFollowStats({
+        followers: 0,
+        following: 0,
+      });
+    }
+  };
 
-const fetchLevelProgress = async () => {
-  if (!token) return;
+  const fetchLevelProgress = async () => {
+    if (!token) return;
 
-  try {
-    const data = await fetchJSON(`${API_BASE}/levels/me-progress`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    try {
+      const data = await fetchJSON(`${API_BASE}/levels/me-progress`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    setLevelProgress(
-      data?.data || {
+      setLevelProgress(
+        data?.data || {
+          total_topup: 0,
+          current_level: null,
+          next_level: null,
+          progress_percent: 0,
+          progress_current: 0,
+          progress_needed: 0,
+        }
+      );
+    } catch (e) {
+      console.error(e);
+      setLevelProgress({
         total_topup: 0,
         current_level: null,
         next_level: null,
         progress_percent: 0,
         progress_current: 0,
         progress_needed: 0,
-      }
-    );
-  } catch (e) {
-    console.error(e);
-    setLevelProgress({
-      total_topup: 0,
-      current_level: null,
-      next_level: null,
-      progress_percent: 0,
-      progress_current: 0,
-      progress_needed: 0,
-    });
-  }
-};
+      });
+    }
+  };
+
   const fetchTxPage = async (page) => {
     if (!token) return;
     try {
@@ -290,30 +309,32 @@ const fetchLevelProgress = async () => {
       setLibraryLoading(false);
     }
   };
-const fetchCommentStats = async () => {
-  if (!token) return;
 
-  try {
-    const data = await fetchJSON(`${API_BASE}/api/comments/me/stats`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  const fetchCommentStats = async () => {
+    if (!token) return;
 
-    setCommentStats(
-      data?.data || {
+    try {
+      const data = await fetchJSON(`${API_BASE}/api/comments/me/stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setCommentStats(
+        data?.data || {
+          total_comments: 0,
+          external_comments: 0,
+          self_comments: 0,
+        }
+      );
+    } catch (e) {
+      console.error(e);
+      setCommentStats({
         total_comments: 0,
         external_comments: 0,
         self_comments: 0,
-      }
-    );
-  } catch (e) {
-    console.error(e);
-    setCommentStats({
-      total_comments: 0,
-      external_comments: 0,
-      self_comments: 0,
-    });
-  }
-};
+      });
+    }
+  };
+
   const fetchReadingStats = async () => {
     if (!token) return;
 
@@ -435,13 +456,13 @@ const fetchCommentStats = async () => {
         setMe(data.user);
         setWallet(data.wallet);
 
-     await Promise.all([
-  fetchReadingStats(),
-  fetchLibrary(),
-  fetchFollowStats(),
-  fetchCommentStats(),
-  fetchLevelProgress(),
-]);
+        await Promise.all([
+          fetchReadingStats(),
+          fetchLibrary(),
+          fetchFollowStats(),
+          fetchCommentStats(),
+          fetchLevelProgress(),
+        ]);
       } catch (e) {
         console.error(e);
         setLoadErr(e.message || "Không kết nối được server");
@@ -536,46 +557,114 @@ const fetchCommentStats = async () => {
     }
   };
 
-  const uiUser = useMemo(() => {
-  const username = me?.username || "User";
-  const email = me?.email || "";
-
-  return {
-    name: username,
-    username: email ? email : "@" + username,
-    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`,
-    level: Number(levelProgress?.current_level?.level_no || 1),
-    totalTopup: Number(levelProgress?.total_topup || 0),
-    nextTopup: Number(
-      levelProgress?.next_level?.min_total_topup ||
-        levelProgress?.progress_needed ||
-        levelProgress?.total_topup ||
-        0
-    ),
-    stats: [
-      {
-        label: "Lượt theo dõi",
-        value: Number(followStats?.followers || 0),
-        icon: "bi-bookmark-heart",
-      },
-      {
-        label: "Chap đã đọc",
-        value: Number(readingStats?.total_chapters_read || 0),
-        icon: "bi-lightning-charge",
-      },
-      {
-        label: "Bình luận",
-        value: Number(commentStats?.total_comments || 0),
-        icon: "bi-chat-dots",
-      },
-    ],
+  // ===== xử lý đổi mật khẩu =====
+  const handlePwChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordForm((prev) => ({ ...prev, [name]: value }));
   };
-}, [me, readingStats, followStats, commentStats, levelProgress]);
-  
 
-const topupPercent = useMemo(() => {
-  return Math.min(100, Math.max(0, Number(levelProgress?.progress_percent || 0)));
-}, [levelProgress]);
+  const resetPasswordForm = () => {
+    setPasswordForm({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+
+    if (!token) {
+      toast.warn("Bạn cần đăng nhập");
+      return;
+    }
+
+    const currentPassword = String(passwordForm.currentPassword || "").trim();
+    const newPassword = String(passwordForm.newPassword || "").trim();
+    const confirmPassword = String(passwordForm.confirmPassword || "").trim();
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.warn("Vui lòng nhập đầy đủ thông tin");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.warn("Mật khẩu mới tối thiểu 6 ký tự");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.warn("Xác nhận mật khẩu không khớp");
+      return;
+    }
+
+    try {
+      setPwSubmitting(true);
+
+      const data = await fetchJSON(`${API_BASE}/api/auth/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+          confirmPassword,
+        }),
+      });
+
+      toast.success(data?.message || "Đổi mật khẩu thành công");
+      resetPasswordForm();
+    } catch (e) {
+      console.error(e);
+      toast.error(e.message || "Đổi mật khẩu thất bại");
+    } finally {
+      setPwSubmitting(false);
+    }
+  };
+
+  const uiUser = useMemo(() => {
+    const username = me?.username || "User";
+    const email = me?.email || "";
+
+    return {
+      name: username,
+      username: email ? email : "@" + username,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        username
+      )}&background=random`,
+      level: Number(levelProgress?.current_level?.level_no || 1),
+      totalTopup: Number(levelProgress?.total_topup || 0),
+      nextTopup: Number(
+        levelProgress?.next_level?.min_total_topup ||
+          levelProgress?.progress_needed ||
+          levelProgress?.total_topup ||
+          0
+      ),
+      stats: [
+        {
+          label: "Lượt theo dõi",
+          value: Number(followStats?.followers || 0),
+          icon: "bi-bookmark-heart",
+        },
+        {
+          label: "Chap đã đọc",
+          value: Number(readingStats?.total_chapters_read || 0),
+          icon: "bi-lightning-charge",
+        },
+        {
+          label: "Bình luận",
+          value: Number(commentStats?.total_comments || 0),
+          icon: "bi-chat-dots",
+        },
+      ],
+    };
+  }, [me, readingStats, followStats, commentStats, levelProgress]);
+
+  const topupPercent = useMemo(() => {
+    return Math.min(100, Math.max(0, Number(levelProgress?.progress_percent || 0)));
+  }, [levelProgress]);
 
   const balance = wallet?.balance ?? 0;
 
@@ -656,51 +745,56 @@ const topupPercent = useMemo(() => {
                   <span className="pw-username">{uiUser.username}</span>
                 </div>
 
-         <div className="pw-xp mt-2">
-  <div className="d-flex justify-content-between small text-secondary">
-    <span>
-      Level {uiUser.level}
-      {levelProgress?.current_level?.name ? ` • ${levelProgress.current_level.name}` : ""}
-    </span>
+                <div className="pw-xp mt-2">
+                  <div className="d-flex justify-content-between small text-secondary">
+                    <span>
+                      Level {uiUser.level}
+                      {levelProgress?.current_level?.name
+                        ? ` • ${levelProgress.current_level.name}`
+                        : ""}
+                    </span>
 
-    <span>
-      {fmtVND(levelProgress?.progress_current || 0)}
-      {levelProgress?.next_level ? ` / ${fmtVND(levelProgress?.progress_needed || 0)}` : ""}
-    </span>
-  </div>
+                    <span>
+                      {fmtVND(levelProgress?.progress_current || 0)}
+                      {levelProgress?.next_level
+                        ? ` / ${fmtVND(levelProgress?.progress_needed || 0)}`
+                        : ""}
+                    </span>
+                  </div>
 
-  <div className="progress pw-progress mt-1">
-    <div
-      className="progress-bar bg-success"
-      role="progressbar"
-      style={{ width: `${topupPercent}%` }}
-      aria-valuenow={topupPercent}
-      aria-valuemin="0"
-      aria-valuemax="100"
-    />
-  </div>
+                  <div className="progress pw-progress mt-1">
+                    <div
+                      className="progress-bar bg-success"
+                      role="progressbar"
+                      style={{ width: `${topupPercent}%` }}
+                      aria-valuenow={topupPercent}
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                    />
+                  </div>
 
-  <div className="small text-secondary mt-1">
-    Tổng đã nạp: <b>{fmtVND(levelProgress?.total_topup || 0)}</b>
-    {levelProgress?.next_level ? (
-      <>
-        {" "}Cần thêm{" "}
-        <b>
-          {fmtVND(
-            Math.max(
-              0,
-              Number(levelProgress?.next_level?.min_total_topup || 0) -
-                Number(levelProgress?.total_topup || 0)
-            )
-          )}
-        </b>{" "}
-        để lên level {levelProgress?.next_level?.level_no}
-      </>
-    ) : (
-      <> </>
-    )}
-  </div>
-</div>
+                  <div className="small text-secondary mt-1">
+                    Tổng đã nạp: <b>{fmtVND(levelProgress?.total_topup || 0)}</b>
+                    {levelProgress?.next_level ? (
+                      <>
+                        {" "}
+                        Cần thêm{" "}
+                        <b>
+                          {fmtVND(
+                            Math.max(
+                              0,
+                              Number(levelProgress?.next_level?.min_total_topup || 0) -
+                                Number(levelProgress?.total_topup || 0)
+                            )
+                          )}
+                        </b>{" "}
+                        để lên level {levelProgress?.next_level?.level_no}
+                      </>
+                    ) : (
+                      <> </>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="col-12 col-md-auto">
@@ -747,6 +841,7 @@ const topupPercent = useMemo(() => {
               <i className="bi bi-person-badge me-2" />
               Trang cá nhân
             </button>
+
             <button
               type="button"
               className={`btn ${tab === "library" ? "btn-dark" : "btn-outline-dark"}`}
@@ -755,6 +850,7 @@ const topupPercent = useMemo(() => {
               <i className="bi bi-bookshelf me-2" />
               Tủ truyện
             </button>
+
             <button
               type="button"
               className={`btn ${tab === "wallet" ? "btn-dark" : "btn-outline-dark"}`}
@@ -763,6 +859,7 @@ const topupPercent = useMemo(() => {
               <i className="bi bi-wallet2 me-2" />
               Ví
             </button>
+
             <button
               type="button"
               className={`btn ${tab === "transactions" ? "btn-dark" : "btn-outline-dark"}`}
@@ -770,6 +867,15 @@ const topupPercent = useMemo(() => {
             >
               <i className="bi bi-receipt me-2" />
               Giao dịch
+            </button>
+
+            <button
+              type="button"
+              className={`btn ${tab === "password" ? "btn-dark" : "btn-outline-dark"}`}
+              onClick={() => setTab("password")}
+            >
+              <i className="bi bi-shield-lock me-2" />
+              Mật khẩu
             </button>
           </div>
         </div>
@@ -898,9 +1004,7 @@ const topupPercent = useMemo(() => {
                               {c.title}
                             </div>
 
-                            <div className="small text-secondary">
-                              {buildLastReadText(c)}
-                            </div>
+                            <div className="small text-secondary">{buildLastReadText(c)}</div>
 
                             <div className="small text-secondary mt-1">
                               Đọc {Number(c.read_count || 0)} chap • {fmtDate(c.last_read_at)}
@@ -994,7 +1098,7 @@ const topupPercent = useMemo(() => {
                             <tr key={t.id}>
                               <td className="fw-semibold">{t.order_id || `TX${t.id}`}</td>
                               <td>
-                          <div className="fw-semibold">{mapTxNote(t.note)}</div>
+                                <div className="fw-semibold">{mapTxNote(t.note)}</div>
                               </td>
                               <td className="small text-secondary">{fmtDate(t.created_at)}</td>
                               <td
@@ -1060,7 +1164,7 @@ const topupPercent = useMemo(() => {
                         txList.map((t) => (
                           <tr key={t.id}>
                             <td className="fw-semibold">{t.order_id || `TX${t.id}`}</td>
-                            <td>{t.note}</td>
+                            <td>{mapTxNote(t.note)}</td>
                             <td className="small text-secondary">{t.type}</td>
                             <td className="small text-secondary">{fmtDate(t.created_at)}</td>
                             <td
@@ -1117,6 +1221,155 @@ const topupPercent = useMemo(() => {
               </div>
             </div>
           )}
+
+          {tab === "password" && (
+            <div className="row g-3">
+              <div className="col-lg-7">
+                <div className="card border-0 shadow-sm">
+                  <div className="card-body">
+                    <h5 className="fw-bold mb-3">
+                      <i className="bi bi-shield-lock me-2" />
+                      Đổi mật khẩu
+                    </h5>
+
+                    {me?.provider !== "local" ? (
+                      <div className="alert alert-warning mb-0">
+                        Tài khoản của bạn đang đăng nhập bằng <b>{me?.provider}</b>. Không thể đổi
+                        mật khẩu local cho tài khoản này.
+                      </div>
+                    ) : (
+                      <form onSubmit={handleChangePassword}>
+                        <div className="mb-3">
+                          <label className="form-label fw-semibold">Mật khẩu hiện tại</label>
+                          <div className="input-group">
+                            <input
+                              type={showPw.current ? "text" : "password"}
+                              className="form-control"
+                              name="currentPassword"
+                              value={passwordForm.currentPassword}
+                              onChange={handlePwChange}
+                              placeholder="Nhập mật khẩu hiện tại"
+                            />
+                            <button
+                              type="button"
+                              className="btn btn-outline-secondary"
+                              onClick={() =>
+                                setShowPw((prev) => ({ ...prev, current: !prev.current }))
+                              }
+                            >
+                              <i className={`bi ${showPw.current ? "bi-eye-slash" : "bi-eye"}`} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="form-label fw-semibold">Mật khẩu mới</label>
+                          <div className="input-group">
+                            <input
+                              type={showPw.next ? "text" : "password"}
+                              className="form-control"
+                              name="newPassword"
+                              value={passwordForm.newPassword}
+                              onChange={handlePwChange}
+                              placeholder="Nhập mật khẩu mới"
+                            />
+                            <button
+                              type="button"
+                              className="btn btn-outline-secondary"
+                              onClick={() =>
+                                setShowPw((prev) => ({ ...prev, next: !prev.next }))
+                              }
+                            >
+                              <i className={`bi ${showPw.next ? "bi-eye-slash" : "bi-eye"}`} />
+                            </button>
+                          </div>
+                          <div className="form-text">Mật khẩu tối thiểu 6 ký tự.</div>
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="form-label fw-semibold">Xác nhận mật khẩu mới</label>
+                          <div className="input-group">
+                            <input
+                              type={showPw.confirm ? "text" : "password"}
+                              className="form-control"
+                              name="confirmPassword"
+                              value={passwordForm.confirmPassword}
+                              onChange={handlePwChange}
+                              placeholder="Nhập lại mật khẩu mới"
+                            />
+                            <button
+                              type="button"
+                              className="btn btn-outline-secondary"
+                              onClick={() =>
+                                setShowPw((prev) => ({ ...prev, confirm: !prev.confirm }))
+                              }
+                            >
+                              <i className={`bi ${showPw.confirm ? "bi-eye-slash" : "bi-eye"}`} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="d-flex gap-2">
+                          <button
+                            type="submit"
+                            className="btn btn-primary"
+                            disabled={pwSubmitting}
+                          >
+                            {pwSubmitting ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-2" />
+                                Đang cập nhật...
+                              </>
+                            ) : (
+                              <>
+                                <i className="bi bi-check-circle me-2" />
+                                Cập nhật mật khẩu
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary"
+                            onClick={resetPasswordForm}
+                            disabled={pwSubmitting}
+                          >
+                            Làm mới
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-lg-5">
+                <div className="card border-0 shadow-sm">
+                  <div className="card-body">
+                    <h5 className="fw-bold mb-3">Lưu ý bảo mật</h5>
+
+                    <div className="small text-secondary">
+                      <div className="mb-2">
+                        • Không dùng lại mật khẩu cũ hoặc mật khẩu quá dễ đoán.
+                      </div>
+                      <div className="mb-2">
+                        • Nên kết hợp chữ hoa, chữ thường, số và ký tự đặc biệt.
+                      </div>
+                      <div className="mb-2">
+                        • Không chia sẻ mật khẩu cho người khác.
+                      </div>
+                      <div>
+                        • Sau khi đổi mật khẩu thành công, hãy dùng mật khẩu mới cho lần đăng nhập
+                        tiếp theo.
+                      </div>
+                    </div>
+
+                   
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1156,6 +1409,7 @@ const topupPercent = useMemo(() => {
                         key={amount}
                         className="btn btn-outline-primary btn-sm"
                         onClick={() => setTopupAmount(amount)}
+                        type="button"
                       >
                         {fmtVND(amount)}
                       </button>
