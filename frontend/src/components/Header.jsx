@@ -337,7 +337,7 @@ useEffect(() => {
               {/* MỤC KHÁC */}
               <li className="nav-item dropdown zt-catMore">
                 <span className="nav-link zt-catMoreBtn">
-                  Khác <i className="bi bi-chevron-down ms-1" />
+                  Truyện chữ <i className="bi bi-chevron-down ms-1" />
                 </span>
 
                 <div className="zt-catDropdown">
@@ -364,7 +364,7 @@ useEffect(() => {
               </li>
             </ul>
 
-            <div className="d-flex align-items-center gap-3">
+            <div className="d-flex align-items-center gap-2 flex-wrap">
               <div
                 className="zt-notifWrap"
                 onMouseEnter={openNotif}

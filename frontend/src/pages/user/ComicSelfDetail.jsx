@@ -7,6 +7,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const API_BASE = "http://localhost:5000";
+const CHAPTERS_PER_PAGE = 10;
 
 function buildSelfCover(cover) {
   if (!cover) return "https://via.placeholder.com/500x700?text=No+Cover";
@@ -83,6 +84,7 @@ export default function ComicSelfDetail() {
   const [followersCount, setFollowersCount] = useState(0);
 
   const [hasAccess, setHasAccess] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const run = async () => {
@@ -193,6 +195,26 @@ export default function ComicSelfDetail() {
     );
   }, [chapters]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [id, sortedChapters.length]);
+
+  const totalPages = Math.ceil(sortedChapters.length / CHAPTERS_PER_PAGE) || 1;
+
+  const paginatedChapters = useMemo(() => {
+    const start = (currentPage - 1) * CHAPTERS_PER_PAGE;
+    const end = start + CHAPTERS_PER_PAGE;
+    return sortedChapters.slice(start, end);
+  }, [sortedChapters, currentPage]);
+
+  const pageNumbers = useMemo(() => {
+    const arr = [];
+    for (let i = 1; i <= totalPages; i += 1) {
+      arr.push(i);
+    }
+    return arr;
+  }, [totalPages]);
+
   const isPaid = !!detail?.is_paid;
   const statusLabel = Number(detail?.status) === 1 ? "Hiển thị" : "Ẩn";
   const statusTone = Number(detail?.status) === 1 ? "ok" : "done";
@@ -200,7 +222,6 @@ export default function ComicSelfDetail() {
   const isOwner = !!(ownerUserId && myId && ownerUserId === myId);
 
   const locked = isPaid && !hasAccess;
-
   const isBought = isPaid && hasAccess && !isOwner;
 
   const goRead = (chapterId) => {
@@ -378,9 +399,7 @@ export default function ComicSelfDetail() {
                   <div className="cd-ownerTop">
                     <i className="bi bi-person-circle me-2" />
                     <span className="fw-bold text-dark">Người đăng:</span>
-                    <span className="ms-2 text-dark">
-                      {detail.username || "Chưa có"}
-                    </span>
+                    <span className="ms-2 text-dark">{detail.username || "Chưa có"}</span>
 
                     <span className="ms-3 text-secondary">
                       <i className="bi bi-people me-1" />
@@ -465,7 +484,9 @@ export default function ComicSelfDetail() {
         <div className="cd-section">
           <div className="cd-section-head">
             <h3>Danh sách chapter</h3>
-            <div className="cd-count">{sortedChapters.length} chap</div>
+            <div className="cd-count">
+              {sortedChapters.length} chap • Trang {currentPage}/{totalPages}
+            </div>
           </div>
 
           {locked ? (
@@ -489,7 +510,7 @@ export default function ComicSelfDetail() {
             {sortedChapters.length === 0 ? (
               <div className="alert alert-light border">Chưa có chapter nào.</div>
             ) : (
-              sortedChapters.map((ch) => (
+              paginatedChapters.map((ch) => (
                 <button
                   key={ch.id}
                   type="button"
@@ -516,6 +537,41 @@ export default function ComicSelfDetail() {
               ))
             )}
           </div>
+
+          {!locked && sortedChapters.length > CHAPTERS_PER_PAGE && (
+            <div className="cd-pagination">
+              <button
+                type="button"
+                className="cd-page-btn"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              >
+                ‹ Trước
+              </button>
+
+              <div className="cd-page-numbers">
+                {pageNumbers.map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    className={`cd-page-btn ${currentPage === page ? "active" : ""}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="cd-page-btn"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              >
+                Sau ›
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

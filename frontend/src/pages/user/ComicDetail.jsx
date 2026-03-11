@@ -8,6 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 const API_BASE = "http://localhost:5000";
 const IMG_BASE = "https://img.otruyenapi.com/uploads/comics/";
+const CHAPTERS_PER_PAGE = 10;
 
 function buildThumb(thumb) {
   if (!thumb) return "https://via.placeholder.com/500x700?text=No+Image";
@@ -65,11 +66,11 @@ export default function ComicDetail() {
   const [comicDbId, setComicDbId] = useState(null);
 
   const [owner, setOwner] = useState({
-  owner_user_id: null,
-  username: null,
-  comic_id: null,
-  translator: null,
-});
+    owner_user_id: null,
+    username: null,
+    comic_id: null,
+    translator: null,
+  });
 
   const [following, setFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
@@ -77,6 +78,8 @@ export default function ComicDetail() {
   const [ratingAvg, setRatingAvg] = useState(0);
   const [ratingCount, setRatingCount] = useState(0);
   const [myRating, setMyRating] = useState(0);
+
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const run = async () => {
@@ -104,12 +107,12 @@ export default function ComicDetail() {
 
         // 3) owner
         const jo = await fetchJSON(`${API_BASE}/api/external-comics/${slug}/owner`);
-       const ownerData = jo?.data || {
-  owner_user_id: null,
-  username: null,
-  comic_id: null,
-  translator: null,
-};
+        const ownerData = jo?.data || {
+          owner_user_id: null,
+          username: null,
+          comic_id: null,
+          translator: null,
+        };
         setOwner(ownerData);
 
         // 4) lấy comic id trong DB chắc chắn hơn
@@ -210,8 +213,30 @@ export default function ComicDetail() {
         api: ch.chapter_api_data,
       }))
     );
+
     return list.sort((a, b) => Number(a.name) - Number(b.name));
   }, [item]);
+
+  // reset page khi đổi truyện hoặc chapters thay đổi
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [slug, chapters.length]);
+
+  const totalPages = Math.ceil(chapters.length / CHAPTERS_PER_PAGE) || 1;
+
+  const paginatedChapters = useMemo(() => {
+    const start = (currentPage - 1) * CHAPTERS_PER_PAGE;
+    const end = start + CHAPTERS_PER_PAGE;
+    return chapters.slice(start, end);
+  }, [chapters, currentPage]);
+
+  const pageNumbers = useMemo(() => {
+    const pages = [];
+    for (let i = 1; i <= totalPages; i += 1) {
+      pages.push(i);
+    }
+    return pages;
+  }, [totalPages]);
 
   const isPaid = !!pricing.is_paid;
   const locked = isPaid && !hasAccess;
@@ -391,10 +416,9 @@ export default function ComicDetail() {
                 </div>
 
                 <div>
-    <i className="bi bi-translate me-2" />
-    {owner?.translator || "—"}
-  </div>
-
+                  <i className="bi bi-translate me-2" />
+                  {owner?.translator || "—"}
+                </div>
 
                 <div>
                   <i className="bi bi-tags me-2" />
@@ -480,7 +504,9 @@ export default function ComicDetail() {
         <div className="cd-section">
           <div className="cd-section-head">
             <h3>Danh sách chapter</h3>
-            <div className="cd-count">{chapters.length} chap</div>
+            <div className="cd-count">
+              {chapters.length} chap • Trang {currentPage}/{totalPages}
+            </div>
           </div>
 
           {locked ? (
@@ -501,7 +527,7 @@ export default function ComicDetail() {
           ) : null}
 
           <div className={`cd-chapters ${locked ? "locked" : ""}`}>
-            {chapters.map((ch) => (
+            {paginatedChapters.map((ch) => (
               <button
                 key={ch.api}
                 type="button"
@@ -520,6 +546,41 @@ export default function ComicDetail() {
               </button>
             ))}
           </div>
+
+          {!locked && chapters.length > CHAPTERS_PER_PAGE && (
+            <div className="cd-pagination">
+              <button
+                type="button"
+                className="cd-page-btn"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              >
+                ‹ Trước
+              </button>
+
+              <div className="cd-page-numbers">
+                {pageNumbers.map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    className={`cd-page-btn ${currentPage === page ? "active" : ""}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="cd-page-btn"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              >
+                Sau ›
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -17,10 +17,12 @@ function auth(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  if (req.user?.role !== "admin") {
-    return res.status(403).json({ message: "Chỉ admin mới được phép" });
+  const role = req.user?.role;
+
+  if (!["admin", "sub_admin"].includes(role)) {
+    return res.status(403).json({ message: "Bạn không có quyền truy cập" });
   }
+
   next();
 }
-
 module.exports = { auth, requireAdmin };

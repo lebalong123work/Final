@@ -832,7 +832,7 @@ export default function ProfileWallet() {
         </div>
 
         <div className="pw-tabs mt-4">
-          <div className="btn-group pw-tab-group" role="group" aria-label="tabs">
+           <div className="pw-tab-group" role="group" aria-label="tabs">
             <button
               type="button"
               className={`btn ${tab === "profile" ? "btn-dark" : "btn-outline-dark"}`}

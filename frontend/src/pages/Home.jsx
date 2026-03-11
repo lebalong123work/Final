@@ -69,7 +69,7 @@ export default function Home() {
         <FeaturedBanner />
            
       
-      <ComicSlider title="Truyện ngoài" items={COMICS} perPage={4} className="py-3" />
+      <ComicSlider title="Truyện tranh" items={COMICS} perPage={4} className="py-3" />
         <Footer />
     </div>
   );

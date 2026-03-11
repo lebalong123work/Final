@@ -370,3 +370,226 @@
 .zt-notifAll:hover {
   text-decoration: underline;
 }
+
+/* tránh dropdown bị che bởi navbar collapse */
+.zt-header,
+.zt-header .navbar,
+.zt-header .container-fluid,
+.zt-header .navbar-collapse {
+  position: relative;
+}
+
+.zt-header .navbar-collapse {
+  overflow: visible !important;
+}
+
+/* desktop giữ như cũ nhưng an toàn hơn */
+.zt-notifDropdown {
+  max-width: calc(100vw - 24px);
+}
+
+.zt-userDropdown {
+  max-width: calc(100vw - 24px);
+}
+
+/* tablet + mobile */
+@media (max-width: 991.98px) {
+  .zt-header .navbar {
+    padding: 8px 0;
+  }
+
+  .zt-header .container-fluid {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .brand-text {
+    font-size: 18px;
+  }
+
+  .zt-nav {
+    margin-top: 10px;
+    gap: 2px;
+  }
+
+  .zt-nav .nav-link {
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .zt-catDropdown {
+    position: static;
+    min-width: 100%;
+    width: 100%;
+    margin-top: 8px;
+    border-radius: 12px;
+    box-shadow: none;
+    border: 1px solid #e9ecef;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    display: none;
+    max-height: 260px;
+  }
+
+  .zt-catMore:hover .zt-catDropdown {
+    display: block;
+  }
+
+  .zt-catGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .zt-notifWrap {
+    position: static;
+  }
+
+  .zt-userMenu {
+    position: static;
+  }
+
+  .zt-notifDropdown {
+    position: fixed;
+    top: 72px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    border-radius: 16px;
+    z-index: 10000;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+  }
+
+  .zt-notifList {
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+  }
+
+  .zt-userDropdown {
+    position: fixed;
+    top: 72px;
+    right: 12px;
+    left: 12px;
+    min-width: unset;
+    max-width: none;
+    width: auto;
+    border-radius: 16px;
+    z-index: 10000;
+  }
+}
+
+/* mobile nhỏ */
+@media (max-width: 767.98px) {
+  .hero-logo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+
+  .brand-text {
+    font-size: 17px;
+  }
+
+  .navbar-toggler {
+    padding: 4px 8px;
+    border-radius: 10px;
+  }
+
+  .zt-notifBtn,
+  .zt-userToggle {
+    padding: 6px 8px !important;
+  }
+
+  .zt-userToggle {
+    font-size: 14px;
+    gap: 3px;
+  }
+
+  .zt-userDropdown {
+    padding: 8px;
+  }
+
+  .zt-userItem {
+    font-size: 14px;
+    padding: 11px 12px;
+  }
+
+  .zt-notifDropdown {
+    top: 66px;
+    left: 10px;
+    right: 10px;
+    border-radius: 14px;
+  }
+
+  .zt-notifHead {
+    padding: 10px 12px;
+  }
+
+  .zt-notifTitle {
+    font-size: 14px;
+  }
+
+  .zt-notifItem {
+    padding: 10px 12px;
+  }
+
+  .zt-notifItemTop {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .zt-notifItemTime {
+    white-space: normal;
+    font-size: 11px;
+  }
+
+  .zt-notifItemBody {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .zt-notifList {
+    max-height: calc(100vh - 170px);
+  }
+
+  .zt-notifBadge {
+    top: -4px;
+    right: -2px;
+  }
+}
+
+/* mobile rất nhỏ */
+@media (max-width: 480px) {
+  .zt-header .container-fluid {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .brand-text {
+    font-size: 16px;
+  }
+
+  .zt-notifDropdown,
+  .zt-userDropdown {
+    left: 8px;
+    right: 8px;
+    top: 220px;
+  }
+
+  .zt-notifTitle {
+    font-size: 13px;
+  }
+
+  .zt-notifItemTitle {
+    font-size: 12px;
+  }
+
+  .zt-notifItemBody {
+    font-size: 12px;
+  }
+
+  .zt-notifRefresh {
+    padding: 5px 7px;
+  }
+}
