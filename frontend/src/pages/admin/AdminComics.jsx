@@ -91,17 +91,18 @@ export default function AdminComics() {
   const [selfSaving, setSelfSaving] = useState(false);
   const [editingSelfId, setEditingSelfId] = useState(null);
 
-  const [selfDraft, setSelfDraft] = useState({
-    title: "",
-    author: "",
-    cover_image: "",
-    description: "",
-    total_chapters: 1,
-    category_id: "",
-    status: 1,
-    is_paid: false,
-    price: 0,
-  });
+ const [selfDraft, setSelfDraft] = useState({
+  title: "",
+  author: "",
+  translated_by: "",
+  cover_image: "",
+  description: "",
+  total_chapters: 1,
+  category_id: "",
+  status: 1,
+  is_paid: false,
+  price: 0,
+});
 
   // ===== MODAL: chapters manager =====
   const [chapterModalOpen, setChapterModalOpen] = useState(false);
@@ -534,21 +535,25 @@ export default function AdminComics() {
   };
 
   // ================== SELF COMIC MODAL ==================
-  const resetSelfDraft = () => {
-    setSelfDraft({
-      title: "",
-      author: "",
-      cover_image: "",
-      description: "",
-      total_chapters: 1,
-      category_id: "",
-      status: 1,
-      is_paid: false,
-      price: 0,
-    });
-    setEditingSelfId(null);
-    setTimeout(() => descEditor?.commands?.setContent(""), 0);
-  };
+
+
+
+const resetSelfDraft = () => {
+  setSelfDraft({
+    title: "",
+    author: "",
+    translated_by: "",
+    cover_image: "",
+    description: "",
+    total_chapters: 1,
+    category_id: "",
+    status: 1,
+    is_paid: false,
+    price: 0,
+  });
+  setEditingSelfId(null);
+  setTimeout(() => descEditor?.commands?.setContent(""), 0);
+};
 
   const openSelfModal = () => {
     if (!token) return toast.warning("Bạn cần đăng nhập để đăng truyện.");
@@ -556,27 +561,28 @@ export default function AdminComics() {
     setSelfModalOpen(true);
   };
 
-  const openEditSelfModal = (comic) => {
-    if (!token) return toast.warning("Bạn cần đăng nhập.");
-    setEditingSelfId(comic.id);
+ const openEditSelfModal = (comic) => {
+  if (!token) return toast.warning("Bạn cần đăng nhập.");
+  setEditingSelfId(comic.id);
 
-    setSelfDraft({
-      title: comic?.title || "",
-      author: comic?.author || "",
-      cover_image: comic?.cover_image || "",
-      description: comic?.description || "",
-      total_chapters: Number(comic?.total_chapters || 1),
-      category_id: comic?.category_id ? String(comic.category_id) : "",
-      status: Number(comic?.status ?? 1),
-      is_paid: !!comic?.is_paid,
-      price: Number(comic?.price || 0),
-    });
+  setSelfDraft({
+    title: comic?.title || "",
+    author: comic?.author || "",
+    translated_by: comic?.translated_by || "",
+    cover_image: comic?.cover_image || "",
+    description: comic?.description || "",
+    total_chapters: Number(comic?.total_chapters || 1),
+    category_id: comic?.category_id ? String(comic.category_id) : "",
+    status: Number(comic?.status ?? 1),
+    is_paid: !!comic?.is_paid,
+    price: Number(comic?.price || 0),
+  });
 
-    setSelfModalOpen(true);
-    setTimeout(() => {
-      descEditor?.commands?.setContent(comic?.description || "");
-    }, 0);
-  };
+  setSelfModalOpen(true);
+  setTimeout(() => {
+    descEditor?.commands?.setContent(comic?.description || "");
+  }, 0);
+};
 
   const closeSelfModal = () => {
     if (selfSaving) return;
@@ -585,73 +591,75 @@ export default function AdminComics() {
   };
 
   const saveSelfComic = async () => {
-    if (!token) return toast.error("Thiếu token đăng nhập.");
+  if (!token) return toast.error("Thiếu token đăng nhập.");
 
-    const title = String(selfDraft.title || "").trim();
-    const author = String(selfDraft.author || "").trim();
-    const coverImage = String(selfDraft.cover_image || "").trim();
-    const descriptionHTML = descEditor?.getHTML?.() || "";
-    const totalChapters = Math.max(1, Number(selfDraft.total_chapters || 1));
+  const title = String(selfDraft.title || "").trim();
+  const author = String(selfDraft.author || "").trim();
+  const translatedBy = String(selfDraft.translated_by || "").trim();
+  const coverImage = String(selfDraft.cover_image || "").trim();
+  const descriptionHTML = descEditor?.getHTML?.() || "";
+  const totalChapters = Math.max(1, Number(selfDraft.total_chapters || 1));
 
-    if (!title) return toast.error("Vui lòng nhập tiêu đề");
-    if (!coverImage) return toast.error("Vui lòng thêm ảnh chính");
-    if (totalChapters < 1) return toast.error("Tổng số chương phải >= 1");
+  if (!title) return toast.error("Vui lòng nhập tiêu đề");
+  if (!coverImage) return toast.error("Vui lòng thêm ảnh chính");
+  if (totalChapters < 1) return toast.error("Tổng số chương phải >= 1");
 
-    const isPaid = !!selfDraft.is_paid;
-    const price = Math.max(0, Number(selfDraft.price || 0));
+  const isPaid = !!selfDraft.is_paid;
+  const price = Math.max(0, Number(selfDraft.price || 0));
 
-    if (isPaid && price <= 0) {
-      return toast.error("Giá phải > 0 khi bật trả phí");
+  if (isPaid && price <= 0) {
+    return toast.error("Giá phải > 0 khi bật trả phí");
+  }
+
+  try {
+    setSelfSaving(true);
+
+    const payload = {
+      title,
+      author: author || null,
+      translated_by: translatedBy || null,
+      cover_image: coverImage,
+      description: descriptionHTML || null,
+      total_chapters: totalChapters,
+      status: Number(selfDraft.status || 1),
+      category_id: selfDraft.category_id ? Number(selfDraft.category_id) : null,
+      is_paid: isPaid,
+      price: isPaid ? price : 0,
+    };
+
+    const isEdit = !!editingSelfId;
+    const url = isEdit
+      ? `${API_BASE}/api/self-comics/${editingSelfId}`
+      : `${API_BASE}/api/self-comics`;
+
+    const method = isEdit ? "PATCH" : "POST";
+
+    const r = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      throw new Error(
+        data?.message || (isEdit ? "Cập nhật truyện thất bại" : "Tạo truyện thất bại")
+      );
     }
 
-    try {
-      setSelfSaving(true);
-
-      const payload = {
-        title,
-        author: author || null,
-        cover_image: coverImage,
-        description: descriptionHTML || null,
-        total_chapters: totalChapters,
-        status: Number(selfDraft.status || 1),
-        category_id: selfDraft.category_id ? Number(selfDraft.category_id) : null,
-        is_paid: isPaid,
-        price: isPaid ? price : 0,
-      };
-
-      const isEdit = !!editingSelfId;
-      const url = isEdit
-        ? `${API_BASE}/api/self-comics/${editingSelfId}`
-        : `${API_BASE}/api/self-comics`;
-
-      const method = isEdit ? "PATCH" : "POST";
-
-      const r = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        throw new Error(
-          data?.message || (isEdit ? "Cập nhật truyện thất bại" : "Tạo truyện thất bại")
-        );
-      }
-
-      toast.success(isEdit ? "Đã cập nhật truyện!" : "Đã tạo truyện!");
-      closeSelfModal();
-      await fetchSelfFromDB(1);
-      setPage(1);
-    } catch (e) {
-      toast.error(e.message || "Lỗi lưu truyện");
-    } finally {
-      setSelfSaving(false);
-    }
-  };
+    toast.success(isEdit ? "Đã cập nhật truyện!" : "Đã tạo truyện!");
+    closeSelfModal();
+    await fetchSelfFromDB(1);
+    setPage(1);
+  } catch (e) {
+    toast.error(e.message || "Lỗi lưu truyện");
+  } finally {
+    setSelfSaving(false);
+  }
+};
 
   const deleteSelfComic = async (comic) => {
     const result = await Swal.fire({
@@ -1064,25 +1072,29 @@ export default function AdminComics() {
       Dịch bởi: <b>{c?.translator || "—"}</b>
     </div>
   ) : null}
-                        {tab === "self" ? (
-                          <>
-                            <div className="text-secondary small mt-2">
-                              Tác giả: <b>{c?.author || "—"}</b>
-                            </div>
+                     {tab === "self" ? (
+  <>
+    <div className="text-secondary small mt-2">
+      Tác giả: <b>{c?.author || "—"}</b>
+    </div>
 
-                            <div className="text-secondary small mt-2">
-                              Tổng chương: <b>{c?.total_chapters || 1}</b>
-                            </div>
+    <div className="text-secondary small mt-2">
+      Dịch bởi: <b>{c?.translated_by || "—"}</b>
+    </div>
 
-                            <div className="text-secondary small mt-2">
-                              Danh mục: <b>{c?.category_name || "—"}</b>
-                            </div>
+    <div className="text-secondary small mt-2">
+      Tổng chương: <b>{c?.total_chapters || 1}</b>
+    </div>
 
-                            <div className="text-secondary small mt-2">
-                              Ảnh chính: <b>{c?.cover_image ? "Đã có" : "Chưa có"}</b>
-                            </div>
-                          </>
-                        ) : null}
+    <div className="text-secondary small mt-2">
+      Danh mục: <b>{c?.category_name || "—"}</b>
+    </div>
+
+    <div className="text-secondary small mt-2">
+      Ảnh chính: <b>{c?.cover_image ? "Đã có" : "Chưa có"}</b>
+    </div>
+  </>
+) : null}
 
                         <div className="ad-comic-meta mt-3">
                           <div className="text-secondary small">
@@ -1199,7 +1211,21 @@ export default function AdminComics() {
                     Có thể để trống nếu chưa muốn thêm tác giả.
                   </div>
                 </div>
-
+<div className="mt-3">
+  <label className="form-label fw-semibold">Dịch bởi</label>
+  <input
+    className="form-control"
+    value={selfDraft.translated_by}
+    onChange={(e) =>
+      setSelfDraft((p) => ({ ...p, translated_by: e.target.value }))
+    }
+    placeholder="Ví dụ: Nhóm dịch ABC"
+    disabled={selfSaving}
+  />
+  <div className="text-secondary small mt-1">
+    Có thể để trống nếu truyện không có nhóm dịch.
+  </div>
+  </div>
                 <div className="mt-3">
                   <label className="form-label fw-semibold">Ảnh chính</label>
 

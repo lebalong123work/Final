@@ -382,7 +382,10 @@ export default function ComicSelfDetail() {
                   <i className="bi bi-person me-2" />
                   {detail.author || "Chưa có tác giả"}
                 </div>
-
+                 <div>
+                  <i className="bi bi-translate me-2" />
+                  {detail?.translated_by || "—"}
+                </div>
                 <div>
                   <i className="bi bi-tags me-2" />
                   {detail.category_name || "Chưa có danh mục"}
@@ -407,7 +410,7 @@ export default function ComicSelfDetail() {
                     </span>
                   </div>
 
-                  <div className="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                  <div className="d-flex align-items-center gap-2 mt-1">
                     <button
                       className={`btn btn-sm ${following ? "btn-outline-success" : "btn-success"}`}
                       onClick={toggleFollow}

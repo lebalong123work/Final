@@ -31,7 +31,6 @@ function normalizeText(v) {
 /*
 GET LIST SELF COMICS
 */
-
 router.get("/", auth, async (req, res) => {
   try {
     const page = normalizePage(req.query.page, 1);
@@ -39,13 +38,14 @@ router.get("/", auth, async (req, res) => {
     const offset = (page - 1) * limit;
 
     const q = String(req.query.q || "").trim();
-    const categoryId = req.query.categoryId ? toInt(req.query.categoryId, 0) : null;
+    const categoryId = req.query.categoryId
+      ? toInt(req.query.categoryId, 0)
+      : null;
 
     const where = [];
     const params = [];
     let idx = 1;
 
-    
     if (q) {
       where.push(`sc.title ILIKE $${idx++}`);
       params.push(`%${q}%`);
@@ -70,6 +70,7 @@ router.get("/", auth, async (req, res) => {
         sc.user_id,
         sc.title,
         sc.author,
+        sc.translated_by,
         sc.cover_image,
         sc.description,
         sc.total_chapters,
@@ -100,83 +101,70 @@ router.get("/", auth, async (req, res) => {
       total,
       totalPages: Math.max(1, Math.ceil(total / limit)),
     });
-
   } catch (err) {
     console.error("GET self comics error:", err);
     return res.status(500).json({ message: "Lỗi server khi tải truyện" });
   }
 });
 
-
 /*
 GET DETAIL
 */
-
 router.get("/:id", auth, async (req, res) => {
   try {
-
     const id = toInt(req.params.id, 0);
-    if (!id) return res.status(400).json({ message: "ID không hợp lệ" });
-
-    const params = [id];
-    let extraWhere = "";
-
-  
+    if (!id) {
+      return res.status(400).json({ message: "ID không hợp lệ" });
+    }
 
     const sql = `
-     SELECT
-  sc.id,
-  sc.user_id,
-  u.username,
-  sc.title,
-  sc.author,
-  sc.cover_image,
-  sc.description,
-  sc.total_chapters,
-  sc.status,
-  sc.created_at,
-  sc.updated_at,
-  sc.category_id,
-  sc.is_paid,
-  sc.price,
-  c.name AS category_name
-FROM self_comics sc
-LEFT JOIN categories c ON c.id = sc.category_id
-LEFT JOIN users u ON u.id = sc.user_id
-WHERE sc.id = $1
-      ${extraWhere}
+      SELECT
+        sc.id,
+        sc.user_id,
+        u.username,
+        sc.title,
+        sc.author,
+        sc.translated_by,
+        sc.cover_image,
+        sc.description,
+        sc.total_chapters,
+        sc.status,
+        sc.created_at,
+        sc.updated_at,
+        sc.category_id,
+        sc.is_paid,
+        sc.price,
+        c.name AS category_name
+      FROM self_comics sc
+      LEFT JOIN categories c ON c.id = sc.category_id
+      LEFT JOIN users u ON u.id = sc.user_id
+      WHERE sc.id = $1
       LIMIT 1
     `;
 
-    const result = await db.query(sql, params);
+    const result = await db.query(sql, [id]);
 
     if (!result.rows.length) {
       return res.status(404).json({ message: "Không tìm thấy truyện" });
     }
 
     return res.json({ data: result.rows[0] });
-
   } catch (err) {
-
     console.error("GET self comic error:", err);
     return res.status(500).json({ message: "Lỗi server khi lấy truyện" });
-
   }
 });
-
 
 /*
 CREATE COMIC
 */
-
 router.post("/", auth, async (req, res) => {
-
   try {
-
     const userId = req.user?.id;
 
     const title = normalizeText(req.body.title);
     const author = normalizeText(req.body.author) || null;
+    const translatedBy = normalizeText(req.body.translated_by) || null;
     const coverImage = normalizeText(req.body.cover_image) || null;
     const description = normalizeText(req.body.description) || null;
 
@@ -190,20 +178,26 @@ router.post("/", auth, async (req, res) => {
     const isPaid = !!req.body.is_paid;
     const price = Math.max(0, toInt(req.body.price, 0));
 
-    if (!userId)
+    if (!userId) {
       return res.status(401).json({ message: "Bạn chưa đăng nhập" });
+    }
 
-    if (!title)
+    if (!title) {
       return res.status(400).json({ message: "Vui lòng nhập tiêu đề" });
+    }
 
-    if (isPaid && price <= 0)
-      return res.status(400).json({ message: "Giá phải > 0 khi bật trả phí" });
+    if (isPaid && price <= 0) {
+      return res
+        .status(400)
+        .json({ message: "Giá phải > 0 khi bật trả phí" });
+    }
 
     const insertSql = `
       INSERT INTO self_comics (
         user_id,
         title,
         author,
+        translated_by,
         cover_image,
         description,
         total_chapters,
@@ -212,7 +206,7 @@ router.post("/", auth, async (req, res) => {
         is_paid,
         price
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       RETURNING *
     `;
 
@@ -220,146 +214,149 @@ router.post("/", auth, async (req, res) => {
       userId,
       title,
       author,
+      translatedBy,
       coverImage,
       description,
       totalChapters,
       status,
       categoryId || null,
       isPaid,
-      isPaid ? price : 0
+      isPaid ? price : 0,
     ]);
 
     return res.status(201).json({
       message: "Tạo truyện thành công",
-      data: result.rows[0]
+      data: result.rows[0],
     });
-
   } catch (err) {
-
     console.error("CREATE self comic error:", err);
     return res.status(500).json({ message: "Lỗi server khi tạo truyện" });
-
   }
-
 });
-
 
 /*
 UPDATE COMIC
 */
-
 router.patch("/:id", auth, async (req, res) => {
-
   try {
-
     const id = toInt(req.params.id, 0);
-    if (!id) return res.status(400).json({ message: "ID không hợp lệ" });
+    if (!id) {
+      return res.status(400).json({ message: "ID không hợp lệ" });
+    }
 
     const check = await db.query(
       `SELECT * FROM self_comics WHERE id = $1 LIMIT 1`,
       [id]
     );
 
-    if (!check.rows.length)
+    if (!check.rows.length) {
       return res.status(404).json({ message: "Không tìm thấy truyện" });
+    }
 
     const comic = check.rows[0];
 
-    if (!canManageAll(req.user) &&
-        Number(comic.user_id) !== Number(req.user.id)) {
+    if (
+      !canManageAll(req.user) &&
+      Number(comic.user_id) !== Number(req.user.id)
+    ) {
       return res.status(403).json({ message: "Không có quyền sửa" });
     }
 
-    const title = req.body.title !== undefined
-      ? normalizeText(req.body.title)
-      : comic.title;
+    const title =
+      req.body.title !== undefined
+        ? normalizeText(req.body.title)
+        : comic.title;
 
-    const author = req.body.author !== undefined
-      ? normalizeText(req.body.author) || null
-      : comic.author;
+    const author =
+      req.body.author !== undefined
+        ? normalizeText(req.body.author) || null
+        : comic.author;
 
-    const coverImage = req.body.cover_image !== undefined
-      ? normalizeText(req.body.cover_image) || null
-      : comic.cover_image;
+    const translatedBy =
+      req.body.translated_by !== undefined
+        ? normalizeText(req.body.translated_by) || null
+        : comic.translated_by;
 
-    const description = req.body.description !== undefined
-      ? normalizeText(req.body.description) || null
-      : comic.description;
+    const coverImage =
+      req.body.cover_image !== undefined
+        ? normalizeText(req.body.cover_image) || null
+        : comic.cover_image;
+
+    const description =
+      req.body.description !== undefined
+        ? normalizeText(req.body.description) || null
+        : comic.description;
 
     const updateSql = `
       UPDATE self_comics
       SET
         title = $1,
         author = $2,
-        cover_image = $3,
-        description = $4,
+        translated_by = $3,
+        cover_image = $4,
+        description = $5,
         updated_at = NOW()
-      WHERE id = $5
+      WHERE id = $6
       RETURNING *
     `;
 
     const result = await db.query(updateSql, [
       title,
       author,
+      translatedBy,
       coverImage,
       description,
-      id
+      id,
     ]);
 
     return res.json({
       message: "Cập nhật thành công",
-      data: result.rows[0]
+      data: result.rows[0],
     });
-
   } catch (err) {
-
     console.error("UPDATE comic error:", err);
     return res.status(500).json({ message: "Lỗi server khi cập nhật" });
-
   }
-
 });
-
 
 /*
 DELETE
 */
-
 router.delete("/:id", auth, async (req, res) => {
-
   try {
-
     const id = toInt(req.params.id, 0);
+    if (!id) {
+      return res.status(400).json({ message: "ID không hợp lệ" });
+    }
 
     const check = await db.query(
-      `SELECT id,user_id,title FROM self_comics WHERE id=$1`,
+      `SELECT id, user_id, title FROM self_comics WHERE id = $1`,
       [id]
     );
 
-    if (!check.rows.length)
+    if (!check.rows.length) {
       return res.status(404).json({ message: "Không tìm thấy truyện" });
+    }
 
     const comic = check.rows[0];
 
-    if (!canManageAll(req.user) &&
-        Number(comic.user_id) !== Number(req.user.id)) {
+    if (
+      !canManageAll(req.user) &&
+      Number(comic.user_id) !== Number(req.user.id)
+    ) {
       return res.status(403).json({ message: "Không có quyền xoá" });
     }
 
-    await db.query(`DELETE FROM self_comics WHERE id=$1`, [id]);
+    await db.query(`DELETE FROM self_comics WHERE id = $1`, [id]);
 
     return res.json({
       message: "Xoá truyện thành công",
-      data: comic
+      data: comic,
     });
-
   } catch (err) {
-
     console.error("DELETE comic error:", err);
     return res.status(500).json({ message: "Lỗi server khi xoá" });
-
   }
-
 });
 
 module.exports = router;
