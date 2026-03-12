@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import "./profileWallet.css";
 import { ToastContainer, toast } from "react-toastify";
@@ -89,48 +89,48 @@ function buildLibraryCover(item) {
   return `https://img.otruyenapi.com/uploads/comics/${item.cover_image}`;
 }
 
-function buildLastReadText(item) {
-  if (item?.comic_type === "self") {
-    if (item?.last_read_chapter_no) {
-      return `Chap ${item.last_read_chapter_no}${item?.last_read_chapter_title ? ` • ${item.last_read_chapter_title}` : ""}`;
-    }
-    return "Chưa đọc";
+function buildLastFavoriteText(item) {
+  const chapterTitle = String(item?.last_chapter_title || "").trim();
+  const chapterId = String(item?.last_chapter_id || "").trim();
+
+  if (chapterTitle) {
+    return `Chap đã thích: ${chapterTitle}`;
   }
 
-  if (item?.last_read_chapter_title) {
-    return `Chap ${item.last_read_chapter_title}`;
+  if (chapterId) {
+    return `Chap đã thích: ${chapterId}`;
   }
 
-  return "Chưa đọc";
+  return "Đã thêm vào yêu thích";
 }
 
 function buildReadUrl(item) {
   if (item?.comic_type === "self") {
-    if (!item?.id || !item?.last_read_chapter_id) {
-      return `/self-comics/${item?.id}`;
+    if (!item?.id) return "#";
+
+    if (!item?.last_chapter_id) {
+      return `/self-comics/${item.id}`;
     }
 
-    return `/doc-self?comicId=${encodeURIComponent(
-      item.id
-    )}&chapterId=${encodeURIComponent(item.last_read_chapter_id)}`;
+    return `/doc-self?comicId=${encodeURIComponent(item.id)}&chapterId=${encodeURIComponent(
+      item.last_chapter_id
+    )}`;
   }
 
   if (!item?.slug) return "#";
 
-  const chapValue = item?.last_read_chapter_api || "";
+  const chapValue = item?.last_chapter_api || "";
 
   if (!chapValue) return `/truyen/${item.slug}`;
 
-  return `/doc?slug=${encodeURIComponent(item.slug)}&chap=${encodeURIComponent(
-    chapValue
-  )}`;
+  return `/doc?slug=${encodeURIComponent(item.slug)}&chap=${encodeURIComponent(chapValue)}`;
 }
 
 function buildDetailUrl(item) {
   if (item?.comic_type === "self") {
     return `/self-comics/${item?.id}`;
   }
-  return `/truyen/${item?.slug}`;
+  return item?.slug ? `/truyen/${item.slug}` : "#";
 }
 
 export default function ProfileWallet() {
@@ -187,12 +187,12 @@ export default function ProfileWallet() {
     total_comics_read: 0,
   });
 
-  // ===== state đổi mật khẩu =====
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
+
   const [pwSubmitting, setPwSubmitting] = useState(false);
   const [showPw, setShowPw] = useState({
     current: false,
@@ -296,7 +296,7 @@ export default function ProfileWallet() {
       setLibraryLoading(true);
       setLibraryErr("");
 
-      const data = await fetchJSON(`${API_BASE}/api/reading-history/library`, {
+      const data = await fetchJSON(`${API_BASE}/api/reactions/library`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -557,7 +557,6 @@ export default function ProfileWallet() {
     }
   };
 
-  // ===== xử lý đổi mật khẩu =====
   const handlePwChange = (e) => {
     const { name, value } = e.target;
     setPasswordForm((prev) => ({ ...prev, [name]: value }));
@@ -832,7 +831,7 @@ export default function ProfileWallet() {
         </div>
 
         <div className="pw-tabs mt-4">
-           <div className="pw-tab-group" role="group" aria-label="tabs">
+          <div className="pw-tab-group" role="group" aria-label="tabs">
             <button
               type="button"
               className={`btn ${tab === "profile" ? "btn-dark" : "btn-outline-dark"}`}
@@ -936,7 +935,7 @@ export default function ProfileWallet() {
                             <div className="min-w-0">
                               <div className="fw-semibold text-truncate">{c.title}</div>
                               <div className="small text-secondary">
-                                {mapLibraryStatus(c)} • {buildLastReadText(c)}
+                                {mapLibraryStatus(c)} • {buildLastFavoriteText(c)}
                               </div>
                             </div>
                             <button
@@ -968,7 +967,7 @@ export default function ProfileWallet() {
             <div className="card border-0 shadow-sm">
               <div className="card-body">
                 <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center">
-                  <h5 className="fw-bold m-0">Tủ truyện</h5>
+                  <h5 className="fw-bold m-0">Tủ truyện yêu thích</h5>
 
                   <div className="pw-search input-group">
                     <span className="input-group-text">
@@ -1004,10 +1003,10 @@ export default function ProfileWallet() {
                               {c.title}
                             </div>
 
-                            <div className="small text-secondary">{buildLastReadText(c)}</div>
+                            <div className="small text-secondary">{buildLastFavoriteText(c)}</div>
 
                             <div className="small text-secondary mt-1">
-                              Đọc {Number(c.read_count || 0)} chap • {fmtDate(c.last_read_at)}
+                              Đã yêu thích lúc {fmtDate(c.favorited_at)}
                             </div>
 
                             <div className="d-flex gap-2 mt-2">
@@ -1016,7 +1015,7 @@ export default function ProfileWallet() {
                                 type="button"
                                 onClick={() => navigate(buildReadUrl(c))}
                               >
-                                Đọc tiếp
+                                Đọc truyện
                               </button>
 
                               <button
@@ -1276,9 +1275,7 @@ export default function ProfileWallet() {
                             <button
                               type="button"
                               className="btn btn-outline-secondary"
-                              onClick={() =>
-                                setShowPw((prev) => ({ ...prev, next: !prev.next }))
-                              }
+                              onClick={() => setShowPw((prev) => ({ ...prev, next: !prev.next }))}
                             >
                               <i className={`bi ${showPw.next ? "bi-eye-slash" : "bi-eye"}`} />
                             </button>
@@ -1349,22 +1346,16 @@ export default function ProfileWallet() {
                     <h5 className="fw-bold mb-3">Lưu ý bảo mật</h5>
 
                     <div className="small text-secondary">
-                      <div className="mb-2">
-                        • Không dùng lại mật khẩu cũ hoặc mật khẩu quá dễ đoán.
-                      </div>
+                      <div className="mb-2">• Không dùng lại mật khẩu cũ hoặc mật khẩu quá dễ đoán.</div>
                       <div className="mb-2">
                         • Nên kết hợp chữ hoa, chữ thường, số và ký tự đặc biệt.
                       </div>
-                      <div className="mb-2">
-                        • Không chia sẻ mật khẩu cho người khác.
-                      </div>
+                      <div className="mb-2">• Không chia sẻ mật khẩu cho người khác.</div>
                       <div>
                         • Sau khi đổi mật khẩu thành công, hãy dùng mật khẩu mới cho lần đăng nhập
                         tiếp theo.
                       </div>
                     </div>
-
-                   
                   </div>
                 </div>
               </div>

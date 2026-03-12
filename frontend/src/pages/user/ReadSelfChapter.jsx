@@ -358,13 +358,23 @@ export default function ReadSelfChapter() {
     setLikeCount((c) => Math.max(0, c + (nextLiked ? 1 : -1)));
 
     try {
-      const data = await fetchJSON(
+     const data = await fetchJSON(
         `${API_BASE}/api/reactions/chapter/${encodeURIComponent(chapterId)}/toggle`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            comicId: comicId,
+            comicType: "self",
+            slug: "",
+            chapApi: "",
+          }),
         }
       );
+
 
       if (typeof data?.data?.likeCount === "number") {
         setLikeCount(data.data.likeCount);

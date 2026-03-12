@@ -296,44 +296,65 @@ useEffect(() => {
     })();
   }, [chapterId, token]);
 
-  const toggleLike = async () => {
-    if (!token) {
-      toast.info("Bạn cần đăng nhập để thả tim.");
-      return;
+ const toggleLike = async () => {
+  if (!token) {
+    toast.info("Bạn cần đăng nhập để thả tim.");
+    return;
+  }
+
+  if (!chapterId) {
+    toast.warning("Không tìm thấy chapter.");
+    return;
+  }
+
+  if (!comicDbId) {
+    toast.warning("Không tìm thấy truyện trong DB.");
+    return;
+  }
+
+  const prevLiked = liked;
+  const nextLiked = !prevLiked;
+
+  setLiked(nextLiked);
+  setLikeCount((c) => Math.max(0, c + (nextLiked ? 1 : -1)));
+
+  try {
+    const data = await fetchJSON(
+      `${API_BASE}/api/reactions/chapter/${encodeURIComponent(chapterId)}/toggle`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          comicId: comicDbId,
+          comicType: "external",
+          slug: slug || null,
+          chapApi: chapterApi || null,
+          chapterTitle: chapterName || null,
+        }),
+      }
+    );
+
+    if (typeof data?.data?.likeCount === "number") {
+      setLikeCount(data.data.likeCount);
     }
 
-    const prevLiked = liked;
-    const nextLiked = !prevLiked;
-
-    setLiked(nextLiked);
-    setLikeCount((c) => Math.max(0, c + (nextLiked ? 1 : -1)));
-
-    try {
-      const data = await fetchJSON(
-        `${API_BASE}/api/reactions/chapter/${encodeURIComponent(chapterId)}/toggle`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (typeof data?.data?.likeCount === "number") {
-        setLikeCount(data.data.likeCount);
-      }
-      if (typeof data?.data?.liked === "boolean") {
-        setLiked(data.data.liked);
-      }
-
-      socketRef.current?.emit("reaction:toggle", {
-        chapterType: CHAPTER_TYPE,
-        chapterId,
-      });
-    } catch (e) {
-      setLiked(prevLiked);
-      setLikeCount((c) => Math.max(0, c + (prevLiked ? 1 : -1)));
-      toast.error(e.message || "Lỗi");
+    if (typeof data?.data?.liked === "boolean") {
+      setLiked(data.data.liked);
     }
-  };
+
+    socketRef.current?.emit("reaction:toggle", {
+      chapterType: CHAPTER_TYPE,
+      chapterId,
+    });
+  } catch (e) {
+    setLiked(prevLiked);
+    setLikeCount((c) => Math.max(0, c + (prevLiked ? 1 : -1)));
+    toast.error(e.message || "Lỗi");
+  }
+};
 
   const sendComment = async () => {
     if (!token) {
