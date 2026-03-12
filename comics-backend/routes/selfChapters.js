@@ -1,12 +1,56 @@
 const express = require("express");
 const db = require("../db");
 const { auth } = require("../middleware/auth");
+const cloudinary = require("../utils/cloudinary");
 
 const router = express.Router();
 
 function toInt(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function isBase64Image(v) {
+  return /^data:image\/[a-zA-Z0-9.+-]+;base64,/.test(String(v || "").trim());
+}
+
+async function uploadBase64ImageToCloudinary(base64, folder = "self-comics/chapters") {
+  const result = await cloudinary.uploader.upload(base64, {
+    folder,
+    resource_type: "image",
+  });
+
+  return result.secure_url;
+}
+
+async function replaceBase64ImagesInHtml(html) {
+  const raw = String(html || "");
+  if (!raw) return raw;
+
+  const matches = [...raw.matchAll(/<img[^>]+src=["'](data:image\/[^"']+)["'][^>]*>/gi)];
+
+  if (!matches.length) {
+    return raw;
+  }
+
+  let nextHtml = raw;
+
+  for (const match of matches) {
+    const fullMatch = match[0];
+    const base64Src = match[1];
+
+    if (!isBase64Image(base64Src)) continue;
+
+    const uploadedUrl = await uploadBase64ImageToCloudinary(
+      base64Src,
+      "self-comics/chapters"
+    );
+
+    const replacedTag = fullMatch.replace(base64Src, uploadedUrl);
+    nextHtml = nextHtml.replace(fullMatch, replacedTag);
+  }
+
+  return nextHtml;
 }
 
 /**
@@ -52,6 +96,10 @@ router.get("/:id", async (req, res) => {
   try {
     const id = toInt(req.params.id, 0);
 
+    if (!id) {
+      return res.status(400).json({ message: "ID không hợp lệ" });
+    }
+
     const result = await db.query(
       `
       SELECT *
@@ -83,7 +131,7 @@ router.post("/", auth, async (req, res) => {
     const comicId = toInt(req.body.comic_id, 0);
     const chapterNo = toInt(req.body.chapter_no, 1);
     const chapterTitle = String(req.body.chapter_title || "").trim();
-    const content = String(req.body.content || "").trim();
+    const rawContent = String(req.body.content || "").trim();
 
     if (!comicId) {
       return res.status(400).json({ message: "comic_id không hợp lệ" });
@@ -93,9 +141,11 @@ router.post("/", auth, async (req, res) => {
       return res.status(400).json({ message: "Thiếu tiêu đề chương" });
     }
 
-    if (!content) {
+    if (!rawContent) {
       return res.status(400).json({ message: "Thiếu nội dung chương" });
     }
+
+    const content = await replaceBase64ImagesInHtml(rawContent);
 
     const insert = await db.query(
       `
@@ -130,16 +180,22 @@ router.patch("/:id", auth, async (req, res) => {
   try {
     const id = toInt(req.params.id, 0);
 
+    if (!id) {
+      return res.status(400).json({ message: "ID không hợp lệ" });
+    }
+
     const chapterTitle = String(req.body.chapter_title || "").trim();
-    const content = String(req.body.content || "").trim();
+    const rawContent = String(req.body.content || "").trim();
 
     if (!chapterTitle) {
       return res.status(400).json({ message: "Tiêu đề chương không được trống" });
     }
 
-    if (!content) {
+    if (!rawContent) {
       return res.status(400).json({ message: "Nội dung chương không được trống" });
     }
+
+    const content = await replaceBase64ImagesInHtml(rawContent);
 
     const result = await db.query(
       `
@@ -173,6 +229,10 @@ router.patch("/:id", auth, async (req, res) => {
 router.delete("/:id", auth, async (req, res) => {
   try {
     const id = toInt(req.params.id, 0);
+
+    if (!id) {
+      return res.status(400).json({ message: "ID không hợp lệ" });
+    }
 
     const result = await db.query(
       `

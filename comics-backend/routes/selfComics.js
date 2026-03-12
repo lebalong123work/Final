@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const { auth } = require("../middleware/auth");
+const cloudinary = require("../utils/cloudinary");
 
 const router = express.Router();
 
@@ -26,6 +27,34 @@ function canManageAll(user) {
 
 function normalizeText(v) {
   return String(v || "").trim();
+}
+
+function isHttpUrl(v) {
+  return /^https?:\/\//i.test(String(v || "").trim());
+}
+
+function isBase64Image(v) {
+  return /^data:image\/[a-zA-Z0-9.+-]+;base64,/.test(String(v || "").trim());
+}
+
+async function uploadCoverToCloudinary(imageValue) {
+  const value = normalizeText(imageValue);
+  if (!value) return null;
+
+  if (isHttpUrl(value)) {
+    return value;
+  }
+
+  if (!isBase64Image(value)) {
+    return value;
+  }
+
+  const result = await cloudinary.uploader.upload(value, {
+    folder: "self-comics/covers",
+    resource_type: "image",
+  });
+
+  return result.secure_url;
 }
 
 /*
@@ -165,7 +194,7 @@ router.post("/", auth, async (req, res) => {
     const title = normalizeText(req.body.title);
     const author = normalizeText(req.body.author) || null;
     const translatedBy = normalizeText(req.body.translated_by) || null;
-    const coverImage = normalizeText(req.body.cover_image) || null;
+    const rawCoverImage = normalizeText(req.body.cover_image) || null;
     const description = normalizeText(req.body.description) || null;
 
     const totalChapters = Math.max(1, toInt(req.body.total_chapters, 1));
@@ -187,10 +216,12 @@ router.post("/", auth, async (req, res) => {
     }
 
     if (isPaid && price <= 0) {
-      return res
-        .status(400)
-        .json({ message: "Giá phải > 0 khi bật trả phí" });
+      return res.status(400).json({ message: "Giá phải > 0 khi bật trả phí" });
     }
+
+    const coverImage = rawCoverImage
+      ? await uploadCoverToCloudinary(rawCoverImage)
+      : null;
 
     const insertSql = `
       INSERT INTO self_comics (
@@ -277,7 +308,7 @@ router.patch("/:id", auth, async (req, res) => {
         ? normalizeText(req.body.translated_by) || null
         : comic.translated_by;
 
-    const coverImage =
+    const rawCoverImage =
       req.body.cover_image !== undefined
         ? normalizeText(req.body.cover_image) || null
         : comic.cover_image;
@@ -286,6 +317,10 @@ router.patch("/:id", auth, async (req, res) => {
       req.body.description !== undefined
         ? normalizeText(req.body.description) || null
         : comic.description;
+
+    const coverImage = rawCoverImage
+      ? await uploadCoverToCloudinary(rawCoverImage)
+      : null;
 
     const updateSql = `
       UPDATE self_comics
