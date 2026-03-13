@@ -139,6 +139,67 @@ router.get("/", auth, async (req, res) => {
 /*
 GET DETAIL
 */
+
+router.get("/my", auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const page = Math.max(1, Number(req.query.page || 1));
+    const limit = Math.max(1, Number(req.query.limit || 12));
+    const offset = (page - 1) * limit;
+    const q = String(req.query.q || "").trim();
+    const categoryId = req.query.categoryId ? Number(req.query.categoryId) : null;
+
+    const where = [`sc.user_id = $1`];
+    const values = [userId];
+    let idx = 2;
+
+    if (q) {
+      where.push(`(sc.title ILIKE $${idx} OR COALESCE(sc.author,'') ILIKE $${idx})`);
+      values.push(`%${q}%`);
+      idx++;
+    }
+
+    if (categoryId) {
+      where.push(`sc.category_id = $${idx}`);
+      values.push(categoryId);
+      idx++;
+    }
+
+    const whereSql = `WHERE ${where.join(" AND ")}`;
+
+    const countQuery = await db.query(
+      `SELECT COUNT(*)::int AS total
+       FROM self_comics sc
+       ${whereSql}`,
+      values
+    );
+
+    const listQuery = await db.query(
+      `SELECT sc.*, c.name AS category_name
+       FROM self_comics sc
+       LEFT JOIN categories c ON c.id = sc.category_id
+       ${whereSql}
+       ORDER BY sc.updated_at DESC NULLS LAST, sc.id DESC
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...values, limit, offset]
+    );
+
+    const total = countQuery.rows[0]?.total || 0;
+
+    res.json({
+      data: listQuery.rows,
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Lỗi lấy truyện của user" });
+  }
+});
+
+
 router.get("/:id", auth, async (req, res) => {
   try {
     const id = toInt(req.params.id, 0);

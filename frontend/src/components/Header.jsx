@@ -480,52 +480,62 @@ useEffect(() => {
           </li>
         </>
       )}
+{user && (
+  <>
+    <li>
+      <Link
+        className="zt-userItem"
+        to="/profile"
+        onClick={() => setUserMenuOpen(false)}
+      >
+        <i className="bi bi-person me-2"></i>
+        Trang cá nhân
+      </Link>
+    </li>
 
-      {user && (
-        <>
-          <li>
-            <Link
-              className="zt-userItem"
-              to="/profile"
-              onClick={() => setUserMenuOpen(false)}
-            >
-              <i className="bi bi-person me-2"></i>
-              Trang cá nhân
-            </Link>
-          </li>
+    <li>
+      <Link
+        className="zt-userItem"
+        to="/my-comics"
+        onClick={() => setUserMenuOpen(false)}
+      >
+        <i className="bi bi-journal-bookmark me-2"></i>
+        Truyện của tôi
+      </Link>
+    </li>
 
-          {(user.role === "admin" || user.role === "sub_admin") && (
-            <li>
-              <Link
-                className="zt-userItem text-danger"
-                to="/admin"
-                onClick={() => setUserMenuOpen(false)}
-              >
-                <i className="bi bi-speedometer2 me-2"></i>
-                Quản trị
-              </Link>
-            </li>
-          )}
+    {(user.role === "admin" || user.role === "sub_admin") && (
+      <li>
+        <Link
+          className="zt-userItem text-danger"
+          to="/admin"
+          onClick={() => setUserMenuOpen(false)}
+        >
+          <i className="bi bi-speedometer2 me-2"></i>
+          Quản trị
+        </Link>
+      </li>
+    )}
 
-          <li>
-            <hr className="dropdown-divider" />
-          </li>
+    <li>
+      <hr className="dropdown-divider" />
+    </li>
 
-          <li>
-            <button
-              className="zt-userItem zt-userBtn"
-              type="button"
-              onClick={() => {
-                setUserMenuOpen(false);
-                handleLogout();
-              }}
-            >
-              <i className="bi bi-box-arrow-right me-2"></i>
-              Đăng xuất
-            </button>
-          </li>
-        </>
-      )}
+    <li>
+      <button
+        className="zt-userItem zt-userBtn"
+        type="button"
+        onClick={() => {
+          setUserMenuOpen(false);
+          handleLogout();
+        }}
+      >
+        <i className="bi bi-box-arrow-right me-2"></i>
+        Đăng xuất
+      </button>
+    </li>
+  </>
+)}
     </ul>
   )}
 </div>
