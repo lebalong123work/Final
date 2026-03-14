@@ -103,20 +103,20 @@ export default function SelfComicSlider({
           <span className="cs-count">{items.length}</span>
         </div>
 
-        <div className="cs-actions d-none d-md-flex align-items-center gap-2">
-          <Link to={viewAllHref} className="cs-viewAll">
-            Xem tất cả <i className="bi bi-arrow-right ms-1" />
-          </Link>
+    <div className="cs-actions d-flex align-items-center gap-2">
+  <Link to={viewAllHref} className="cs-viewAll" aria-label="Xem tất cả">
+    Xem tất cả <i className="bi bi-arrow-right ms-1" />
+  </Link>
 
-          <div className="cs-controls d-none d-md-flex gap-2">
-            <button className="btn cs-btn" onClick={prev} disabled={!pages.length}>
-              <i className="bi bi-chevron-left" />
-            </button>
-            <button className="btn cs-btn" onClick={next} disabled={!pages.length}>
-              <i className="bi bi-chevron-right" />
-            </button>
-          </div>
-        </div>
+  <div className="cs-controls d-none d-md-flex gap-2">
+    <button className="btn cs-btn" onClick={prev} aria-label="Prev" disabled={!pages.length}>
+      <i className="bi bi-chevron-left" />
+    </button>
+    <button className="btn cs-btn" onClick={next} aria-label="Next" disabled={!pages.length}>
+      <i className="bi bi-chevron-right" />
+    </button>
+  </div>
+</div>
       </div>
 
       <div className="position-relative py-2">
