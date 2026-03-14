@@ -932,7 +932,7 @@ export default function MyComics() {
 
       {selfModalOpen ? (
         <div className="ad-modal-backdrop" onMouseDown={closeSelfModal}>
-          <div className="ad-modal ad-modal-lg" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="ad-modal ad-modal-lg mt-7" onMouseDown={(e) => e.stopPropagation()}>
             <div className="ad-modal-header d-flex align-items-start justify-content-between gap-3 mb-2">
               <div className="min-w-0">
                 <div className="fw-bold">

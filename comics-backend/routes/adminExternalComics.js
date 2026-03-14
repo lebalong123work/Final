@@ -75,6 +75,7 @@ router.post("/external-comics/sync", auth, requireAdmin, async (req, res) => {
           try {
             await io.notifyFollowersNewComic({
               ownerUserId,
+              comicKind: "self",
               comicSlug: row.slug,
               comicName: row.name,
             });

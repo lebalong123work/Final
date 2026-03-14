@@ -26,6 +26,7 @@ import ComicSelfDetail from './pages/user/ComicSelfDetail';
 import ReadSelfChapter from './pages/user/ReadSelfChapter';
 import TrafficTracker from './components/TrafficTracker';
 import MyComics from './pages/user/MyComics';
+import SelfComic from './pages/user/SelfComic';
 
 function App() {
  
@@ -52,6 +53,8 @@ function App() {
 <Route path="/self-comics/:id" element={<ComicSelfDetail />} />
 <Route path="/my-comics" element={<MyComics />} />
   <Route path="/doc-self" element={<ReadSelfChapter />} />
+  
+    <Route path="/self-comics" element={<SelfComic />} />
     </Routes>
     </>
   );

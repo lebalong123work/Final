@@ -60,7 +60,7 @@ async function uploadCoverToCloudinary(imageValue) {
 /*
 GET LIST SELF COMICS
 */
-router.get("/",  async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const page = normalizePage(req.query.page, 1);
     const limit = normalizeLimit(req.query.limit, 12);
@@ -139,7 +139,6 @@ router.get("/",  async (req, res) => {
 /*
 GET DETAIL
 */
-
 router.get("/my", auth, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -199,7 +198,6 @@ router.get("/my", auth, async (req, res) => {
   }
 });
 
-
 router.get("/:id", auth, async (req, res) => {
   try {
     const id = toInt(req.params.id, 0);
@@ -251,6 +249,7 @@ CREATE COMIC
 router.post("/", auth, async (req, res) => {
   try {
     const userId = req.user?.id;
+    const io = req.app.get("io");
 
     const title = normalizeText(req.body.title);
     const author = normalizeText(req.body.author) || null;
@@ -316,9 +315,25 @@ router.post("/", auth, async (req, res) => {
       isPaid ? price : 0,
     ]);
 
+    const newComic = result.rows[0];
+
+    // Gửi thông báo cho follower
+    if (io?.notifyFollowersNewComic && newComic?.id) {
+      try {
+        await io.notifyFollowersNewComic({
+          ownerUserId: userId,
+          comicKind: "self",
+          comicId: newComic.id,
+          comicName: newComic.title,
+        });
+      } catch (notifyErr) {
+        console.error("notify self comic error:", notifyErr);
+      }
+    }
+
     return res.status(201).json({
       message: "Tạo truyện thành công",
-      data: result.rows[0],
+      data: newComic,
     });
   } catch (err) {
     console.error("CREATE self comic error:", err);
