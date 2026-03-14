@@ -282,7 +282,7 @@ export default function ComicListPage() {
           </div>
         ) : (
           <>
-            <div className="row g-3">
+            <div className="row g-3 mt-2">
               {items.map((c) => {
                 const detailUrl = buildDetailUrl(c);
 

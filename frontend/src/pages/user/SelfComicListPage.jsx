@@ -221,7 +221,7 @@ export default function SelfComicListPage() {
       <Header />
 
       <div className="clp-wrap">
-        <div className="clp-hero">
+        <div className="clp-hero mb-3">
           <div className="clp-heroLeft">
             <h1 className="clp-title">Truyện tự đăng</h1>
             <div className="clp-sub">

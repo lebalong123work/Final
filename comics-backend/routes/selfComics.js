@@ -60,7 +60,7 @@ async function uploadCoverToCloudinary(imageValue) {
 /*
 GET LIST SELF COMICS
 */
-router.get("/", auth, async (req, res) => {
+router.get("/",  async (req, res) => {
   try {
     const page = normalizePage(req.query.page, 1);
     const limit = normalizeLimit(req.query.limit, 12);

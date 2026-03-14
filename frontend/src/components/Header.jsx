@@ -2,7 +2,9 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./header.css";
 import { io } from "socket.io-client";
-
+import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap/dist/js/bootstrap.bundle.min.js";
+import "bootstrap-icons/font/bootstrap-icons.css";
 const API_BASE = "http://localhost:5000";
 
 async function fetchJSON(url, options) {
@@ -39,7 +41,7 @@ export default function Header() {
   }, [tick]);
 
   const token = useMemo(() => localStorage.getItem("token") || "", [tick]);
-
+const [navOpen, setNavOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [notifs, setNotifs] = useState([]);
@@ -51,7 +53,8 @@ export default function Header() {
   const [categories, setCategories] = useState([]);
   const [catLoading, setCatLoading] = useState(false);
   const [catErr, setCatErr] = useState("");
-
+const [moreOpen, setMoreOpen] = useState(false);
+const [textOpen, setTextOpen] = useState(false);
   const visibleCategories = categories.slice(0, 5);
   const moreCategories = categories.slice(5);
 
@@ -293,16 +296,18 @@ useEffect(() => {
   </div>
 </Link>
 
-          <button
-            className="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#ztNav"
-          >
-            <span className="navbar-toggler-icon" />
-          </button>
+      <button
+  className="navbar-toggler"
+  type="button"
+  onClick={() => setNavOpen((v) => !v)}
+  aria-controls="ztNav"
+  aria-expanded={navOpen}
+  aria-label="Toggle navigation"
+>
+  <span className="navbar-toggler-icon" />
+</button>
 
-          <div className="collapse navbar-collapse" id="ztNav">
+        <div className={`navbar-collapse collapse ${navOpen ? "show" : ""}`} id="ztNav">
             <ul className="navbar-nav mx-auto mb-2 mb-lg-0 zt-nav">
               {visibleCategories.map((cat) => (
                 <li className="nav-item" key={cat.id}>
@@ -312,56 +317,79 @@ useEffect(() => {
                 </li>
               ))}
 
-              {moreCategories.length > 0 ? (
-                <li className="nav-item dropdown zt-catMore">
-                  <span className="nav-link zt-catMoreBtn">
-                    Xem thêm <i className="bi bi-chevron-down ms-1" />
-                  </span>
+           {moreCategories.length > 0 ? (
+  <li className={`nav-item dropdown zt-catMore ${moreOpen ? "open" : ""}`}>
+    
+    <button
+      type="button"
+      className="nav-link zt-catMoreBtn zt-catToggleBtn"
+      onClick={() => setMoreOpen((v) => !v)}
+    >
+      Xem thêm
+      <i className={`bi ms-1 ${moreOpen ? "bi-chevron-up" : "bi-chevron-down"}`} />
+    </button>
 
-                  <div className="zt-catDropdown">
-                    <div className="zt-catGrid">
-                      {moreCategories.map((cat) => (
-                        <Link
-                          key={cat.id}
-                          className="zt-catItem"
-                          to={`/truyen?category=${cat.slug}`}
-                        >
-                          {cat.name}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                </li>
-              ) : null}
+    <div className={`zt-catDropdown ${moreOpen ? "show" : ""}`}>
+      <div className="zt-catGrid">
+        {moreCategories.map((cat) => (
+          <Link
+            key={cat.id}
+            className="zt-catItem"
+            to={`/truyen?category=${cat.slug}`}
+            onClick={() => {
+              setMoreOpen(false);
+              setNavOpen(false);
+            }}
+          >
+            {cat.name}
+          </Link>
+        ))}
+      </div>
+    </div>
+
+  </li>
+) : null}
 
               {/* MỤC KHÁC */}
-              <li className="nav-item dropdown zt-catMore">
-                <span className="nav-link zt-catMoreBtn">
-                  Truyện chữ <i className="bi bi-chevron-down ms-1" />
-                </span>
+        <li className={`nav-item dropdown zt-catMore ${textOpen ? "open" : ""}`}>
+  <button
+    type="button"
+    className="nav-link zt-catMoreBtn zt-catToggleBtn"
+    onClick={() => {
+      setTextOpen((v) => !v);
+      setMoreOpen(false);
+    }}
+  >
+    Truyện chữ
+    <i className={`bi ms-1 ${textOpen ? "bi-chevron-up" : "bi-chevron-down"}`} />
+  </button>
 
-                <div className="zt-catDropdown">
-                  {otherCatLoading ? (
-                    <div className="zt-catStatus">Đang tải...</div>
-                  ) : otherCatErr ? (
-                    <div className="zt-catStatus text-danger">{otherCatErr}</div>
-                  ) : otherCategories.length === 0 ? (
-                    <div className="zt-catStatus">Chưa có dữ liệu.</div>
-                  ) : (
-                    <div className="zt-catGrid">
-                      {otherCategories.map((cat) => (
-                        <Link
-                          key={cat.id}
-                          className="zt-catItem"
-                          to={`/self-comics-category/=${cat.id}`}
-                        >
-                          {cat.name}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </li>
+  <div className={`zt-catDropdown ${textOpen ? "show" : ""}`}>
+    {otherCatLoading ? (
+      <div className="zt-catStatus">Đang tải...</div>
+    ) : otherCatErr ? (
+      <div className="zt-catStatus text-danger">{otherCatErr}</div>
+    ) : otherCategories.length === 0 ? (
+      <div className="zt-catStatus">Chưa có dữ liệu.</div>
+    ) : (
+      <div className="zt-catGrid">
+        {otherCategories.map((cat) => (
+          <Link
+            key={cat.id}
+            className="zt-catItem"
+            to={`/self-comics-category/${cat.id}?categoryId=${cat.id}&page=1`}
+            onClick={() => {
+              setTextOpen(false);
+              setNavOpen(false);
+            }}
+          >
+            {cat.name}
+          </Link>
+        ))}
+      </div>
+    )}
+  </div>
+</li>
             </ul>
 
             <div className="d-flex align-items-center gap-2 flex-wrap">

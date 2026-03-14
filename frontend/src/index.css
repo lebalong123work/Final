@@ -22,6 +22,32 @@
   user-select: none;
 }
 
+.zt-catToggleBtn {
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-radius: 10px;
+  color: #111827;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.zt-catToggleBtn:hover {
+  background: #f3f4f6;
+  border-color: transparent;
+}
+
+.zt-catToggleBtn:focus,
+.zt-catToggleBtn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .zt-catDropdown {
   position: absolute;
   top: 100%;
@@ -33,7 +59,6 @@
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
   padding: 12px;
 
-  /* animation */
   opacity: 0;
   visibility: hidden;
   transform: translateY(8px);
@@ -41,12 +66,13 @@
 
   z-index: 999;
 
-  /* scroll */
-  max-height: 300px;   /* chiều cao tối đa */
-  overflow-y: auto;    /* bật scroll dọc */
+  max-height: 300px;
+  overflow-y: auto;
+  display: block;
 }
 
-.zt-catMore:hover .zt-catDropdown {
+.zt-catMore.open .zt-catDropdown,
+.zt-catDropdown.show {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -84,13 +110,14 @@
 .zt-catDropdown::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
+
 .page-wrapper {
   overflow: hidden;
 }
 
 .page-wrapper img {
   width: 100%;
-  transform: translateY(-40px); /* cắt phía trên */
+  transform: translateY(-40px);
 }
 
 a {
@@ -98,16 +125,16 @@ a {
   color: #646cff;
   text-decoration: inherit;
 }
+
 a:hover {
   color: #535bf2;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  display: block;
 }
 
 h1 {
@@ -124,14 +151,62 @@ button {
   font-family: inherit;
   background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, background-color 0.25s;
 }
+
 button:hover {
   border-color: #646cff;
 }
+
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (max-width: 991.98px) {
+  .zt-catDropdown {
+    position: static;
+    min-width: 100%;
+    width: 100%;
+    margin-top: 8px;
+    border-radius: 12px;
+    box-shadow: none;
+    border: 1px solid #e9ecef;
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+    display: none;
+    max-height: 260px;
+  }
+
+  .zt-catDropdown.show,
+  .zt-catMore.open .zt-catDropdown {
+    display: block;
+  }
+
+  .zt-catGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .zt-catToggleBtn {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  .zt-catDropdown {
+    padding: 10px;
+  }
+
+  .zt-catItem {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .zt-catToggleBtn {
+    font-size: 14px;
+  }
 }
 
 @media (prefers-color-scheme: light) {
@@ -139,13 +214,16 @@ button:focus-visible {
     color: #213547;
     background-color: #ffffff;
   }
+
   a:hover {
     color: #747bff;
   }
+
   button {
     background-color: #f9f9f9;
   }
 }
+
 .mt-7 {
   margin-top: 5rem !important;
 }
