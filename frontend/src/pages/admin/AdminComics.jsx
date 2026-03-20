@@ -274,10 +274,16 @@ export default function AdminComics() {
     try {
       setExtLoading(true);
 
-      const res = await fetch(`${API_BASE}/api/admin/external-comics/sync`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+     const res = await fetch(`${API_BASE}/api/admin/external-comics/sync`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  },
+  body: JSON.stringify({
+    maxPages: 14, 
+  }),
+});
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Đồng bộ thất bại");
