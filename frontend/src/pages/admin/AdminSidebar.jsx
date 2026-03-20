@@ -49,7 +49,7 @@ export default function AdminSidebar() {
     <aside className="ad-side">
       <div className="ad-side-brand">
         <div className="d-flex align-items-center gap-2 mb-3 position-relative">
-          <a href="/"><img  className="hero-logo" src="https://i.ibb.co/4wJ9F49W/logo-fotor-bg-remover-202603048410-1.png" alt="logo-fotor-bg-remover-202603048410-1" border="0"/></a>
+          <a href="/"><img  className="hero-logo" src="https://i.ibb.co/MxWp9rJW/logo-fotor-bg-remover-202603048410-2.png" alt="logo-fotor-bg-remover-202603048410-1" border="0"/></a>
           
         </div>
         <div>

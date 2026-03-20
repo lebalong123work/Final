@@ -329,7 +329,7 @@ export default function Header() {
             <div className="d-flex align-items-center gap-2 mb-0">
               <img
                 className="hero-logo"
-                src="https://i.ibb.co/4wJ9F49W/logo-fotor-bg-remover-202603048410-1.png"
+                src="https://i.ibb.co/MxWp9rJW/logo-fotor-bg-remover-202603048410-2.png"
                 alt="logo"
               />
 
