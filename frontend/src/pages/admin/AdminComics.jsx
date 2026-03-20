@@ -281,7 +281,7 @@ export default function AdminComics() {
     Authorization: `Bearer ${token}`,
   },
   body: JSON.stringify({
-    maxPages: 14, 
+    maxPages: 1, 
   }),
 });
 
