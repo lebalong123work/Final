@@ -54,64 +54,60 @@ function normalizeStatusTone(status) {
   return "dark";
 }
 
+function getSelectedValues(selectEl) {
+  return Array.from(selectEl.selectedOptions || []).map((opt) => opt.value);
+}
+
 export default function AdminComics() {
   const [tab, setTab] = useState("external");
 
-  // ===== EXTERNAL =====
   const [extItems, setExtItems] = useState([]);
   const [extLoading, setExtLoading] = useState(false);
   const [extError, setExtError] = useState("");
 
-  // ===== SELF =====
   const [selfItems, setSelfItems] = useState([]);
   const [selfLoading, setSelfLoading] = useState(false);
   const [selfError, setSelfError] = useState("");
 
-  // search + paging
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // categories
   const [cats, setCats] = useState([]);
   const [catId, setCatId] = useState("");
 
-  // ===== MODAL: pricing external =====
   const [settingComic, setSettingComic] = useState(null);
- const [settingDraft, setSettingDraft] = useState({
-  tab: "pricing", // pricing | translator
-  type: "free",
-  price: 0,
-  translator: "",
-});
+  const [settingDraft, setSettingDraft] = useState({
+    tab: "pricing",
+    type: "free",
+    price: 0,
+    translator: "",
+  });
   const [savingSetting, setSavingSetting] = useState(false);
 
-  // ===== MODAL: create/edit self comic =====
   const [selfModalOpen, setSelfModalOpen] = useState(false);
   const [selfSaving, setSelfSaving] = useState(false);
   const [editingSelfId, setEditingSelfId] = useState(null);
 
- const [selfDraft, setSelfDraft] = useState({
-  title: "",
-  author: "",
-  translated_by: "",
-  cover_image: "",
-  description: "",
-  total_chapters: 1,
-  category_id: "",
-  status: 1,
-  is_paid: false,
-  price: 0,
-});
+  const [selfDraft, setSelfDraft] = useState({
+    title: "",
+    author: "",
+    translated_by: "",
+    cover_image: "",
+    description: "",
+    total_chapters: 1,
+    category_ids: [],
+    status: 1,
+    is_paid: false,
+    price: 0,
+  });
 
-  // ===== MODAL: chapters manager =====
   const [chapterModalOpen, setChapterModalOpen] = useState(false);
   const [chapterComic, setChapterComic] = useState(null);
   const [chapterItems, setChapterItems] = useState([]);
   const [chapterLoading, setChapterLoading] = useState(false);
   const [chapterError, setChapterError] = useState("");
 
-  // ===== MODAL: create/edit chapter =====
   const [chapterFormOpen, setChapterFormOpen] = useState(false);
   const [chapterSaving, setChapterSaving] = useState(false);
   const [editingChapterId, setEditingChapterId] = useState(null);
@@ -126,7 +122,6 @@ export default function AdminComics() {
   const descImageInputRef = useRef(null);
   const chapterImageInputRef = useRef(null);
 
-  // ===== TipTap editor: description =====
   const descEditor = useEditor({
     extensions: [
       StarterKit,
@@ -152,7 +147,6 @@ export default function AdminComics() {
     },
   });
 
-  // ===== TipTap editor: chapter content =====
   const chapterEditor = useEditor({
     extensions: [
       StarterKit,
@@ -178,7 +172,6 @@ export default function AdminComics() {
     },
   });
 
-  // ================== FETCH ==================
   const fetchCategories = async () => {
     try {
       const r = await fetch(`${API_BASE}/api/categories`);
@@ -274,16 +267,16 @@ export default function AdminComics() {
     try {
       setExtLoading(true);
 
-     const res = await fetch(`${API_BASE}/api/admin/external-comics/sync`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  },
-  body: JSON.stringify({
-    maxPages: 1, 
-  }),
-});
+      const res = await fetch(`${API_BASE}/api/admin/external-comics/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          maxPages: 1,
+        }),
+      });
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Đồng bộ thất bại");
@@ -308,7 +301,6 @@ export default function AdminComics() {
     }
   };
 
-  // ================== EFFECT ==================
   useEffect(() => {
     if (tab === "external") fetchExternalFromDB(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -323,7 +315,6 @@ export default function AdminComics() {
 
   const current = tab === "external" ? extItems : selfItems;
 
-  // ================== BADGE PRICING ==================
   const pricingLabel = (comic) => {
     if (!comic) return null;
     if (comic.is_paid) {
@@ -336,26 +327,26 @@ export default function AdminComics() {
   };
 
   const openSetting = (comic) => {
-  const isPaid = !!comic?.is_paid;
-  setSettingComic(comic);
-  setSettingDraft({
-    tab: "pricing",
-    type: isPaid ? "paid" : "free",
-    price: Number(comic?.price || 0),
-    translator: comic?.translator || "",
-  });
-};
+    const isPaid = !!comic?.is_paid;
+    setSettingComic(comic);
+    setSettingDraft({
+      tab: "pricing",
+      type: isPaid ? "paid" : "free",
+      price: Number(comic?.price || 0),
+      translator: comic?.translator || "",
+    });
+  };
 
   const closeSetting = () => {
-  if (savingSetting) return;
-  setSettingComic(null);
-  setSettingDraft({
-    tab: "pricing",
-    type: "free",
-    price: 0,
-    translator: "",
-  });
-};
+    if (savingSetting) return;
+    setSettingComic(null);
+    setSettingDraft({
+      tab: "pricing",
+      type: "free",
+      price: 0,
+      translator: "",
+    });
+  };
 
   const saveSetting = async () => {
     if (!token) return toast.error("Thiếu token admin.");
@@ -401,68 +392,67 @@ export default function AdminComics() {
     }
   };
 
-
   const saveTranslator = async () => {
-  if (!token) return toast.error("Thiếu token admin.");
-  if (!settingComic?.slug && !settingComic?.api_id) {
-    return toast.error("Không tìm thấy định danh truyện.");
-  }
-
-  const comicKey = settingComic?.slug || settingComic?.api_id;
-  const translator = String(settingDraft.translator || "").trim();
-
-  try {
-    setSavingSetting(true);
-
-    const res = await fetch(
-      `${API_BASE}/api/external-comics/${encodeURIComponent(comicKey)}/translator`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          translator: translator || null,
-        }),
-      }
-    );
-
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(data?.message || "Lưu translator thất bại");
+    if (!token) return toast.error("Thiếu token admin.");
+    if (!settingComic?.slug && !settingComic?.api_id) {
+      return toast.error("Không tìm thấy định danh truyện.");
     }
 
-    setExtItems((prev) =>
-      prev.map((x) =>
-        (x.api_id === settingComic.api_id || x.slug === settingComic.slug)
-          ? { ...x, translator: data?.data?.translator ?? null }
-          : x
-      )
-    );
+    const comicKey = settingComic?.slug || settingComic?.api_id;
+    const translator = String(settingDraft.translator || "").trim();
 
-    setSettingComic((prev) =>
-      prev
-        ? {
-            ...prev,
-            translator: data?.data?.translator ?? null,
-          }
-        : prev
-    );
+    try {
+      setSavingSetting(true);
 
-    setSettingDraft((prev) => ({
-      ...prev,
-      translator: data?.data?.translator || "",
-    }));
+      const res = await fetch(
+        `${API_BASE}/api/external-comics/${encodeURIComponent(comicKey)}/translator`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            translator: translator || null,
+          }),
+        }
+      );
 
-    toast.success(data?.message || "Đã cập nhật translator");
-  } catch (e) {
-    toast.error(e.message || "Lỗi lưu translator");
-  } finally {
-    setSavingSetting(false);
-  }
-};
-  // ================== Editor helpers ==================
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || "Lưu translator thất bại");
+      }
+
+      setExtItems((prev) =>
+        prev.map((x) =>
+          x.api_id === settingComic.api_id || x.slug === settingComic.slug
+            ? { ...x, translator: data?.data?.translator ?? null }
+            : x
+        )
+      );
+
+      setSettingComic((prev) =>
+        prev
+          ? {
+              ...prev,
+              translator: data?.data?.translator ?? null,
+            }
+          : prev
+      );
+
+      setSettingDraft((prev) => ({
+        ...prev,
+        translator: data?.data?.translator || "",
+      }));
+
+      toast.success(data?.message || "Đã cập nhật translator");
+    } catch (e) {
+      toast.error(e.message || "Lỗi lưu translator");
+    } finally {
+      setSavingSetting(false);
+    }
+  };
+
   const setEditorLink = (editor) => {
     if (!editor) return;
     const prev = editor.getAttributes("link").href || "";
@@ -511,7 +501,6 @@ export default function AdminComics() {
     e.target.value = "";
   };
 
-  // ================== COVER IMAGE ==================
   const pickCoverFile = () => coverInputRef.current?.click();
 
   const onUploadCoverImage = (e) => {
@@ -540,26 +529,22 @@ export default function AdminComics() {
     setSelfDraft((p) => ({ ...p, cover_image: "" }));
   };
 
-  // ================== SELF COMIC MODAL ==================
-
-
-
-const resetSelfDraft = () => {
-  setSelfDraft({
-    title: "",
-    author: "",
-    translated_by: "",
-    cover_image: "",
-    description: "",
-    total_chapters: 1,
-    category_id: "",
-    status: 1,
-    is_paid: false,
-    price: 0,
-  });
-  setEditingSelfId(null);
-  setTimeout(() => descEditor?.commands?.setContent(""), 0);
-};
+  const resetSelfDraft = () => {
+    setSelfDraft({
+      title: "",
+      author: "",
+      translated_by: "",
+      cover_image: "",
+      description: "",
+      total_chapters: 1,
+      category_ids: [],
+      status: 1,
+      is_paid: false,
+      price: 0,
+    });
+    setEditingSelfId(null);
+    setTimeout(() => descEditor?.commands?.setContent(""), 0);
+  };
 
   const openSelfModal = () => {
     if (!token) return toast.warning("Bạn cần đăng nhập để đăng truyện.");
@@ -567,28 +552,30 @@ const resetSelfDraft = () => {
     setSelfModalOpen(true);
   };
 
- const openEditSelfModal = (comic) => {
-  if (!token) return toast.warning("Bạn cần đăng nhập.");
-  setEditingSelfId(comic.id);
+  const openEditSelfModal = (comic) => {
+    if (!token) return toast.warning("Bạn cần đăng nhập.");
+    setEditingSelfId(comic.id);
 
-  setSelfDraft({
-    title: comic?.title || "",
-    author: comic?.author || "",
-    translated_by: comic?.translated_by || "",
-    cover_image: comic?.cover_image || "",
-    description: comic?.description || "",
-    total_chapters: Number(comic?.total_chapters || 1),
-    category_id: comic?.category_id ? String(comic.category_id) : "",
-    status: Number(comic?.status ?? 1),
-    is_paid: !!comic?.is_paid,
-    price: Number(comic?.price || 0),
-  });
+    setSelfDraft({
+      title: comic?.title || "",
+      author: comic?.author || "",
+      translated_by: comic?.translated_by || "",
+      cover_image: comic?.cover_image || "",
+      description: comic?.description || "",
+      total_chapters: Number(comic?.total_chapters || 1),
+      category_ids: Array.isArray(comic?.categories)
+        ? comic.categories.map((x) => String(x.id))
+        : [],
+      status: Number(comic?.status ?? 1),
+      is_paid: !!comic?.is_paid,
+      price: Number(comic?.price || 0),
+    });
 
-  setSelfModalOpen(true);
-  setTimeout(() => {
-    descEditor?.commands?.setContent(comic?.description || "");
-  }, 0);
-};
+    setSelfModalOpen(true);
+    setTimeout(() => {
+      descEditor?.commands?.setContent(comic?.description || "");
+    }, 0);
+  };
 
   const closeSelfModal = () => {
     if (selfSaving) return;
@@ -597,75 +584,81 @@ const resetSelfDraft = () => {
   };
 
   const saveSelfComic = async () => {
-  if (!token) return toast.error("Thiếu token đăng nhập.");
+    if (!token) return toast.error("Thiếu token đăng nhập.");
 
-  const title = String(selfDraft.title || "").trim();
-  const author = String(selfDraft.author || "").trim();
-  const translatedBy = String(selfDraft.translated_by || "").trim();
-  const coverImage = String(selfDraft.cover_image || "").trim();
-  const descriptionHTML = descEditor?.getHTML?.() || "";
-  const totalChapters = Math.max(1, Number(selfDraft.total_chapters || 1));
+    const title = String(selfDraft.title || "").trim();
+    const author = String(selfDraft.author || "").trim();
+    const translatedBy = String(selfDraft.translated_by || "").trim();
+    const coverImage = String(selfDraft.cover_image || "").trim();
+    const descriptionHTML = descEditor?.getHTML?.() || "";
+    const totalChapters = Math.max(1, Number(selfDraft.total_chapters || 1));
+    const normalizedCategoryIds = Array.isArray(selfDraft.category_ids)
+      ? [...new Set(selfDraft.category_ids.map((x) => Number(x)).filter((x) => Number.isInteger(x) && x > 0))]
+      : [];
 
-  if (!title) return toast.error("Vui lòng nhập tiêu đề");
-  if (!coverImage) return toast.error("Vui lòng thêm ảnh chính");
-  if (totalChapters < 1) return toast.error("Tổng số chương phải >= 1");
-
-  const isPaid = !!selfDraft.is_paid;
-  const price = Math.max(0, Number(selfDraft.price || 0));
-
-  if (isPaid && price <= 0) {
-    return toast.error("Giá phải > 0 khi bật trả phí");
-  }
-
-  try {
-    setSelfSaving(true);
-
-    const payload = {
-      title,
-      author: author || null,
-      translated_by: translatedBy || null,
-      cover_image: coverImage,
-      description: descriptionHTML || null,
-      total_chapters: totalChapters,
-      status: Number(selfDraft.status || 1),
-      category_id: selfDraft.category_id ? Number(selfDraft.category_id) : null,
-      is_paid: isPaid,
-      price: isPaid ? price : 0,
-    };
-
-    const isEdit = !!editingSelfId;
-    const url = isEdit
-      ? `${API_BASE}/api/self-comics/${editingSelfId}`
-      : `${API_BASE}/api/self-comics`;
-
-    const method = isEdit ? "PATCH" : "POST";
-
-    const r = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      throw new Error(
-        data?.message || (isEdit ? "Cập nhật truyện thất bại" : "Tạo truyện thất bại")
-      );
+    if (!title) return toast.error("Vui lòng nhập tiêu đề");
+    if (!coverImage) return toast.error("Vui lòng thêm ảnh chính");
+    if (totalChapters < 1) return toast.error("Tổng số chương phải >= 1");
+    if (normalizedCategoryIds.length === 0) {
+      return toast.error("Vui lòng chọn ít nhất 1 danh mục");
     }
 
-    toast.success(isEdit ? "Đã cập nhật truyện!" : "Đã tạo truyện!");
-    closeSelfModal();
-    await fetchSelfFromDB(1);
-    setPage(1);
-  } catch (e) {
-    toast.error(e.message || "Lỗi lưu truyện");
-  } finally {
-    setSelfSaving(false);
-  }
-};
+    const isPaid = !!selfDraft.is_paid;
+    const price = Math.max(0, Number(selfDraft.price || 0));
+
+    if (isPaid && price <= 0) {
+      return toast.error("Giá phải > 0 khi bật trả phí");
+    }
+
+    try {
+      setSelfSaving(true);
+
+      const payload = {
+        title,
+        author: author || null,
+        translated_by: translatedBy || null,
+        cover_image: coverImage,
+        description: descriptionHTML || null,
+        total_chapters: totalChapters,
+        status: Number(selfDraft.status || 1),
+        category_ids: normalizedCategoryIds,
+        is_paid: isPaid,
+        price: isPaid ? price : 0,
+      };
+
+      const isEdit = !!editingSelfId;
+      const url = isEdit
+        ? `${API_BASE}/api/self-comics/${editingSelfId}`
+        : `${API_BASE}/api/self-comics`;
+
+      const method = isEdit ? "PATCH" : "POST";
+
+      const r = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        throw new Error(
+          data?.message || (isEdit ? "Cập nhật truyện thất bại" : "Tạo truyện thất bại")
+        );
+      }
+
+      toast.success(isEdit ? "Đã cập nhật truyện!" : "Đã tạo truyện!");
+      closeSelfModal();
+      await fetchSelfFromDB(1);
+      setPage(1);
+    } catch (e) {
+      toast.error(e.message || "Lỗi lưu truyện");
+    } finally {
+      setSelfSaving(false);
+    }
+  };
 
   const deleteSelfComic = async (comic) => {
     const result = await Swal.fire({
@@ -699,7 +692,6 @@ const resetSelfDraft = () => {
     }
   };
 
-  // ================== CHAPTER MANAGER ==================
   const openChapterManager = async (comic) => {
     setChapterComic(comic);
     setChapterModalOpen(true);
@@ -1073,34 +1065,45 @@ const resetSelfDraft = () => {
                         <div className="fw-bold ad-comic-title" title={name}>
                           {name}
                         </div>
-                       {tab === "external" ? (
-    <div className="text-secondary small mt-2">
-      Dịch bởi: <b>{c?.translator || "—"}</b>
-    </div>
-  ) : null}
-                     {tab === "self" ? (
-  <>
-    <div className="text-secondary small mt-2">
-      Tác giả: <b>{c?.author || "—"}</b>
-    </div>
 
-    <div className="text-secondary small mt-2">
-      Dịch bởi: <b>{c?.translated_by || "—"}</b>
-    </div>
+                        {tab === "external" ? (
+                          <div className="text-secondary small mt-2">
+                            Dịch bởi: <b>{c?.translator || "—"}</b>
+                          </div>
+                        ) : null}
 
-    <div className="text-secondary small mt-2">
-      Tổng chương: <b>{c?.total_chapters || 1}</b>
-    </div>
+                        {tab === "self" ? (
+                          <>
+                            <div className="text-secondary small mt-2">
+                              Tác giả: <b>{c?.author || "—"}</b>
+                            </div>
 
-    <div className="text-secondary small mt-2">
-      Danh mục: <b>{c?.category_name || "—"}</b>
-    </div>
+                            <div className="text-secondary small mt-2">
+                              Dịch bởi: <b>{c?.translated_by || "—"}</b>
+                            </div>
 
-    <div className="text-secondary small mt-2">
-      Ảnh chính: <b>{c?.cover_image ? "Đã có" : "Chưa có"}</b>
-    </div>
-  </>
-) : null}
+                            <div className="text-secondary small mt-2">
+                              Tổng chương: <b>{c?.total_chapters || 1}</b>
+                            </div>
+
+                            <div className="text-secondary small mt-2">Danh mục:</div>
+                            <div className="d-flex flex-wrap gap-2 mt-1">
+                              {Array.isArray(c?.categories) && c.categories.length > 0 ? (
+                                c.categories.map((cat) => (
+                                  <span key={cat.id} className="badge text-bg-light border">
+                                    {cat.name}
+                                  </span>
+                                ))
+                              ) : (
+                                <b>—</b>
+                              )}
+                            </div>
+
+                            <div className="text-secondary small mt-2">
+                              Ảnh chính: <b>{c?.cover_image ? "Đã có" : "Chưa có"}</b>
+                            </div>
+                          </>
+                        ) : null}
 
                         <div className="ad-comic-meta mt-3">
                           <div className="text-secondary small">
@@ -1180,7 +1183,7 @@ const resetSelfDraft = () => {
                     {editingSelfId ? "Sửa truyện tự đăng" : "Thêm truyện tự đăng"}
                   </div>
                   <div className="text-secondary small">
-                    Ảnh chính + mô tả + tác giả + tổng số chương + miễn phí / trả phí
+                    Ảnh chính + mô tả + tác giả + tổng số chương + nhiều danh mục + miễn phí / trả phí
                   </div>
                 </div>
 
@@ -1217,21 +1220,23 @@ const resetSelfDraft = () => {
                     Có thể để trống nếu chưa muốn thêm tác giả.
                   </div>
                 </div>
-<div className="mt-3">
-  <label className="form-label fw-semibold">Dịch bởi</label>
-  <input
-    className="form-control"
-    value={selfDraft.translated_by}
-    onChange={(e) =>
-      setSelfDraft((p) => ({ ...p, translated_by: e.target.value }))
-    }
-    placeholder="Ví dụ: Nhóm dịch ABC"
-    disabled={selfSaving}
-  />
-  <div className="text-secondary small mt-1">
-    Có thể để trống nếu truyện không có nhóm dịch.
-  </div>
-  </div>
+
+                <div className="mt-3">
+                  <label className="form-label fw-semibold">Dịch bởi</label>
+                  <input
+                    className="form-control"
+                    value={selfDraft.translated_by}
+                    onChange={(e) =>
+                      setSelfDraft((p) => ({ ...p, translated_by: e.target.value }))
+                    }
+                    placeholder="Ví dụ: Nhóm dịch ABC"
+                    disabled={selfSaving}
+                  />
+                  <div className="text-secondary small mt-1">
+                    Có thể để trống nếu truyện không có nhóm dịch.
+                  </div>
+                </div>
+
                 <div className="mt-3">
                   <label className="form-label fw-semibold">Ảnh chính</label>
 
@@ -1396,22 +1401,47 @@ const resetSelfDraft = () => {
                     />
                   </div>
 
-                  <div className="col-md-8">
-                    <label className="form-label fw-semibold">Danh mục</label>
-                    <select
-                      className="form-select"
-                      value={selfDraft.category_id}
-                      onChange={(e) => setSelfDraft((p) => ({ ...p, category_id: e.target.value }))}
-                      disabled={selfSaving}
-                    >
-                      <option value="">-- Chọn danh mục --</option>
-                      {cats.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="col-md-8">
+  <label className="form-label fw-semibold">Danh mục</label>
+  <select
+    className="form-select category-multi-select"
+    multiple
+    size={8}
+    value={selfDraft.category_ids}
+    onChange={(e) =>
+      setSelfDraft((p) => ({
+        ...p,
+        category_ids: getSelectedValues(e.target),
+      }))
+    }
+    disabled={selfSaving}
+  >
+    {cats.map((c) => (
+      <option key={c.id} value={String(c.id)}>
+        {c.name}
+      </option>
+    ))}
+  </select>
+
+  <div className="text-secondary small mt-1">
+    Giữ <b>Ctrl</b> để chọn nhiều danh mục.
+  </div>
+
+  <div className="d-flex flex-wrap gap-2 mt-2">
+    {selfDraft.category_ids.length > 0 ? (
+      selfDraft.category_ids.map((catIdValue) => {
+        const found = cats.find((x) => String(x.id) === String(catIdValue));
+        return (
+          <span key={catIdValue} className="badge text-bg-light border">
+            {found?.name || catIdValue}
+          </span>
+        );
+      })
+    ) : (
+      <span className="text-secondary small">Chưa chọn danh mục</span>
+    )}
+  </div>
+</div>
                 </div>
 
                 <div className="mt-3">
@@ -1767,157 +1797,157 @@ const resetSelfDraft = () => {
           </div>
         ) : null}
 
- {settingComic ? (
-  <div className="ad-modal-backdrop" onMouseDown={closeSetting}>
-    <div className="ad-modal" onMouseDown={(e) => e.stopPropagation()}>
-      <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
-        <div className="min-w-0">
-          <div className="fw-bold">Cài đặt truyện (Truyện ngoài DB)</div>
-          <div className="text-secondary small text-truncate" title={settingComic?.name}>
-            {settingComic?.name}
-          </div>
-        </div>
+        {settingComic ? (
+          <div className="ad-modal-backdrop" onMouseDown={closeSetting}>
+            <div className="ad-modal" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
+                <div className="min-w-0">
+                  <div className="fw-bold">Cài đặt truyện (Truyện ngoài DB)</div>
+                  <div className="text-secondary small text-truncate" title={settingComic?.name}>
+                    {settingComic?.name}
+                  </div>
+                </div>
 
-        <button
-          className="btn btn-light btn-sm"
-          type="button"
-          onClick={closeSetting}
-          disabled={savingSetting}
-        >
-          <i className="bi bi-x-lg" />
-        </button>
-      </div>
-
-      <div className="mt-3">
-        <div className="d-flex gap-2 flex-wrap mb-3">
-          <button
-            type="button"
-            className={`btn ${
-              settingDraft.tab === "pricing" ? "btn-dark" : "btn-outline-dark"
-            }`}
-            onClick={() => setSettingDraft((p) => ({ ...p, tab: "pricing" }))}
-            disabled={savingSetting}
-          >
-            <i className="bi bi-cash-coin me-2" />
-            Giá truyện
-          </button>
-
-          <button
-            type="button"
-            className={`btn ${
-              settingDraft.tab === "translator" ? "btn-dark" : "btn-outline-dark"
-            }`}
-            onClick={() => setSettingDraft((p) => ({ ...p, tab: "translator" }))}
-            disabled={savingSetting}
-          >
-            <i className="bi bi-translate me-2" />
-            Dịch bởi
-          </button>
-        </div>
-
-        {settingDraft.tab === "pricing" ? (
-          <>
-            <label className="form-label fw-semibold">Hình thức xem</label>
-            <select
-              className="form-select"
-              value={settingDraft.type}
-              onChange={(e) =>
-                setSettingDraft((p) => ({ ...p, type: e.target.value }))
-              }
-              disabled={savingSetting}
-            >
-              <option value="free">Miễn phí</option>
-              <option value="paid">Trả phí</option>
-            </select>
-
-            {settingDraft.type === "paid" ? (
-              <div className="mt-3">
-                <label className="form-label fw-semibold">Giá (VNĐ)</label>
-                <input
-                  type="number"
-                  min="0"
-                  className="form-control"
-                  value={settingDraft.price}
-                  onChange={(e) =>
-                    setSettingDraft((p) => ({ ...p, price: e.target.value }))
-                  }
-                  placeholder="Ví dụ: 5000"
+                <button
+                  className="btn btn-light btn-sm"
+                  type="button"
+                  onClick={closeSetting}
                   disabled={savingSetting}
-                />
+                >
+                  <i className="bi bi-x-lg" />
+                </button>
               </div>
-            ) : (
-              <div className="text-secondary small mt-2">
-                User sẽ được xem miễn phí.
+
+              <div className="mt-3">
+                <div className="d-flex gap-2 flex-wrap mb-3">
+                  <button
+                    type="button"
+                    className={`btn ${
+                      settingDraft.tab === "pricing" ? "btn-dark" : "btn-outline-dark"
+                    }`}
+                    onClick={() => setSettingDraft((p) => ({ ...p, tab: "pricing" }))}
+                    disabled={savingSetting}
+                  >
+                    <i className="bi bi-cash-coin me-2" />
+                    Giá truyện
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`btn ${
+                      settingDraft.tab === "translator" ? "btn-dark" : "btn-outline-dark"
+                    }`}
+                    onClick={() => setSettingDraft((p) => ({ ...p, tab: "translator" }))}
+                    disabled={savingSetting}
+                  >
+                    <i className="bi bi-translate me-2" />
+                    Dịch bởi
+                  </button>
+                </div>
+
+                {settingDraft.tab === "pricing" ? (
+                  <>
+                    <label className="form-label fw-semibold">Hình thức xem</label>
+                    <select
+                      className="form-select"
+                      value={settingDraft.type}
+                      onChange={(e) =>
+                        setSettingDraft((p) => ({ ...p, type: e.target.value }))
+                      }
+                      disabled={savingSetting}
+                    >
+                      <option value="free">Miễn phí</option>
+                      <option value="paid">Trả phí</option>
+                    </select>
+
+                    {settingDraft.type === "paid" ? (
+                      <div className="mt-3">
+                        <label className="form-label fw-semibold">Giá (VNĐ)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          className="form-control"
+                          value={settingDraft.price}
+                          onChange={(e) =>
+                            setSettingDraft((p) => ({ ...p, price: e.target.value }))
+                          }
+                          placeholder="Ví dụ: 5000"
+                          disabled={savingSetting}
+                        />
+                      </div>
+                    ) : (
+                      <div className="text-secondary small mt-2">
+                        User sẽ được xem miễn phí.
+                      </div>
+                    )}
+
+                    <div className="ad-modal-actions mt-4">
+                      <button
+                        className="btn btn-outline-secondary w-100"
+                        type="button"
+                        onClick={closeSetting}
+                        disabled={savingSetting}
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        className="btn btn-primary w-100"
+                        type="button"
+                        onClick={saveSetting}
+                        disabled={savingSetting}
+                      >
+                        {savingSetting ? "Đang lưu..." : "Lưu cài đặt"}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <label className="form-label fw-semibold">Dịch bởi</label>
+                    <input
+                      className="form-control"
+                      value={settingDraft.translator}
+                      onChange={(e) =>
+                        setSettingDraft((p) => ({ ...p, translator: e.target.value }))
+                      }
+                      placeholder="Ví dụ: Nhóm dịch ABC"
+                      disabled={savingSetting}
+                    />
+
+                    <div className="text-secondary small mt-2">
+                      Có thể để trống để xóa thông tin translator.
+                    </div>
+
+                    <div className="mt-3 p-3 rounded-3 border bg-light">
+                      <div className="small text-secondary">Giá trị hiện tại</div>
+                      <div className="fw-semibold">
+                        {String(settingDraft.translator || "").trim() || "—"}
+                      </div>
+                    </div>
+
+                    <div className="ad-modal-actions mt-4">
+                      <button
+                        className="btn btn-outline-secondary w-100"
+                        type="button"
+                        onClick={closeSetting}
+                        disabled={savingSetting}
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        className="btn btn-primary w-100"
+                        type="button"
+                        onClick={saveTranslator}
+                        disabled={savingSetting}
+                      >
+                        {savingSetting ? "Đang lưu..." : "Lưu dịch giả"}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
-            )}
-
-            <div className="ad-modal-actions mt-4">
-              <button
-                className="btn btn-outline-secondary w-100"
-                type="button"
-                onClick={closeSetting}
-                disabled={savingSetting}
-              >
-                Hủy
-              </button>
-              <button
-                className="btn btn-primary w-100"
-                type="button"
-                onClick={saveSetting}
-                disabled={savingSetting}
-              >
-                {savingSetting ? "Đang lưu..." : "Lưu cài đặt"}
-              </button>
             </div>
-          </>
-        ) : (
-          <>
-            <label className="form-label fw-semibold">Dịch bởi</label>
-            <input
-              className="form-control"
-              value={settingDraft.translator}
-              onChange={(e) =>
-                setSettingDraft((p) => ({ ...p, translator: e.target.value }))
-              }
-              placeholder="Ví dụ: Nhóm dịch ABC"
-              disabled={savingSetting}
-            />
-
-            <div className="text-secondary small mt-2">
-              Có thể để trống để xóa thông tin translator.
-            </div>
-
-            <div className="mt-3 p-3 rounded-3 border bg-light">
-              <div className="small text-secondary">Giá trị hiện tại</div>
-              <div className="fw-semibold">
-                {String(settingDraft.translator || "").trim() || "—"}
-              </div>
-            </div>
-
-            <div className="ad-modal-actions mt-4">
-              <button
-                className="btn btn-outline-secondary w-100"
-                type="button"
-                onClick={closeSetting}
-                disabled={savingSetting}
-              >
-                Hủy
-              </button>
-              <button
-                className="btn btn-primary w-100"
-                type="button"
-                onClick={saveTranslator}
-                disabled={savingSetting}
-              >
-                {savingSetting ? "Đang lưu..." : "Lưu dịch giả"}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  </div>
-) : null}
+          </div>
+        ) : null}
 
         <style>{`
           .tiptap-content {

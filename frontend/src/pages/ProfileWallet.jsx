@@ -120,10 +120,15 @@ function buildReadUrl(item) {
   if (!item?.slug) return "#";
 
   const chapValue = item?.last_chapter_api || "";
+  const comicId = item?.id || "";
 
-  if (!chapValue) return `/truyen/${item.slug}`;
+  if (!chapValue) {
+    return `/truyen/${encodeURIComponent(item.slug)}`;
+  }
 
-  return `/doc?slug=${encodeURIComponent(item.slug)}&chap=${encodeURIComponent(chapValue)}`;
+  return `/doc?slug=${encodeURIComponent(item.slug)}&chap=${encodeURIComponent(
+    chapValue
+  )}&comicId=${encodeURIComponent(comicId)}`;
 }
 
 function buildDetailUrl(item) {

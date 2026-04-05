@@ -91,6 +91,7 @@ export default function Header() {
   const notifHoverTimerRef = useRef(null);
   const userMenuRef = useRef(null);
   const notifWrapRef = useRef(null);
+  const navRef = useRef(null);
 
   const visibleCategories = categories.slice(0, 5);
   const moreCategories = categories.slice(5);
@@ -112,16 +113,32 @@ export default function Header() {
       if (notifWrapRef.current && !notifWrapRef.current.contains(e.target)) {
         setNotifOpen(false);
       }
+
+      if (navRef.current && !navRef.current.contains(e.target)) {
+        setMoreOpen(false);
+        setTextOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (notifHoverTimerRef.current) clearTimeout(notifHoverTimerRef.current);
+    };
+  }, []);
+
   const closeAllMenus = () => {
     setMoreOpen(false);
     setTextOpen(false);
     setUserMenuOpen(false);
+  };
+
+  const closeNavMenusOnly = () => {
+    setMoreOpen(false);
+    setTextOpen(false);
   };
 
   const handleLogout = () => {
@@ -321,11 +338,25 @@ export default function Header() {
     return d.toLocaleString("vi-VN");
   };
 
+  const goSelfCategory = (catId) => {
+    closeAllMenus();
+    setNotifOpen(false);
+    setNavOpen(false);
+    navigate(`/self-comics?page=1&categoryId=${catId}`);
+  };
+
   return (
     <header className="zt-header border-bottom bg-white">
-      <nav className="navbar navbar-expand-lg navbar-light">
+      <nav className="navbar navbar-expand-lg navbar-light" ref={navRef}>
         <div className="container-fluid px-4">
-          <Link to="/" className="navbar-brand d-flex align-items-center gap-2">
+          <Link
+            to="/"
+            className="navbar-brand d-flex align-items-center gap-2"
+            onClick={() => {
+              closeAllMenus();
+              setNavOpen(false);
+            }}
+          >
             <div className="d-flex align-items-center gap-2 mb-0">
               <img
                 className="hero-logo"
@@ -395,7 +426,7 @@ export default function Header() {
                           className="zt-catItem"
                           to={`/truyen?category=${cat.slug}`}
                           onClick={() => {
-                            setMoreOpen(false);
+                            closeNavMenusOnly();
                             setNavOpen(false);
                           }}
                         >
@@ -421,29 +452,39 @@ export default function Header() {
                 </button>
 
                 <div className={`zt-catDropdown ${textOpen ? "show" : ""}`}>
-                  {otherCatLoading ? (
-                    <div className="zt-catStatus">Đang tải...</div>
-                  ) : otherCatErr ? (
-                    <div className="zt-catStatus text-danger">{otherCatErr}</div>
-                  ) : otherCategories.length === 0 ? (
-                    <div className="zt-catStatus">Chưa có dữ liệu.</div>
-                  ) : (
-                    <div className="zt-catGrid">
-                      {otherCategories.map((cat) => (
-                        <Link
-                          key={cat.id}
-                          className="zt-catItem"
-                          to={`/self-comics-category/${cat.id}?categoryId=${cat.id}&page=1`}
-                          onClick={() => {
-                            setTextOpen(false);
-                            setNavOpen(false);
-                          }}
-                        >
-                          {cat.name}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
+                  <div className="zt-catDropdownInner">
+                    <Link
+                      className="zt-catItem zt-catItemAll"
+                      to="/self-comics?page=1"
+                      onClick={() => {
+                        closeNavMenusOnly();
+                        setNavOpen(false);
+                      }}
+                    >
+                      Tất cả truyện chữ
+                    </Link>
+
+                    {otherCatLoading ? (
+                      <div className="zt-catStatus">Đang tải...</div>
+                    ) : otherCatErr ? (
+                      <div className="zt-catStatus text-danger">{otherCatErr}</div>
+                    ) : otherCategories.length === 0 ? (
+                      <div className="zt-catStatus">Chưa có dữ liệu.</div>
+                    ) : (
+                      <div className="zt-catGrid">
+                        {otherCategories.map((cat) => (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            className="zt-catItem zt-catItemBtn"
+                            onClick={() => goSelfCategory(cat.id)}
+                          >
+                            {cat.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </li>
             </ul>
@@ -544,9 +585,9 @@ export default function Header() {
                   type="button"
                   onClick={() => setUserMenuOpen((v) => !v)}
                 >
-                  <i className="bi bi-person-circle fs-4 me-1"></i>
+                  <i className="bi bi-person-circle fs-4 me-1" />
                   {user ? user.username : "Tài khoản"}
-                  <i className={`bi ms-1 ${userMenuOpen ? "bi-chevron-up" : "bi-chevron-down"}`}></i>
+                  <i className={`bi ms-1 ${userMenuOpen ? "bi-chevron-up" : "bi-chevron-down"}`} />
                 </button>
 
                 {userMenuOpen && (
@@ -559,7 +600,7 @@ export default function Header() {
                             to="/login"
                             onClick={() => setUserMenuOpen(false)}
                           >
-                            <i className="bi bi-box-arrow-in-right me-2"></i>
+                            <i className="bi bi-box-arrow-in-right me-2" />
                             Đăng nhập
                           </Link>
                         </li>
@@ -569,7 +610,7 @@ export default function Header() {
                             to="/register"
                             onClick={() => setUserMenuOpen(false)}
                           >
-                            <i className="bi bi-person-plus me-2"></i>
+                            <i className="bi bi-person-plus me-2" />
                             Đăng ký
                           </Link>
                         </li>
@@ -584,21 +625,11 @@ export default function Header() {
                             to="/profile"
                             onClick={() => setUserMenuOpen(false)}
                           >
-                            <i className="bi bi-person me-2"></i>
+                            <i className="bi bi-person me-2" />
                             Trang cá nhân
                           </Link>
                         </li>
 
-                        <li>
-                          <Link
-                            className="zt-userItem"
-                            to="/my-comics"
-                            onClick={() => setUserMenuOpen(false)}
-                          >
-                            <i className="bi bi-journal-bookmark me-2"></i>
-                            Truyện của tôi
-                          </Link>
-                        </li>
 
                         {(user.role === "admin" || user.role === "sub_admin") && (
                           <li>
@@ -607,7 +638,7 @@ export default function Header() {
                               to="/admin"
                               onClick={() => setUserMenuOpen(false)}
                             >
-                              <i className="bi bi-speedometer2 me-2"></i>
+                              <i className="bi bi-speedometer2 me-2" />
                               Quản trị
                             </Link>
                           </li>
@@ -626,7 +657,7 @@ export default function Header() {
                               handleLogout();
                             }}
                           >
-                            <i className="bi bi-box-arrow-right me-2"></i>
+                            <i className="bi bi-box-arrow-right me-2" />
                             Đăng xuất
                           </button>
                         </li>

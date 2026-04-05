@@ -97,7 +97,6 @@ export default function ComicSelfDetail() {
           throw new Error("ID truyện không hợp lệ.");
         }
 
-        // 1) detail self comic
         const d1 = await fetchJSON(`${API_BASE}/api/self-comics/${comicId}`, {
           headers: token
             ? {
@@ -109,12 +108,10 @@ export default function ComicSelfDetail() {
         const comic = d1?.data || null;
         setDetail(comic);
 
-        // 2) chapters
         const d2 = await fetchJSON(`${API_BASE}/api/self-chapters/comic/${comicId}`);
         const rows = Array.isArray(d2?.data) ? d2.data : [];
         setChapters(rows);
 
-        // 3) rating
         try {
           const d3 = await fetchJSON(`${API_BASE}/api/ratings/self/${comicId}`, {
             headers: token
@@ -134,7 +131,6 @@ export default function ComicSelfDetail() {
           setMyRating(0);
         }
 
-        // 4) follow status
         try {
           const ownerUserId = Number(comic?.user_id || 0);
 
@@ -155,7 +151,6 @@ export default function ComicSelfDetail() {
           setFollowersCount(0);
         }
 
-        // 5) access buy
         const paid = !!comic?.is_paid;
         const ownerId = Number(comic?.user_id || 0);
 
@@ -223,6 +218,18 @@ export default function ComicSelfDetail() {
 
   const locked = isPaid && !hasAccess;
   const isBought = isPaid && hasAccess && !isOwner;
+
+  const categories = useMemo(() => {
+    if (Array.isArray(detail?.categories) && detail.categories.length > 0) {
+      return detail.categories.filter((x) => x && (x.id || x.name));
+    }
+
+    if (detail?.category_name) {
+      return [{ id: "legacy", name: detail.category_name }];
+    }
+
+    return [];
+  }, [detail]);
 
   const goRead = (chapterId) => {
     if (locked) return;
@@ -382,13 +389,28 @@ export default function ComicSelfDetail() {
                   <i className="bi bi-person me-2" />
                   {detail.author || "Chưa có tác giả"}
                 </div>
-                 <div>
+
+                <div>
                   <i className="bi bi-translate me-2" />
                   {detail?.translated_by || "—"}
                 </div>
-                <div>
+
+                <div className="cd-meta-categories">
                   <i className="bi bi-tags me-2" />
-                  {detail.category_name || "Chưa có danh mục"}
+                  {categories.length > 0 ? (
+                    <span className="cd-category-list">
+                      {categories.map((cat) => (
+                        <span
+                          key={String(cat.id || cat.name)}
+                          className="cd-category-badge"
+                        >
+                          {cat.name}
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    <span>Chưa có danh mục</span>
+                  )}
                 </div>
 
                 <div>

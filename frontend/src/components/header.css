@@ -9,7 +9,26 @@
   .navbar-collapse {
     position: relative;
   }
+.zt-catItemBtn {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
 
+.zt-catItemAll {
+  font-weight: 600;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 6px;
+  padding-bottom: 10px;
+}
+
+.zt-catDropdownInner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
   .navbar {
     padding: 10px 0;
     width: 100%;

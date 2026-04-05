@@ -44,10 +44,7 @@ async function ensureComicExists(client, comicType, comicId) {
       [comicId]
     );
 
-    if (!check.rows.length) {
-      return null;
-    }
-
+    if (!check.rows.length) return null;
     return check.rows[0];
   }
 
@@ -61,57 +58,90 @@ async function ensureComicExists(client, comicType, comicId) {
     [comicId]
   );
 
-  if (!check.rows.length) {
-    return null;
-  }
-
+  if (!check.rows.length) return null;
   return check.rows[0];
 }
 
 /**
  * GET /api/reactions/chapter/:chapterId
- * Đếm like theo chapter_id + check user hiện tại đã like chưa
+ * Đếm tim theo từng chapter + check user hiện tại đã tim chapter đó chưa
+ *
+ * query optional:
+ * - comicId
+ * - comicType
+ *
+ * Nếu có comicId + comicType => đếm chính xác theo chapter thuộc truyện đó
+ * Nếu không có => fallback theo chapter_id
  */
 router.get("/chapter/:chapterId", async (req, res) => {
   try {
     const chapterId = normalizeText(req.params.chapterId);
+    const comicId = toInt(req.query.comicId, 0);
+    const comicType = normalizeText(req.query.comicType);
+    const userId = getUserIdFromToken(req);
+
     if (!chapterId) {
       return res.status(400).json({ message: "chapterId is required" });
     }
 
-    const userId = getUserIdFromToken(req);
+    let countRes;
+    let likedRes = { rows: [] };
 
-    const countRes = await db.query(
-      `
-      SELECT COUNT(*)::int AS cnt
-      FROM chapter_reactions
-      WHERE chapter_id = $1
-      `,
-      [chapterId]
-    );
-
-    let liked = false;
-
-    if (userId) {
-      const likedRes = await db.query(
+    if (comicId > 0 && isValidComicType(comicType)) {
+      countRes = await db.query(
         `
-        SELECT 1
+        SELECT COUNT(*)::int AS cnt
         FROM chapter_reactions
         WHERE chapter_id = $1
-          AND user_id = $2
-        LIMIT 1
+          AND comic_id = $2
+          AND comic_type = $3
         `,
-        [chapterId, userId]
+        [chapterId, comicId, comicType]
       );
 
-      liked = likedRes.rows.length > 0;
+      if (userId) {
+        likedRes = await db.query(
+          `
+          SELECT 1
+          FROM chapter_reactions
+          WHERE chapter_id = $1
+            AND comic_id = $2
+            AND comic_type = $3
+            AND user_id = $4
+          LIMIT 1
+          `,
+          [chapterId, comicId, comicType, userId]
+        );
+      }
+    } else {
+      countRes = await db.query(
+        `
+        SELECT COUNT(*)::int AS cnt
+        FROM chapter_reactions
+        WHERE chapter_id = $1
+        `,
+        [chapterId]
+      );
+
+      if (userId) {
+        likedRes = await db.query(
+          `
+          SELECT 1
+          FROM chapter_reactions
+          WHERE chapter_id = $1
+            AND user_id = $2
+          LIMIT 1
+          `,
+          [chapterId, userId]
+        );
+      }
     }
 
     return res.json({
       success: true,
       data: {
         likeCount: Number(countRes.rows[0]?.cnt || 0),
-        liked,
+        liked: likedRes.rows.length > 0,
       },
     });
   } catch (e) {
@@ -175,9 +205,10 @@ router.post("/chapter/:chapterId/toggle", auth, async (req, res) => {
       WHERE user_id = $1
         AND comic_type = $2
         AND comic_id = $3
+        AND chapter_id = $4
       LIMIT 1
       `,
-      [userId, comicType, comicId]
+      [userId, comicType, comicId, chapterId]
     );
 
     let liked = false;
@@ -189,8 +220,9 @@ router.post("/chapter/:chapterId/toggle", auth, async (req, res) => {
         WHERE user_id = $1
           AND comic_type = $2
           AND comic_id = $3
+          AND chapter_id = $4
         `,
-        [userId, comicType, comicId]
+        [userId, comicType, comicId, chapterId]
       );
       liked = false;
     } else {
@@ -227,8 +259,9 @@ router.post("/chapter/:chapterId/toggle", auth, async (req, res) => {
       FROM chapter_reactions
       WHERE comic_type = $1
         AND comic_id = $2
+        AND chapter_id = $3
       `,
-      [comicType, comicId]
+      [comicType, comicId, chapterId]
     );
 
     await client.query("COMMIT");
@@ -249,7 +282,7 @@ router.post("/chapter/:chapterId/toggle", auth, async (req, res) => {
     console.error("POST /api/reactions/chapter/:chapterId/toggle error:", e);
 
     if (e.code === "23505") {
-      return res.status(409).json({ message: "Truyện này đã có trong yêu thích" });
+      return res.status(409).json({ message: "Chapter này đã được yêu thích" });
     }
 
     return res.status(500).json({ message: "Server error" });
@@ -260,7 +293,10 @@ router.post("/chapter/:chapterId/toggle", auth, async (req, res) => {
 
 /**
  * GET /api/reactions/comic/:comicType/:comicId
- * lấy tổng user yêu thích 1 truyện + user hiện tại đã thích chưa
+ * lấy tổng user yêu thích 1 truyện + user hiện tại đã thích truyện này chưa
+ *
+ * liked = true nếu user đã tim ít nhất 1 chapter của truyện đó
+ * likeCount = số user distinct đã tim truyện đó
  */
 router.get("/comic/:comicType/:comicId", async (req, res) => {
   try {
@@ -278,7 +314,7 @@ router.get("/comic/:comicType/:comicId", async (req, res) => {
 
     const countRes = await db.query(
       `
-      SELECT COUNT(*)::int AS cnt
+      SELECT COUNT(DISTINCT user_id)::int AS cnt
       FROM chapter_reactions
       WHERE comic_type = $1
         AND comic_id = $2
@@ -320,6 +356,7 @@ router.get("/comic/:comicType/:comicId", async (req, res) => {
 /**
  * GET /api/reactions/my-liked/:comicType/:comicId
  * check riêng user hiện tại có thích truyện này chưa
+ * = đã tim ít nhất 1 chapter trong truyện đó
  */
 router.get("/my-liked/:comicType/:comicId", auth, async (req, res) => {
   try {
@@ -362,6 +399,8 @@ router.get("/my-liked/:comicType/:comicId", auth, async (req, res) => {
 /**
  * GET /api/reactions/library
  * tủ truyện yêu thích của user hiện tại
+ *
+ * Mỗi truyện chỉ hiện 1 dòng, lấy chapter user thích gần nhất làm last_chapter_*
  */
 router.get("/library", auth, async (req, res) => {
   try {
@@ -436,6 +475,8 @@ router.get("/library", auth, async (req, res) => {
 /**
  * GET /api/reactions/top-comics?limit=10
  * top truyện được yêu thích nhiều nhất
+ *
+ * tính theo số user distinct thích truyện
  */
 router.get("/top-comics", async (req, res) => {
   try {
@@ -450,7 +491,7 @@ router.get("/top-comics", async (req, res) => {
         sc.cover_image,
         sc.status,
         NULL::text AS slug,
-        COUNT(*)::int AS like_count
+        COUNT(DISTINCT cr.user_id)::int AS like_count
       FROM chapter_reactions cr
       JOIN self_comics sc
         ON sc.id = cr.comic_id
@@ -468,7 +509,7 @@ router.get("/top-comics", async (req, res) => {
         ec.thumb_url AS cover_image,
         ec.status,
         ec.slug,
-        COUNT(*)::int AS like_count
+        COUNT(DISTINCT cr.user_id)::int AS like_count
       FROM chapter_reactions cr
       JOIN external_comics ec
         ON ec.id = cr.comic_id
@@ -494,6 +535,8 @@ router.get("/top-comics", async (req, res) => {
 /**
  * GET /api/reactions/latest-liked?limit=12
  * truyện mới được thích gần đây
+ *
+ * mỗi user có thể thích nhiều chapter, nhưng mỗi truyện chỉ lấy mốc thích gần nhất
  */
 router.get("/latest-liked", async (req, res) => {
   try {
@@ -536,7 +579,7 @@ router.get("/latest-liked", async (req, res) => {
     );
 
     const rows = [...(selfRes.rows || []), ...(externalRes.rows || [])]
-      .sort((a, b) => new Date(b.liked_at).getTime() - new Date(a.liked_at).getTime())
+      .sort((a, b) => new Date(b.liked_at || 0).getTime() - new Date(a.liked_at || 0).getTime())
       .slice(0, limit);
 
     return res.json({

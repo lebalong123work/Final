@@ -90,6 +90,8 @@ export default function ReadSelfChapter() {
 
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [reactionReady, setReactionReady] = useState(false);
+  const [reactionLoading, setReactionLoading] = useState(false);
 
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
@@ -197,7 +199,7 @@ export default function ReadSelfChapter() {
   const isOwner = !!(ownerUserId && myId && ownerUserId === myId);
   const locked = isPaid && !hasAccess;
 
-  // ====== THÊM API LỊCH SỬ ĐỌC Ở ĐÂY ======
+  // lưu lịch sử đọc
   useEffect(() => {
     if (!token) return;
     if (!comicId) return;
@@ -214,8 +216,8 @@ export default function ReadSelfChapter() {
           },
           body: JSON.stringify({
             comicType: "self",
-            comicId: comicId,
-            chapterId: chapterId,
+            comicId,
+            chapterId,
           }),
         });
 
@@ -231,7 +233,6 @@ export default function ReadSelfChapter() {
 
     return () => clearTimeout(timer);
   }, [token, comicId, chapterId, locked]);
-  // ====== END ======
 
   // socket
   useEffect(() => {
@@ -295,6 +296,9 @@ export default function ReadSelfChapter() {
       if (typeof payload.likeCount === "number") {
         setLikeCount(payload.likeCount);
       }
+      if (typeof payload.liked === "boolean") {
+        setLiked(payload.liked);
+      }
     };
 
     s.on("comment:new", onNewComment);
@@ -316,7 +320,10 @@ export default function ReadSelfChapter() {
 
   // load comments + reactions
   useEffect(() => {
-    if (!chapterId) return;
+    if (!chapterId || !comicId) return;
+
+    let cancelled = false;
+    setReactionReady(false);
 
     (async () => {
       try {
@@ -325,25 +332,40 @@ export default function ReadSelfChapter() {
             CHAPTER_TYPE
           )}&chapterId=${encodeURIComponent(chapterId)}`
         );
-        setComments(Array.isArray(rc?.data) ? rc.data : []);
+
+        if (!cancelled) {
+          setComments(Array.isArray(rc?.data) ? rc.data : []);
+        }
 
         const rr = await fetchJSON(
-          `${API_BASE}/api/reactions/chapter/${encodeURIComponent(chapterId)}`,
+          `${API_BASE}/api/reactions/chapter/${encodeURIComponent(
+            chapterId
+          )}?comicId=${encodeURIComponent(comicId)}&comicType=self`,
           {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           }
         );
 
-        setLikeCount(Number(rr?.data?.likeCount || 0));
-        setLiked(!!rr?.data?.liked);
+        if (!cancelled) {
+          setLikeCount(Number(rr?.data?.likeCount || 0));
+          setLiked(!!rr?.data?.liked);
+          setReactionReady(true);
+        }
       } catch (e) {
         console.error(e);
-        setComments([]);
-        setLikeCount(0);
-        setLiked(false);
+        if (!cancelled) {
+          setComments([]);
+          setLikeCount(0);
+          setLiked(false);
+          setReactionReady(true);
+        }
       }
     })();
-  }, [chapterId, token]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chapterId, comicId, token]);
 
   const toggleLike = async () => {
     if (!token) {
@@ -351,14 +373,19 @@ export default function ReadSelfChapter() {
       return;
     }
 
-    const prevLiked = liked;
-    const nextLiked = !prevLiked;
+    if (!chapterId || !comicId) {
+      toast.warning("Thiếu thông tin chapter.");
+      return;
+    }
 
-    setLiked(nextLiked);
-    setLikeCount((c) => Math.max(0, c + (nextLiked ? 1 : -1)));
+    if (!reactionReady || reactionLoading) {
+      return;
+    }
 
     try {
-     const data = await fetchJSON(
+      setReactionLoading(true);
+
+      const data = await fetchJSON(
         `${API_BASE}/api/reactions/chapter/${encodeURIComponent(chapterId)}/toggle`,
         {
           method: "POST",
@@ -367,30 +394,27 @@ export default function ReadSelfChapter() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            comicId: comicId,
+            comicId: Number(comicId),
             comicType: "self",
-            slug: "",
-            chapApi: "",
+            chapterTitle:
+              chapterData?.chapter_title || `Chap ${chapterData?.chapter_no || ""}`,
           }),
         }
       );
 
-
-      if (typeof data?.data?.likeCount === "number") {
-        setLikeCount(data.data.likeCount);
-      }
-      if (typeof data?.data?.liked === "boolean") {
-        setLiked(data.data.liked);
-      }
+      setLikeCount(Number(data?.data?.likeCount || 0));
+      setLiked(!!data?.data?.liked);
 
       socketRef.current?.emit("reaction:toggle", {
         chapterType: CHAPTER_TYPE,
         chapterId: String(chapterId),
+        likeCount: Number(data?.data?.likeCount || 0),
+        liked: !!data?.data?.liked,
       });
     } catch (e) {
-      setLiked(prevLiked);
-      setLikeCount((c) => Math.max(0, c + (prevLiked ? 1 : -1)));
       toast.error(e.message || "Lỗi");
+    } finally {
+      setReactionLoading(false);
     }
   };
 
@@ -588,6 +612,7 @@ export default function ReadSelfChapter() {
             className={`rsc-likeBtn ${liked ? "active" : ""}`}
             type="button"
             onClick={toggleLike}
+            disabled={!reactionReady || reactionLoading}
             title={liked ? "Bỏ tim" : "Thả tim"}
           >
             <i className={`bi ${liked ? "bi-heart-fill" : "bi-heart"}`} />

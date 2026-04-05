@@ -58,21 +58,21 @@ export default function ReadChapter() {
 
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [reactionReady, setReactionReady] = useState(false);
+  const [reactionLoading, setReactionLoading] = useState(false);
 
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
-
-  const [replyTo, setReplyTo] = useState(null); // { rootId, replyName }
+  const [replyTo, setReplyTo] = useState(null);
 
   const listRef = useRef(null);
   const socketRef = useRef(null);
 
-  // chapterId dùng cho comment/reaction/socket
   const chapterId = chapterData?.item?._id || "";
   const chapterName = chapterData?.item?.chapter_name || "";
   const comicName = chapterData?.item?.comic_name || "";
 
-  // 1) load danh sách chapter để prev/next
+  // load danh sách chapter để prev/next
   useEffect(() => {
     if (!slug) return;
 
@@ -99,7 +99,7 @@ export default function ReadChapter() {
     })();
   }, [slug]);
 
-  // 2) load chapter detail/images
+  // load chapter detail/images
   useEffect(() => {
     if (!chapterApi) return;
 
@@ -123,44 +123,45 @@ export default function ReadChapter() {
     })();
   }, [chapterApi]);
 
-useEffect(() => {
-  if (!token) return;
-  if (!comicDbId) return;
-  if (!chapterId) return;
-  if (!chapterApi) return;
+  // lưu lịch sử đọc
+  useEffect(() => {
+    if (!token) return;
+    if (!comicDbId) return;
+    if (!chapterId) return;
+    if (!chapterApi) return;
 
-  const timer = setTimeout(async () => {
-    try {
-      await fetchJSON(`${API_BASE}/api/reading-history/mark`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+    const timer = setTimeout(async () => {
+      try {
+        await fetchJSON(`${API_BASE}/api/reading-history/mark`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            comicType: "external",
+            comicId: comicDbId,
+            chapterId,
+            chapterApi,
+            chapterTitle: chapterName,
+          }),
+        });
+
+        console.log("Đã lưu lịch sử đọc external:", {
           comicType: "external",
           comicId: comicDbId,
-          chapterId: chapterId,
-          chapterApi: chapterApi,
+          chapterId,
+          chapterApi,
           chapterTitle: chapterName,
-        }),
-      });
+        });
+      } catch (e) {
+        console.error("mark read external error:", e);
+      }
+    }, 1200);
 
-      console.log("Đã lưu lịch sử đọc external:", {
-        comicType: "external",
-        comicId: comicDbId,
-        chapterId,
-        chapterApi,
-        chapterTitle: chapterName,
-      });
-    } catch (e) {
-      console.error("mark read external error:", e);
-    }
-  }, 1200);
+    return () => clearTimeout(timer);
+  }, [token, comicDbId, chapterId, chapterApi, chapterName]);
 
-  return () => clearTimeout(timer);
-}, [token, comicDbId, chapterId, chapterApi, chapterName]);
-  // 3) build pages
   const pages = useMemo(() => {
     const domain = chapterData?.domain_cdn;
     const item = chapterData?.item;
@@ -172,21 +173,27 @@ useEffect(() => {
       .map((img) => buildPageUrl(domain, item.chapter_path, img.image_file));
   }, [chapterData]);
 
-  // prev/next chapter
   const currentIndex = useMemo(() => {
     if (!chapters.length || !chapterApi) return -1;
     return chapters.findIndex((c) => c.api === chapterApi);
   }, [chapters, chapterApi]);
 
   const prevChap = currentIndex > 0 ? chapters[currentIndex - 1] : null;
-  const nextChap = currentIndex >= 0 && currentIndex < chapters.length - 1 ? chapters[currentIndex + 1] : null;
+  const nextChap =
+    currentIndex >= 0 && currentIndex < chapters.length - 1
+      ? chapters[currentIndex + 1]
+      : null;
 
   const goChap = (api) => {
-    nav(`/doc?slug=${encodeURIComponent(slug)}&chap=${encodeURIComponent(api)}`);
+    nav(
+      `/doc?slug=${encodeURIComponent(slug)}&chap=${encodeURIComponent(
+        api
+      )}&comicId=${encodeURIComponent(comicDbId || "")}`
+    );
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // 4) socket connect + join room
+  // socket connect + join room
   useEffect(() => {
     if (!chapterId) return;
 
@@ -248,6 +255,10 @@ useEffect(() => {
       if (typeof payload.likeCount === "number") {
         setLikeCount(payload.likeCount);
       }
+
+      if (typeof payload.liked === "boolean") {
+        setLiked(payload.liked);
+      }
     };
 
     s.on("comment:new", onNewComment);
@@ -267,94 +278,111 @@ useEffect(() => {
     };
   }, [chapterId, token]);
 
-  // 5) load comments + reactions
+  // load comments + reactions
   useEffect(() => {
-    if (!chapterId) return;
+    if (!chapterId || !comicDbId) return;
+
+    let cancelled = false;
+    setReactionReady(false);
 
     (async () => {
       try {
         const rc = await fetchJSON(
-          `${API_BASE}/api/comments?chapterType=${encodeURIComponent(CHAPTER_TYPE)}&chapterId=${encodeURIComponent(chapterId)}`
+          `${API_BASE}/api/comments?chapterType=${encodeURIComponent(
+            CHAPTER_TYPE
+          )}&chapterId=${encodeURIComponent(chapterId)}`
         );
-        setComments(Array.isArray(rc?.data) ? rc.data : []);
+
+        if (!cancelled) {
+          setComments(Array.isArray(rc?.data) ? rc.data : []);
+        }
 
         const rr = await fetchJSON(
-          `${API_BASE}/api/reactions/chapter/${encodeURIComponent(chapterId)}`,
+          `${API_BASE}/api/reactions/chapter/${encodeURIComponent(
+            chapterId
+          )}?comicId=${encodeURIComponent(comicDbId)}&comicType=external`,
           {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           }
         );
 
-        setLikeCount(Number(rr?.data?.likeCount || 0));
-        setLiked(!!rr?.data?.liked);
+        if (!cancelled) {
+          setLikeCount(Number(rr?.data?.likeCount || 0));
+          setLiked(!!rr?.data?.liked);
+          setReactionReady(true);
+        }
       } catch (e) {
         console.error(e);
-        setComments([]);
-        setLikeCount(0);
-        setLiked(false);
+        if (!cancelled) {
+          setComments([]);
+          setLikeCount(0);
+          setLiked(false);
+          setReactionReady(true);
+        }
       }
     })();
-  }, [chapterId, token]);
 
- const toggleLike = async () => {
-  if (!token) {
-    toast.info("Bạn cần đăng nhập để thả tim.");
-    return;
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, [chapterId, comicDbId, token]);
 
-  if (!chapterId) {
-    toast.warning("Không tìm thấy chapter.");
-    return;
-  }
-
-  if (!comicDbId) {
-    toast.warning("Không tìm thấy truyện trong DB.");
-    return;
-  }
-
-  const prevLiked = liked;
-  const nextLiked = !prevLiked;
-
-  setLiked(nextLiked);
-  setLikeCount((c) => Math.max(0, c + (nextLiked ? 1 : -1)));
-
-  try {
-    const data = await fetchJSON(
-      `${API_BASE}/api/reactions/chapter/${encodeURIComponent(chapterId)}/toggle`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          comicId: comicDbId,
-          comicType: "external",
-          slug: slug || null,
-          chapApi: chapterApi || null,
-          chapterTitle: chapterName || null,
-        }),
-      }
-    );
-
-    if (typeof data?.data?.likeCount === "number") {
-      setLikeCount(data.data.likeCount);
+  const toggleLike = async () => {
+    if (!token) {
+      toast.info("Bạn cần đăng nhập để thả tim.");
+      return;
     }
 
-    if (typeof data?.data?.liked === "boolean") {
-      setLiked(data.data.liked);
+    if (!chapterId) {
+      toast.warning("Không tìm thấy chapter.");
+      return;
     }
 
-    socketRef.current?.emit("reaction:toggle", {
-      chapterType: CHAPTER_TYPE,
-      chapterId,
-    });
-  } catch (e) {
-    setLiked(prevLiked);
-    setLikeCount((c) => Math.max(0, c + (prevLiked ? 1 : -1)));
-    toast.error(e.message || "Lỗi");
-  }
-};
+    if (!comicDbId) {
+      toast.warning("Không tìm thấy truyện trong DB.");
+      return;
+    }
+
+    if (!reactionReady || reactionLoading) {
+      return;
+    }
+
+    try {
+      setReactionLoading(true);
+
+      const data = await fetchJSON(
+        `${API_BASE}/api/reactions/chapter/${encodeURIComponent(chapterId)}/toggle`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            comicId: comicDbId,
+            comicType: "external",
+            slug: slug || null,
+            chapApi: chapterApi || null,
+            chapterTitle: chapterName || null,
+          }),
+        }
+      );
+
+      setLikeCount(Number(data?.data?.likeCount || 0));
+      setLiked(!!data?.data?.liked);
+
+      socketRef.current?.emit("reaction:toggle", {
+        chapterType: CHAPTER_TYPE,
+        chapterId: String(chapterId),
+        likeCount: Number(data?.data?.likeCount || 0),
+        liked: !!data?.data?.liked,
+      });
+    } catch (e) {
+      toast.error(e.message || "Lỗi");
+    } finally {
+      setReactionLoading(false);
+    }
+  };
 
   const sendComment = async () => {
     if (!token) {
@@ -521,6 +549,7 @@ useEffect(() => {
             className={`rc-likeBtn ${liked ? "active" : ""}`}
             type="button"
             onClick={toggleLike}
+            disabled={!reactionReady || reactionLoading}
             title={liked ? "Bỏ tim" : "Thả tim"}
           >
             <i className={`bi ${liked ? "bi-heart-fill" : "bi-heart"}`} />

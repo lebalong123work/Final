@@ -26,18 +26,67 @@ function fmtVND(n) {
   return new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
 }
 
+function safeParseJson(value) {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function normalizeCategories(c) {
+  const raw = safeParseJson(c?.categories);
+
+  if (Array.isArray(raw) && raw.length > 0) {
+    return raw
+      .map((item) => {
+        if (!item) return null;
+
+        if (typeof item === "string") {
+          return {
+            id: item,
+            name: item,
+          };
+        }
+
+        if (typeof item === "object") {
+          return {
+            id: item.id ?? item.name ?? Math.random().toString(36).slice(2),
+            name: String(item.name || item.label || "").trim(),
+          };
+        }
+
+        return null;
+      })
+      .filter((x) => x && x.name);
+  }
+
+  if (c?.category_name) {
+    return [
+      {
+        id: c.category_id || "legacy",
+        name: c.category_name,
+      },
+    ];
+  }
+
+  return [];
+}
+
 function normalizeSelfComic(c) {
+  const categories = normalizeCategories(c);
+
   return {
     id: c.id,
     name: c.title || "Không tên",
     cover: buildCover(c.cover_image),
-    tags: c.category_name ? [c.category_name] : [],
+    categories,
+    tags: categories.map((x) => x.name).filter(Boolean),
     updated: fmtUpdated(c.updated_at || c.created_at),
     latest: c.total_chapters || null,
     is_paid: !!c.is_paid,
     price: Number(c.price || 0),
-    category_id: c.category_id || null,
-    category_name: c.category_name || "",
     author: c.author || "",
     status: Number(c.status || 0),
     description: c.description || "",
@@ -74,7 +123,7 @@ function Pagination({ page, totalPages, onPage }) {
 
     if (left > 2) out.push("...");
 
-    for (let p = left; p <= right; p++) out.push(p);
+    for (let p = left; p <= right; p += 1) out.push(p);
 
     if (right < totalPages - 1) out.push("...");
 
@@ -87,7 +136,11 @@ function Pagination({ page, totalPages, onPage }) {
 
   return (
     <div className="clp-pagi">
-      <button className="clp-pagiBtn" disabled={page <= 1} onClick={() => onPage(page - 1)}>
+      <button
+        className="clp-pagiBtn"
+        disabled={page <= 1}
+        onClick={() => onPage(page - 1)}
+      >
         <i className="bi bi-chevron-left" /> Trước
       </button>
 
@@ -110,7 +163,11 @@ function Pagination({ page, totalPages, onPage }) {
         )}
       </div>
 
-      <button className="clp-pagiBtn" disabled={page >= totalPages} onClick={() => onPage(page + 1)}>
+      <button
+        className="clp-pagiBtn"
+        disabled={page >= totalPages}
+        onClick={() => onPage(page + 1)}
+      >
         Sau <i className="bi bi-chevron-right" />
       </button>
     </div>
@@ -237,7 +294,11 @@ export default function SelfComic() {
                 placeholder="Tìm truyện tự đăng..."
               />
               {q ? (
-                <button className="clp-x" onClick={() => setParam("q", "")} aria-label="Clear">
+                <button
+                  className="clp-x"
+                  onClick={() => setParam("q", "")}
+                  aria-label="Clear"
+                >
                   <i className="bi bi-x-lg" />
                 </button>
               ) : null}
@@ -292,7 +353,11 @@ export default function SelfComic() {
                 return (
                   <div key={c.id} className="col-12 col-sm-6 col-lg-4">
                     <div className="clp-card">
-                      <Link to={detailUrl} className="clp-thumbLink" aria-label={`Xem ${c.name}`}>
+                      <Link
+                        to={detailUrl}
+                        className="clp-thumbLink"
+                        aria-label={`Xem ${c.name}`}
+                      >
                         <div className="clp-thumb">
                           <img src={c.cover} alt={c.name} loading="lazy" />
 
@@ -305,7 +370,9 @@ export default function SelfComic() {
                           </div>
 
                           <div className="clp-badgesRight">
-                            {c.latest ? <span className="clp-badge dark">{c.latest} chap</span> : null}
+                            {c.latest ? (
+                              <span className="clp-badge dark">{c.latest} chap</span>
+                            ) : null}
 
                             {c.is_paid ? (
                               <span className="clp-badge pay">
@@ -339,9 +406,22 @@ export default function SelfComic() {
                           {c.author || "Chưa có tác giả"}
                         </div>
 
-                        <div className="clp-meta">
+                        <div className="clp-meta clp-meta-cats">
                           <i className="bi bi-bookmark me-1" />
-                          {c.category_name || "Chưa có danh mục"}
+                          {c.categories.length > 0 ? (
+                            <span className="clp-category-list">
+                              {c.categories.map((cat) => (
+                                <span
+                                  key={String(cat.id || cat.name)}
+                                  className="clp-category-badge"
+                                >
+                                  {cat.name}
+                                </span>
+                              ))}
+                            </span>
+                          ) : (
+                            <span className="text-secondary">Chưa có danh mục</span>
+                          )}
                         </div>
 
                         <div className="clp-meta">

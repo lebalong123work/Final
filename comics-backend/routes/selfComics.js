@@ -5,24 +5,11 @@ const cloudinary = require("../utils/cloudinary");
 
 const router = express.Router();
 
+/* ================= HELPERS ================= */
+
 function toInt(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
-}
-
-function normalizePage(v, fallback = 1) {
-  const n = parseInt(v, 10);
-  return Number.isFinite(n) && n > 0 ? n : fallback;
-}
-
-function normalizeLimit(v, fallback = 12) {
-  const n = parseInt(v, 10);
-  if (!Number.isFinite(n) || n <= 0) return fallback;
-  return Math.min(n, 100);
-}
-
-function canManageAll(user) {
-  return user?.role === "admin";
 }
 
 function normalizeText(v) {
@@ -30,46 +17,37 @@ function normalizeText(v) {
 }
 
 function isHttpUrl(v) {
-  return /^https?:\/\//i.test(String(v || "").trim());
+  return /^https?:\/\//i.test(v);
 }
 
 function isBase64Image(v) {
-  return /^data:image\/[a-zA-Z0-9.+-]+;base64,/.test(String(v || "").trim());
+  return /^data:image/.test(v);
 }
 
-async function uploadCoverToCloudinary(imageValue) {
-  const value = normalizeText(imageValue);
-  if (!value) return null;
+async function uploadCover(image) {
+  if (!image) return null;
 
-  if (isHttpUrl(value)) {
-    return value;
-  }
+  if (isHttpUrl(image)) return image;
 
-  if (!isBase64Image(value)) {
-    return value;
-  }
+  if (!isBase64Image(image)) return image;
 
-  const result = await cloudinary.uploader.upload(value, {
+  const r = await cloudinary.uploader.upload(image, {
     folder: "self-comics/covers",
-    resource_type: "image",
   });
 
-  return result.secure_url;
+  return r.secure_url;
 }
 
-/*
-GET LIST SELF COMICS
-*/
+/* ================= GET LIST ================= */
+
 router.get("/", async (req, res) => {
   try {
-    const page = normalizePage(req.query.page, 1);
-    const limit = normalizeLimit(req.query.limit, 12);
+    const page = Math.max(1, Number(req.query.page || 1));
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 12)));
     const offset = (page - 1) * limit;
 
-    const q = String(req.query.q || "").trim();
-    const categoryId = req.query.categoryId
-      ? toInt(req.query.categoryId, 0)
-      : null;
+    const q = normalizeText(req.query.q);
+    const categoryId = toInt(req.query.categoryId, 0);
 
     const where = [];
     const params = [];
@@ -80,9 +58,17 @@ router.get("/", async (req, res) => {
       params.push(`%${q}%`);
     }
 
-    if (categoryId) {
-      where.push(`sc.category_id = $${idx++}`);
+    if (categoryId > 0) {
+      where.push(`
+        EXISTS (
+          SELECT 1
+          FROM self_comic_categories scc
+          WHERE scc.self_comic_id = sc.id
+          AND scc.category_id = $${idx}
+        )
+      `);
       params.push(categoryId);
+      idx++;
     }
 
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
@@ -95,378 +81,254 @@ router.get("/", async (req, res) => {
 
     const listSql = `
       SELECT
-        sc.id,
-        sc.user_id,
-        sc.title,
-        sc.author,
-        sc.translated_by,
-        sc.cover_image,
-        sc.description,
-        sc.total_chapters,
-        sc.status,
-        sc.created_at,
-        sc.updated_at,
-        sc.category_id,
-        sc.is_paid,
-        sc.price,
-        c.name AS category_name
+        sc.*,
+        COALESCE(
+          json_agg(
+            DISTINCT jsonb_build_object(
+              'id', c.id,
+              'name', c.name
+            )
+          ) FILTER (WHERE c.id IS NOT NULL),
+          '[]'
+        ) AS categories
       FROM self_comics sc
-      LEFT JOIN categories c ON c.id = sc.category_id
+      LEFT JOIN self_comic_categories scc ON scc.self_comic_id = sc.id
+      LEFT JOIN categories c ON c.id = scc.category_id
       ${whereSql}
-      ORDER BY sc.updated_at DESC, sc.id DESC
-      LIMIT $${idx++} OFFSET $${idx++}
+      GROUP BY sc.id
+      ORDER BY sc.updated_at DESC
+      LIMIT $${idx} OFFSET $${idx + 1}
     `;
 
-    const countResult = await db.query(countSql, params);
-    const total = countResult.rows[0]?.total || 0;
-
-    const listParams = [...params, limit, offset];
-    const listResult = await db.query(listSql, listParams);
-
-    return res.json({
-      data: listResult.rows,
-      page,
-      limit,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
-    });
-  } catch (err) {
-    console.error("GET self comics error:", err);
-    return res.status(500).json({ message: "Lỗi server khi tải truyện" });
-  }
-});
-
-/*
-GET DETAIL
-*/
-router.get("/my", auth, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const page = Math.max(1, Number(req.query.page || 1));
-    const limit = Math.max(1, Number(req.query.limit || 12));
-    const offset = (page - 1) * limit;
-    const q = String(req.query.q || "").trim();
-    const categoryId = req.query.categoryId ? Number(req.query.categoryId) : null;
-
-    const where = [`sc.user_id = $1`];
-    const values = [userId];
-    let idx = 2;
-
-    if (q) {
-      where.push(`(sc.title ILIKE $${idx} OR COALESCE(sc.author,'') ILIKE $${idx})`);
-      values.push(`%${q}%`);
-      idx++;
-    }
-
-    if (categoryId) {
-      where.push(`sc.category_id = $${idx}`);
-      values.push(categoryId);
-      idx++;
-    }
-
-    const whereSql = `WHERE ${where.join(" AND ")}`;
-
-    const countQuery = await db.query(
-      `SELECT COUNT(*)::int AS total
-       FROM self_comics sc
-       ${whereSql}`,
-      values
-    );
-
-    const listQuery = await db.query(
-      `SELECT sc.*, c.name AS category_name
-       FROM self_comics sc
-       LEFT JOIN categories c ON c.id = sc.category_id
-       ${whereSql}
-       ORDER BY sc.updated_at DESC NULLS LAST, sc.id DESC
-       LIMIT $${idx} OFFSET $${idx + 1}`,
-      [...values, limit, offset]
-    );
-
-    const total = countQuery.rows[0]?.total || 0;
+    const total = (await db.query(countSql, params)).rows[0].total;
+    const rows = (await db.query(listSql, [...params, limit, offset])).rows;
 
     res.json({
-      data: listQuery.rows,
+      data: rows,
       page,
-      limit,
       total,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
+      totalPages: Math.ceil(total / limit),
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Lỗi lấy truyện của user" });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Lỗi load list" });
   }
 });
+
+/* ================= GET DETAIL ================= */
 
 router.get("/:id", auth, async (req, res) => {
   try {
     const id = toInt(req.params.id, 0);
-    if (!id) {
-      return res.status(400).json({ message: "ID không hợp lệ" });
-    }
 
     const sql = `
       SELECT
-        sc.id,
-        sc.user_id,
+        sc.*,
         u.username,
-        sc.title,
-        sc.author,
-        sc.translated_by,
-        sc.cover_image,
-        sc.description,
-        sc.total_chapters,
-        sc.status,
-        sc.created_at,
-        sc.updated_at,
-        sc.category_id,
-        sc.is_paid,
-        sc.price,
-        c.name AS category_name
+        COALESCE(
+          json_agg(
+            DISTINCT jsonb_build_object(
+              'id', c.id,
+              'name', c.name
+            )
+          ) FILTER (WHERE c.id IS NOT NULL),
+          '[]'
+        ) AS categories
       FROM self_comics sc
-      LEFT JOIN categories c ON c.id = sc.category_id
       LEFT JOIN users u ON u.id = sc.user_id
+      LEFT JOIN self_comic_categories scc ON scc.self_comic_id = sc.id
+      LEFT JOIN categories c ON c.id = scc.category_id
       WHERE sc.id = $1
-      LIMIT 1
+      GROUP BY sc.id, u.username
     `;
 
-    const result = await db.query(sql, [id]);
+    const rs = await db.query(sql, [id]);
 
-    if (!result.rows.length) {
-      return res.status(404).json({ message: "Không tìm thấy truyện" });
+    if (!rs.rows.length) {
+      return res.status(404).json({ message: "Không tìm thấy" });
     }
 
-    return res.json({ data: result.rows[0] });
-  } catch (err) {
-    console.error("GET self comic error:", err);
-    return res.status(500).json({ message: "Lỗi server khi lấy truyện" });
+    res.json({ data: rs.rows[0] });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Lỗi detail" });
   }
 });
 
-/*
-CREATE COMIC
-*/
+/* ================= CREATE ================= */
+
 router.post("/", auth, async (req, res) => {
+  const client = await db.connect();
   try {
-    const userId = req.user?.id;
-    const io = req.app.get("io");
+    const userId = req.user.id;
 
     const title = normalizeText(req.body.title);
     const author = normalizeText(req.body.author) || null;
     const translatedBy = normalizeText(req.body.translated_by) || null;
-    const rawCoverImage = normalizeText(req.body.cover_image) || null;
-    const description = normalizeText(req.body.description) || null;
-
-    const totalChapters = Math.max(1, toInt(req.body.total_chapters, 1));
+    const cover = await uploadCover(req.body.cover_image);
+    const desc = normalizeText(req.body.description);
+    const totalChapters = Math.max(1, Number(req.body.total_chapters || 1));
     const status = Number(req.body.status ?? 1);
-
-    const categoryId = req.body.category_id
-      ? toInt(req.body.category_id, 0)
-      : null;
-
     const isPaid = !!req.body.is_paid;
-    const price = Math.max(0, toInt(req.body.price, 0));
+    const price = isPaid ? Math.max(0, Number(req.body.price || 0)) : 0;
+    const categoryIds = Array.isArray(req.body.category_ids) ? req.body.category_ids : [];
 
-    if (!userId) {
-      return res.status(401).json({ message: "Bạn chưa đăng nhập" });
+    if (!title) return res.status(400).json({ message: "Thiếu title" });
+    if (!cover) return res.status(400).json({ message: "Thiếu ảnh" });
+
+    await client.query("BEGIN");
+
+    const insert = await client.query(
+      `INSERT INTO self_comics
+        (user_id, title, author, translated_by, cover_image, description, total_chapters, status, is_paid, price)
+       VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       RETURNING *`,
+      [userId, title, author, translatedBy, cover, desc, totalChapters, status, isPaid, price]
+    );
+
+    const comic = insert.rows[0];
+
+    for (const catId of categoryIds) {
+      await client.query(
+        `INSERT INTO self_comic_categories (self_comic_id, category_id)
+         VALUES ($1,$2)
+         ON CONFLICT DO NOTHING`,
+        [comic.id, catId]
+      );
     }
 
-    if (!title) {
-      return res.status(400).json({ message: "Vui lòng nhập tiêu đề" });
-    }
-
-    if (isPaid && price <= 0) {
-      return res.status(400).json({ message: "Giá phải > 0 khi bật trả phí" });
-    }
-
-    const coverImage = rawCoverImage
-      ? await uploadCoverToCloudinary(rawCoverImage)
-      : null;
-
-    const insertSql = `
-      INSERT INTO self_comics (
-        user_id,
-        title,
-        author,
-        translated_by,
-        cover_image,
-        description,
-        total_chapters,
-        status,
-        category_id,
-        is_paid,
-        price
-      )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-      RETURNING *
-    `;
-
-    const result = await db.query(insertSql, [
-      userId,
-      title,
-      author,
-      translatedBy,
-      coverImage,
-      description,
-      totalChapters,
-      status,
-      categoryId || null,
-      isPaid,
-      isPaid ? price : 0,
-    ]);
-
-    const newComic = result.rows[0];
-
-    // Gửi thông báo cho follower
-    if (io?.notifyFollowersNewComic && newComic?.id) {
-      try {
-        await io.notifyFollowersNewComic({
-          ownerUserId: userId,
-          comicKind: "self",
-          comicId: newComic.id,
-          comicName: newComic.title,
-        });
-      } catch (notifyErr) {
-        console.error("notify self comic error:", notifyErr);
-      }
-    }
-
-    return res.status(201).json({
-      message: "Tạo truyện thành công",
-      data: newComic,
-    });
-  } catch (err) {
-    console.error("CREATE self comic error:", err);
-    return res.status(500).json({ message: "Lỗi server khi tạo truyện" });
+    await client.query("COMMIT");
+    res.json({ data: comic });
+  } catch (e) {
+    await client.query("ROLLBACK");
+    console.error(e);
+    res.status(500).json({ message: "Lỗi create" });
+  } finally {
+    client.release();
   }
 });
 
-/*
-UPDATE COMIC
-*/
+/* ================= UPDATE ================= */
+
 router.patch("/:id", auth, async (req, res) => {
+  const client = await db.connect();
   try {
     const id = toInt(req.params.id, 0);
-    if (!id) {
-      return res.status(400).json({ message: "ID không hợp lệ" });
-    }
 
-    const check = await db.query(
+    await client.query("BEGIN");
+
+    const oldRs = await client.query(
       `SELECT * FROM self_comics WHERE id = $1 LIMIT 1`,
       [id]
     );
 
-    if (!check.rows.length) {
+    if (!oldRs.rows.length) {
+      await client.query("ROLLBACK");
       return res.status(404).json({ message: "Không tìm thấy truyện" });
     }
 
-    const comic = check.rows[0];
-
-    if (
-      !canManageAll(req.user) &&
-      Number(comic.user_id) !== Number(req.user.id)
-    ) {
-      return res.status(403).json({ message: "Không có quyền sửa" });
-    }
+    const oldComic = oldRs.rows[0];
 
     const title =
-      req.body.title !== undefined
-        ? normalizeText(req.body.title)
-        : comic.title;
+      req.body.title !== undefined ? normalizeText(req.body.title) : oldComic.title;
 
     const author =
       req.body.author !== undefined
         ? normalizeText(req.body.author) || null
-        : comic.author;
+        : oldComic.author;
 
     const translatedBy =
       req.body.translated_by !== undefined
         ? normalizeText(req.body.translated_by) || null
-        : comic.translated_by;
+        : oldComic.translated_by;
 
-    const rawCoverImage =
+    const cover =
       req.body.cover_image !== undefined
-        ? normalizeText(req.body.cover_image) || null
-        : comic.cover_image;
+        ? await uploadCover(req.body.cover_image)
+        : oldComic.cover_image;
 
-    const description =
+    const desc =
       req.body.description !== undefined
-        ? normalizeText(req.body.description) || null
-        : comic.description;
+        ? normalizeText(req.body.description)
+        : oldComic.description;
 
-    const coverImage = rawCoverImage
-      ? await uploadCoverToCloudinary(rawCoverImage)
-      : null;
+    const totalChapters =
+      req.body.total_chapters !== undefined
+        ? Math.max(1, Number(req.body.total_chapters || 1))
+        : oldComic.total_chapters;
 
-    const updateSql = `
-      UPDATE self_comics
-      SET
-        title = $1,
-        author = $2,
-        translated_by = $3,
-        cover_image = $4,
-        description = $5,
-        updated_at = NOW()
-      WHERE id = $6
-      RETURNING *
-    `;
+    const status =
+      req.body.status !== undefined
+        ? Number(req.body.status)
+        : oldComic.status;
 
-    const result = await db.query(updateSql, [
-      title,
-      author,
-      translatedBy,
-      coverImage,
-      description,
-      id,
-    ]);
+    const isPaid =
+      req.body.is_paid !== undefined
+        ? !!req.body.is_paid
+        : oldComic.is_paid;
 
-    return res.json({
-      message: "Cập nhật thành công",
-      data: result.rows[0],
-    });
-  } catch (err) {
-    console.error("UPDATE comic error:", err);
-    return res.status(500).json({ message: "Lỗi server khi cập nhật" });
+    const price =
+      req.body.price !== undefined
+        ? Math.max(0, Number(req.body.price || 0))
+        : Number(oldComic.price || 0);
+
+    const update = await client.query(
+      `UPDATE self_comics
+       SET title=$1,
+           author=$2,
+           translated_by=$3,
+           cover_image=$4,
+           description=$5,
+           total_chapters=$6,
+           status=$7,
+           is_paid=$8,
+           price=$9,
+           updated_at=NOW()
+       WHERE id=$10
+       RETURNING *`,
+      [title, author, translatedBy, cover, desc, totalChapters, status, isPaid, isPaid ? price : 0, id]
+    );
+
+    if (Array.isArray(req.body.category_ids)) {
+      await client.query(
+        `DELETE FROM self_comic_categories WHERE self_comic_id = $1`,
+        [id]
+      );
+
+      for (const catId of req.body.category_ids) {
+        await client.query(
+          `INSERT INTO self_comic_categories (self_comic_id, category_id)
+           VALUES ($1,$2)
+           ON CONFLICT DO NOTHING`,
+          [id, catId]
+        );
+      }
+    }
+
+    await client.query("COMMIT");
+    res.json({ data: update.rows[0] });
+  } catch (e) {
+    await client.query("ROLLBACK");
+    console.error(e);
+    res.status(500).json({ message: "Lỗi update" });
+  } finally {
+    client.release();
   }
 });
 
-/*
-DELETE
-*/
+/* ================= DELETE ================= */
+
 router.delete("/:id", auth, async (req, res) => {
   try {
     const id = toInt(req.params.id, 0);
-    if (!id) {
-      return res.status(400).json({ message: "ID không hợp lệ" });
-    }
 
-    const check = await db.query(
-      `SELECT id, user_id, title FROM self_comics WHERE id = $1`,
-      [id]
-    );
+    await db.query(`DELETE FROM self_comics WHERE id=$1`, [id]);
 
-    if (!check.rows.length) {
-      return res.status(404).json({ message: "Không tìm thấy truyện" });
-    }
-
-    const comic = check.rows[0];
-
-    if (
-      !canManageAll(req.user) &&
-      Number(comic.user_id) !== Number(req.user.id)
-    ) {
-      return res.status(403).json({ message: "Không có quyền xoá" });
-    }
-
-    await db.query(`DELETE FROM self_comics WHERE id = $1`, [id]);
-
-    return res.json({
-      message: "Xoá truyện thành công",
-      data: comic,
-    });
-  } catch (err) {
-    console.error("DELETE comic error:", err);
-    return res.status(500).json({ message: "Lỗi server khi xoá" });
+    res.json({ message: "Đã xóa" });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Lỗi delete" });
   }
 });
 

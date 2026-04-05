@@ -26,18 +26,41 @@ function fmtVND(n) {
   return new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
 }
 
+function normalizeCategories(c) {
+  if (Array.isArray(c?.categories) && c.categories.length > 0) {
+    return c.categories
+      .filter((x) => x && (x.id || x.name))
+      .map((x) => ({
+        id: x.id,
+        name: x.name || "",
+      }));
+  }
+
+  if (c?.category_name) {
+    return [
+      {
+        id: c.category_id || "legacy",
+        name: c.category_name,
+      },
+    ];
+  }
+
+  return [];
+}
+
 function normalizeSelfComic(c) {
+  const categories = normalizeCategories(c);
+
   return {
     id: c.id,
     name: c.title || "Không tên",
     cover: buildCover(c.cover_image),
-    tags: c.category_name ? [c.category_name] : [],
+    categories,
+    tags: categories.map((x) => x.name).filter(Boolean),
     updated: fmtUpdated(c.updated_at || c.created_at),
     latest: c.total_chapters || null,
     is_paid: !!c.is_paid,
     price: Number(c.price || 0),
-    category_id: c.category_id || null,
-    category_name: c.category_name || "",
     author: c.author || "",
     status: Number(c.status || 0),
     description: c.description || "",
@@ -74,7 +97,7 @@ function Pagination({ page, totalPages, onPage }) {
 
     if (left > 2) out.push("...");
 
-    for (let p = left; p <= right; p++) out.push(p);
+    for (let p = left; p <= right; p += 1) out.push(p);
 
     if (right < totalPages - 1) out.push("...");
 
@@ -349,9 +372,22 @@ export default function SelfComicListPage() {
                           {c.author || "Chưa có tác giả"}
                         </div>
 
-                        <div className="clp-meta">
+                        <div className="clp-meta clp-meta-cats">
                           <i className="bi bi-bookmark me-1" />
-                          {c.category_name || "Chưa có danh mục"}
+                          {c.categories.length > 0 ? (
+                            <span className="clp-category-list">
+                              {c.categories.map((cat) => (
+                                <span
+                                  key={String(cat.id || cat.name)}
+                                  className="clp-category-badge"
+                                >
+                                  {cat.name}
+                                </span>
+                              ))}
+                            </span>
+                          ) : (
+                            <span>Chưa có danh mục</span>
+                          )}
                         </div>
 
                         <div className="clp-meta">

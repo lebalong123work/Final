@@ -14,6 +14,16 @@
   width: 8px;
 }
 
+.category-multi-select {
+  min-height: 180px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.category-multi-select option {
+  padding: 8px 10px;
+}
+
 .ad-modal-body-scroll::-webkit-scrollbar-thumb,
 .editor-scroll-box::-webkit-scrollbar-thumb {
   background: #c7c7c7;
