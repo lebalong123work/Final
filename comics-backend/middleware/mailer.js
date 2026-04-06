@@ -14,9 +14,9 @@ async function sendNewPasswordMail(toEmail, newPassword) {
   const from = process.env.SMTP_USER;
 
   return transporter.sendMail({
-    from: `ZTruyen <${from}>`,
+    from: `Readink <${from}>`,
     to: toEmail,
-    subject: "ZTruyen - Mật khẩu mới của bạn",
+    subject: "Readink - Mật khẩu mới của bạn",
     html: `
       <div style="font-family:Arial; line-height:1.6">
         <h3>Yêu cầu đặt lại mật khẩu</h3>
