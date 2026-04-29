@@ -1,0 +1,609 @@
+/* =====================================================
+   MY COMICS — Readink "Obsidian Premium" Creator Studio
+   Premium glassmorphism — zero logic touched
+===================================================== */
+
+/* ── Page shell ── */
+.mc-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 900px 500px at 5%  0%,   rgba(99,102,241,.12) 0%, transparent 60%),
+    radial-gradient(ellipse 700px 400px at 95% 15%,  rgba(59,130,246,.10) 0%, transparent 58%),
+    radial-gradient(ellipse 600px 350px at 50% 85%,  rgba(139,92,246,.07) 0%, transparent 55%),
+    linear-gradient(180deg, #eef2ff 0%, #f0f4ff 100%);
+}
+
+/* Utility for modal margin-top */
+.mt-7 {
+  margin-top: 5rem !important;
+}
+
+/* ── Hero banner ── */
+.mc-hero {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 32px;
+  border-radius: 30px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #4f46e5 100%);
+  color: #fff;
+  box-shadow:
+    0 24px 70px rgba(30,58,138,.26),
+    0 1px 0 rgba(255,255,255,.08) inset;
+  margin-bottom: 28px;
+  overflow: hidden;
+  position: relative;
+}
+
+.mc-hero::before {
+  content: '';
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.08), transparent 68%);
+  top: -200px;
+  right: -120px;
+  pointer-events: none;
+}
+
+.mc-hero::after {
+  content: '';
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,92,246,.18), transparent 70%);
+  bottom: -80px;
+  left: 30%;
+  pointer-events: none;
+}
+
+.mc-hero__content {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Hero kicker pill ── */
+.mc-kicker {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.18);
+  margin-bottom: 16px;
+  letter-spacing: .2px;
+  backdrop-filter: blur(8px);
+}
+
+/* ── Hero title ── */
+.mc-title {
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 900;
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: -.5px;
+  text-shadow: 0 2px 20px rgba(0,0,0,.15);
+}
+
+.mc-subtitle {
+  margin: 14px 0 0;
+  max-width: 760px;
+  color: rgba(255,255,255,.84);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* ── Stats row ── */
+.mc-hero__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.mc-stat {
+  min-width: 130px;
+  padding: 14px 18px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(10px);
+}
+
+.mc-stat__value {
+  display: block;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.3px;
+}
+
+.mc-stat__label {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: rgba(255,255,255,.75);
+  font-weight: 600;
+}
+
+/* ── Hero actions panel ── */
+.mc-hero__actions {
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Shared button styles ── */
+.mc-btn-primary,
+.mc-btn-light,
+.mc-btn-outline,
+.mc-page-btn {
+  border-radius: 16px;
+  padding: 13px 18px;
+  font-weight: 700;
+  font-size: 14px;
+  transition: transform .2s ease, box-shadow .2s ease, opacity .2s;
+}
+
+.mc-btn-primary {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 60%, #2563eb 100%);
+  color: #fff;
+  border: none;
+  box-shadow: 0 10px 28px rgba(99,102,241,.32);
+}
+
+.mc-btn-primary:hover {
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 38px rgba(99,102,241,.44);
+}
+
+.mc-btn-light {
+  background: rgba(255,255,255,.95);
+  border: 1px solid rgba(255,255,255,.30);
+  color: #1e293b;
+  backdrop-filter: blur(8px);
+}
+
+.mc-btn-light:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0,0,0,.12);
+}
+
+.mc-btn-outline {
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.20);
+  color: #fff;
+  backdrop-filter: blur(6px);
+}
+
+/* ── Toolbar (search + filter) ── */
+.mc-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  background: rgba(255,255,255,.93);
+  border: 1px solid rgba(59,130,246,.08);
+  box-shadow: 0 14px 38px rgba(30,58,138,.06);
+  backdrop-filter: blur(14px) saturate(160%);
+  border-radius: 26px;
+  padding: 20px;
+}
+
+.mc-search {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(248,250,252,.95);
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 18px;
+  padding: 0 16px;
+  height: 54px;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.mc-search:focus-within {
+  border-color: rgba(59,130,246,.35);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.10);
+}
+
+.mc-search i {
+  color: #64748b;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.mc-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.mc-search input::placeholder { color: #94a3b8; }
+
+.mc-filter-wrap {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.mc-select {
+  min-width: 220px;
+  height: 54px;
+  border-radius: 18px;
+  border: 1px solid rgba(148,163,184,.18);
+  background: rgba(248,250,252,.95);
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  padding: 0 16px;
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.mc-select:focus {
+  outline: none;
+  border-color: rgba(59,130,246,.35);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.10);
+}
+
+/* ── Loading ── */
+.mc-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.95);
+  box-shadow: 0 12px 30px rgba(8,12,24,.06);
+  margin-top: 20px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.mc-loading .spinner-border { color: #4f46e5; }
+
+/* ── Empty state ── */
+.mc-empty {
+  margin-top: 28px;
+  padding: 60px 28px;
+  text-align: center;
+  background: rgba(255,255,255,.97);
+  border-radius: 30px;
+  border: 1px solid rgba(59,130,246,.07);
+  box-shadow: 0 20px 50px rgba(30,58,138,.07);
+}
+
+.mc-empty__icon {
+  width: 92px;
+  height: 92px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 36px;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  color: #4f46e5;
+  box-shadow: 0 12px 30px rgba(99,102,241,.16);
+}
+
+.mc-empty h3 {
+  font-size: 26px;
+  font-weight: 900;
+  margin-bottom: 10px;
+  color: #0f172a;
+}
+
+.mc-empty p {
+  color: #64748b;
+  margin-bottom: 20px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* ── Comic cards ── */
+.mc-card {
+  height: 100%;
+  border-radius: 28px;
+  overflow: hidden;
+  background: rgba(255,255,255,.97);
+  border: 1px solid rgba(59,130,246,.07);
+  box-shadow: 0 16px 44px rgba(30,58,138,.08);
+  transition: transform .25s ease, box-shadow .25s ease, border-color .2s;
+}
+
+.mc-card:hover {
+  transform: translateY(-7px);
+  box-shadow: 0 28px 64px rgba(30,58,138,.14);
+  border-color: rgba(59,130,246,.16);
+}
+
+.mc-card__thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #e2e8f0;
+}
+
+.mc-card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .4s ease;
+}
+
+.mc-card:hover .mc-card__thumb img {
+  transform: scale(1.06);
+}
+
+.mc-card__overlay {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ── Status / price badges ── */
+.mc-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+  letter-spacing: .1px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.10);
+}
+
+.mc-badge.show {
+  background: rgba(22,163,74,.92);
+  color: #fff;
+}
+
+.mc-badge.hide {
+  background: rgba(100,116,139,.92);
+  color: #fff;
+}
+
+.mc-badge.free {
+  background: rgba(6,182,212,.92);
+  color: #0c4a6e;
+}
+
+.mc-badge.paid {
+  background: rgba(239,68,68,.92);
+  color: #fff;
+}
+
+/* ── Card body ── */
+.mc-card__body {
+  padding: 20px 22px;
+}
+
+.mc-card__title {
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.35;
+  margin-bottom: 14px;
+  color: #0f172a;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 54px;
+}
+
+.mc-card__meta {
+  display: grid;
+  gap: 8px;
+  color: #4b5563;
+  font-size: 13.5px;
+}
+
+.mc-card__meta div {
+  display: flex;
+  align-items: flex-start;
+  line-height: 1.5;
+  gap: 6px;
+}
+
+.mc-card__meta i {
+  color: #6366f1;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Action buttons row ── */
+.mc-card__actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.mc-action {
+  border-radius: 14px;
+  padding: 11px 10px;
+  font-weight: 700;
+  border: none;
+  font-size: 13.5px;
+  transition: transform .15s, box-shadow .15s;
+}
+
+.mc-action:hover {
+  transform: translateY(-1px);
+}
+
+.mc-action--edit {
+  background: rgba(59,130,246,.10);
+  color: #2563eb;
+}
+
+.mc-action--edit:hover { box-shadow: 0 6px 16px rgba(37,99,235,.16); }
+
+.mc-action--chapter {
+  background: rgba(16,185,129,.10);
+  color: #059669;
+}
+
+.mc-action--chapter:hover { box-shadow: 0 6px 16px rgba(16,185,129,.16); }
+
+.mc-action--delete {
+  background: rgba(239,68,68,.10);
+  color: #dc2626;
+}
+
+.mc-action--delete:hover { box-shadow: 0 6px 16px rgba(239,68,68,.16); }
+
+/* ── Pagination ── */
+.mc-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  margin-top: 32px;
+}
+
+.mc-page-btn {
+  background: rgba(255,255,255,.95);
+  border: 1px solid rgba(148,163,184,.18);
+  min-width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  color: #1e293b;
+  font-weight: 700;
+  box-shadow: 0 8px 22px rgba(8,12,24,.06);
+  transition: transform .15s, box-shadow .15s, border-color .15s;
+}
+
+.mc-page-btn:hover:not(:disabled) {
+  border-color: rgba(99,102,241,.28);
+  color: #4f46e5;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(99,102,241,.14);
+}
+
+.mc-page-btn:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+}
+
+.mc-page-indicator {
+  padding: 14px 22px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.95);
+  border: 1px solid rgba(148,163,184,.16);
+  color: #334155;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 8px 22px rgba(8,12,24,.05);
+}
+
+/* =========================
+   Tablet
+========================= */
+@media (max-width: 991.98px) {
+  .mc-hero {
+    flex-direction: column;
+    padding: 24px;
+  }
+
+  .mc-hero__actions {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .mc-hero__actions .btn {
+    flex: 1;
+    min-width: 200px;
+  }
+}
+
+/* =========================
+   Mobile
+========================= */
+@media (max-width: 767.98px) {
+  .mc-page .container {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .mc-hero {
+    padding: 22px;
+    border-radius: 24px;
+    margin-bottom: 20px;
+  }
+
+  .mc-toolbar {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .mc-search,
+  .mc-select {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .mc-filter-wrap { width: 100%; }
+  .mc-filter-wrap > * { flex: 1; }
+
+  .mc-card__actions { grid-template-columns: 1fr; }
+
+  .mc-card__title {
+    font-size: 18px;
+    min-height: auto;
+  }
+
+  .mc-empty {
+    padding: 40px 18px;
+    border-radius: 24px;
+  }
+
+  .mc-empty h3 { font-size: 22px; }
+
+  .mc-page-btn {
+    min-width: 44px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mc-hero {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .mc-title { font-size: 26px; }
+
+  .mc-hero__actions {
+    flex-direction: column;
+  }
+}
