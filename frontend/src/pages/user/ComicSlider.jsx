@@ -29,7 +29,7 @@ function fmtUpdated(d) {
 function normalizeExternalComic(c) {
   return {
     id: c.api_id || c.id,
-    name: c.name || "Không tên",
+    name: c.name || "Untitled",
     cover: buildCover(c.thumb_url),
     tags: (c.categories || []).map((x) => x.name).filter(Boolean),
     updated: fmtUpdated(c.updated_at || c.created_at),
@@ -45,7 +45,7 @@ function fmtVND(n) {
 }
 
 export default function ComicSlider({
-  title = "Truyện mới cập nhật",
+  title = "Recently Updated Comics",
   perPage = 4,
   limit = 24,
   q = "",
@@ -78,7 +78,7 @@ export default function ComicSlider({
 
         const res = await fetch(url.toString());
         const data = await res.json();
-        if (!res.ok) throw new Error(data?.message || "Lỗi tải external comics");
+        if (!res.ok) throw new Error(data?.message || "Error loading external comics");
 
         const rows = Array.isArray(data?.data) ? data.data : [];
         setItems(rows.map(normalizeExternalComic));
@@ -104,8 +104,8 @@ export default function ComicSlider({
         </div>
 
      <div className="cs-actions d-flex align-items-center gap-2">
-  <Link to={viewAllHref} className="cs-viewAll" aria-label="Xem tất cả">
-    Xem tất cả <i className="bi bi-arrow-right ms-1" />
+  <Link to={viewAllHref} className="cs-viewAll" aria-label="View all">
+    View all <i className="bi bi-arrow-right ms-1" />
   </Link>
 
   <div className="cs-controls d-none d-md-flex gap-2">
@@ -130,7 +130,7 @@ export default function ComicSlider({
         {loading ? (
           <div className="cs-loading">
             <div className="spinner-border spinner-border-sm me-2" />
-            Đang tải...
+            Loading...
           </div>
         ) : (
           <div className="row g-3">
@@ -140,8 +140,8 @@ export default function ComicSlider({
               return (
                 <div key={c.id} className="col-12 col-sm-6 col-lg-3">
                   <div className="cs-card">
-                    {/* Click cả ảnh cũng vào chi tiết */}
-                    <Link to={detailUrl} className="cs-thumbLink" aria-label={`Xem ${c.name}`}>
+                    {/* Clicking the image also goes to detail */}
+                    <Link to={detailUrl} className="cs-thumbLink" aria-label={`View ${c.name}`}>
                       <div className="cs-thumb">
                         <img src={c.cover} alt={c.name} loading="lazy" />
 
@@ -157,10 +157,10 @@ export default function ComicSlider({
                           {c.latest ? <span className="cs-badge cs-badge-dark">Chap {c.latest}</span> : null}
                           {c.is_paid ? (
                             <span className="cs-badge cs-badge-pay">
-                              Trả phí{c.price ? ` • ${fmtVND(c.price)}` : ""}
+                              Paid{c.price ? ` • ${fmtVND(c.price)}` : ""}
                             </span>
                           ) : (
-                            <span className="cs-badge cs-badge-free">Miễn phí</span>
+                            <span className="cs-badge cs-badge-free">Free</span>
                           )}
                         </div>
 
@@ -169,13 +169,13 @@ export default function ComicSlider({
                           <div className="cs-overlayTitle" title={c.name}>{c.name}</div>
                           <div className="cs-overlayMeta">
                             <i className="bi bi-clock me-1" />
-                            Cập nhật: <span>{c.updated}</span>
+                            Updated: <span>{c.updated}</span>
                           </div>
 
                           <div className="cs-overlayActions">
                             <span className="cs-btnGhost">
                               <i className="bi bi-eye me-1" />
-                              Xem chi tiết
+                              View details
                             </span>
                           </div>
                         </div>
@@ -187,7 +187,7 @@ export default function ComicSlider({
                       <div className="cs-name" title={c.name}>{c.name}</div>
                       <div className="cs-update">
                         <i className="bi bi-clock me-1" />
-                        Cập nhật <span>{c.updated}</span>
+                        Updated <span>{c.updated}</span>
                       </div>
 
                      
@@ -198,7 +198,7 @@ export default function ComicSlider({
             })}
 
             {!loading && current.length === 0 ? (
-              <div className="col-12 text-secondary py-4">Không có dữ liệu.</div>
+              <div className="col-12 text-secondary py-4">No data available.</div>
             ) : null}
           </div>
         )}

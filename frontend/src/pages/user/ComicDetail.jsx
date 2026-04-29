@@ -91,7 +91,7 @@ export default function ComicDetail() {
         const r1 = await fetchJSON(`https://otruyenapi.com/v1/api/truyen-tranh/${slug}`);
         setDetail(r1?.data || null);
 
-        // 2) pricing từ DB
+        // 2) pricing from DB
         const j2 = await fetchJSON(`${API_BASE}/api/external-comics/${slug}/pricing`);
         const pr = j2?.data || {
           id: null,
@@ -115,7 +115,7 @@ export default function ComicDetail() {
         };
         setOwner(ownerData);
 
-        // 4) lấy comic id trong DB chắc chắn hơn
+        // 4) get comic id from DB more reliably
         const finalComicId =
           Number(pr?.id || pr?.comic_id || ownerData?.comic_id || 0) || null;
 
@@ -192,7 +192,7 @@ export default function ComicDetail() {
         }
       } catch (e) {
         console.error(e);
-        setErr(e.message || "Lỗi");
+        setErr(e.message || "Error");
         setDetail(null);
       } finally {
         setLoading(false);
@@ -217,7 +217,6 @@ export default function ComicDetail() {
     return list.sort((a, b) => Number(a.name) - Number(b.name));
   }, [item]);
 
-  // reset page khi đổi truyện hoặc chapters thay đổi
   useEffect(() => {
     setCurrentPage(1);
   }, [slug, chapters.length]);
@@ -254,7 +253,7 @@ export default function ComicDetail() {
 
   const handleBuy = async () => {
     if (!token) {
-      toast.info("Bạn cần đăng nhập để mua truyện");
+      toast.info("You need to log in to purchase this comic");
       return;
     }
 
@@ -265,9 +264,9 @@ export default function ComicDetail() {
       });
 
       setHasAccess(true);
-      toast.success(`Mua thành công! Số dư còn lại: ${data?.data?.balance || 0}`);
+      toast.success(`Purchase successful! Remaining balance: ${data?.data?.balance || 0}`);
     } catch (e) {
-      toast.error(e.message || "Lỗi mua");
+      toast.error(e.message || "Purchase failed");
     }
   };
 
@@ -282,10 +281,10 @@ export default function ComicDetail() {
   };
 
   const toggleFollow = async () => {
-    if (!token) return toast.info("Bạn cần đăng nhập để theo dõi.");
-    if (!owner?.owner_user_id) return toast.warning("Truyện chưa có người đăng.");
+    if (!token) return toast.info("You need to log in to follow.");
+    if (!owner?.owner_user_id) return toast.warning("This comic has no uploader yet.");
     if (Number(owner?.owner_user_id) === Number(myId)) {
-      return toast.info("Bạn không thể theo dõi chính mình.");
+      return toast.info("You cannot follow yourself.");
     }
 
     try {
@@ -297,21 +296,21 @@ export default function ComicDetail() {
       const next = !!data?.data?.following;
       setFollowing(next);
       setFollowersCount(Number(data?.data?.followers || 0));
-      toast.success(next ? "Đã theo dõi người đăng" : "Đã bỏ theo dõi");
+      toast.success(next ? "Now following the uploader" : "Unfollowed");
     } catch (e) {
-      toast.error(e.message || "Lỗi follow");
+      toast.error(e.message || "Follow action failed");
     }
   };
 
   const setRating = async (star) => {
     if (!token) {
-      toast.info("Bạn cần đăng nhập để đánh giá.");
+      toast.info("You need to log in to rate.");
       return;
     }
 
     if (!comicDbId) {
       console.log("comicDbId submit =", comicDbId);
-      toast.warning("Không tìm thấy ID truyện trong DB để đánh giá.");
+      toast.warning("Comic ID not found in database for rating.");
       return;
     }
 
@@ -330,10 +329,10 @@ export default function ComicDetail() {
       setMyRating(star);
       setRatingAvg(Number(data?.data?.summary?.avg || 0));
       setRatingCount(Number(data?.data?.summary?.count || 0));
-      toast.success(`Bạn đã chấm ${star} sao`);
+      toast.success(`You rated ${star} star(s)`);
     } catch (e) {
       console.error("set rating error:", e);
-      toast.error(e.message || "Lỗi đánh giá");
+      toast.error(e.message || "Rating failed");
     }
   };
 
@@ -347,7 +346,7 @@ export default function ComicDetail() {
             type="button"
             className={`cd-starBtn ${v >= s ? "on" : ""} ${clickable ? "clickable" : ""}`}
             onClick={clickable ? () => setRating(s) : undefined}
-            title={clickable ? `Chấm ${s} sao` : ""}
+            title={clickable ? `Rate ${s} star(s)` : ""}
           >
             <i className={`bi ${v >= s ? "bi-star-fill" : "bi-star"}`} />
           </button>
@@ -360,7 +359,7 @@ export default function ComicDetail() {
     return (
       <div>
         <Header />
-        <div className="cd-wrap cd-loading">Đang tải truyện...</div>
+        <div className="cd-wrap cd-loading">Loading comic...</div>
       </div>
     );
   }
@@ -395,12 +394,12 @@ export default function ComicDetail() {
               <img src={buildThumb(item.thumb_url)} alt={item.name} />
               <div className="cd-badges">
                 <span className={`cd-badge ${item.status === "ongoing" ? "ok" : "done"}`}>
-                  {item.status === "ongoing" ? "Đang ra" : "Hoàn thành"}
+                  {item.status === "ongoing" ? "Ongoing" : "Completed"}
                 </span>
                 {isPaid ? (
-                  <span className="cd-badge pay">Trả phí • {fmtVND(pricing.price)}</span>
+                  <span className="cd-badge pay">Paid • {fmtVND(pricing.price)}</span>
                 ) : (
-                  <span className="cd-badge free">Miễn phí</span>
+                  <span className="cd-badge free">Free</span>
                 )}
               </div>
             </div>
@@ -430,11 +429,11 @@ export default function ComicDetail() {
                 <div className="cd-owner">
                   <div className="cd-ownerTop">
                     <i className="bi bi-person-circle me-2" />
-                    <span className="fw-bold text-dark">Người đăng:</span>
-                    <span className="ms-2 text-dark">{owner?.username || "Chưa có"}</span>
+                    <span className="fw-bold text-dark">Uploader:</span>
+                    <span className="ms-2 text-dark">{owner?.username || "None"}</span>
                     <span className="ms-3 text-secondary">
                       <i className="bi bi-people me-1" />
-                      {followersCount} theo dõi
+                      {followersCount} followers
                     </span>
                   </div>
 
@@ -445,10 +444,10 @@ export default function ComicDetail() {
                       !owner?.owner_user_id ||
                       Number(owner?.owner_user_id) === Number(myId)
                     }
-                    title={!token ? "Đăng nhập để theo dõi" : ""}
+                    title={!token ? "Log in to follow" : ""}
                   >
                     <i className={`bi ${following ? "bi-check2" : "bi-plus-lg"} me-2`} />
-                    {following ? "Đang theo dõi" : "Follow"}
+                    {following ? "Following" : "Follow"}
                   </button>
                 </div>
 
@@ -457,11 +456,11 @@ export default function ComicDetail() {
                     <div className="cd-ratingText">
                       <i className="bi bi-star-fill me-2 text-warning" />
                       <b>{Number(ratingAvg).toFixed(1)}</b>
-                      <span className="ms-2 text-secondary">({ratingCount} đánh giá)</span>
+                      <span className="ms-2 text-secondary">({ratingCount} ratings)</span>
                     </div>
 
                     <div className="cd-myRating">
-                      <span className="text-secondary me-2">Bạn:</span>
+                      <span className="text-secondary me-2">Your rating:</span>
                       {renderStars(myRating, true)}
                     </div>
                   </div>
@@ -472,7 +471,7 @@ export default function ComicDetail() {
                 {isFree && (
                   <Link className="btn btn-success cd-btn" to={firstChapterLink}>
                     <i className="bi bi-unlock-fill me-2" />
-                    Miễn phí
+                    Free to Read
                   </Link>
                 )}
 
@@ -480,10 +479,10 @@ export default function ComicDetail() {
                   <>
                     <button className="btn btn-danger cd-btn" onClick={handleBuy}>
                       <i className="bi bi-lock-fill me-2" />
-                      Mua truyện {fmtVND(pricing.price)}
+                      Buy Comic {fmtVND(pricing.price)}
                     </button>
                     <div className="cd-hint">
-                      Truyện này đang khóa. Bạn cần mua để xem chapter.
+                      This comic is locked. Purchase to read chapters.
                     </div>
                   </>
                 )}
@@ -491,7 +490,7 @@ export default function ComicDetail() {
                 {isBought && (
                   <Link className="btn btn-dark cd-btn" to={firstChapterLink}>
                     <i className="bi bi-book me-2" />
-                    Đã mua
+                    Purchased
                   </Link>
                 )}
               </div>
@@ -503,9 +502,9 @@ export default function ComicDetail() {
 
         <div className="cd-section">
           <div className="cd-section-head">
-            <h3>Danh sách chapter</h3>
+            <h3>Chapter List</h3>
             <div className="cd-count">
-              {chapters.length} chap • Trang {currentPage}/{totalPages}
+              {chapters.length} chapters • Page {currentPage}/{totalPages}
             </div>
           </div>
 
@@ -515,13 +514,13 @@ export default function ComicDetail() {
                 <i className="bi bi-lock" />
               </div>
               <div className="cd-locktext">
-                <div className="fw-bold">Nội dung bị khóa</div>
+                <div className="fw-bold">Content Locked</div>
                 <div className="text-secondary">
-                  Mua truyện để mở khóa danh sách chapter và đọc ảnh.
+                  Purchase this comic to unlock the chapter list and read images.
                 </div>
               </div>
               <button className="btn btn-danger" onClick={handleBuy}>
-                Mua truyện • {fmtVND(pricing.price)}
+                Buy Comic • {fmtVND(pricing.price)}
               </button>
             </div>
           ) : null}
@@ -534,10 +533,10 @@ export default function ComicDetail() {
                 className="cd-chap"
                 onClick={() => goRead(ch.api)}
                 disabled={locked}
-                title={locked ? "Truyện trả phí — cần mua để đọc" : `Đọc chap ${ch.name}`}
+                title={locked ? "Paid comic — purchase to read" : `Read chapter ${ch.name}`}
               >
                 <div className="cd-chap-left">
-                  <div className="cd-chap-no">Chap {ch.name}</div>
+                  <div className="cd-chap-no">Chapter {ch.name}</div>
                   {ch.title ? <div className="cd-chap-title">{ch.title}</div> : null}
                 </div>
                 <div className="cd-chap-right">
@@ -555,7 +554,7 @@ export default function ComicDetail() {
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               >
-                ‹ Trước
+                ‹ Previous
               </button>
 
               <div className="cd-page-numbers">
@@ -577,7 +576,7 @@ export default function ComicDetail() {
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
               >
-                Sau ›
+                Next ›
               </button>
             </div>
           )}

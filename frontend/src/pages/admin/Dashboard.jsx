@@ -12,7 +12,7 @@ async function fetchJSON(url, options = {}) {
   try {
     json = text ? JSON.parse(text) : null;
   } catch {
-    throw new Error(`API không trả JSON: ${url}`);
+    throw new Error(`API did not return JSON: ${url}`);
   }
 
   if (!res.ok) {
@@ -36,7 +36,7 @@ function dayLabelFromDate(dateStr) {
   if (Number.isNaN(d.getTime())) return dateStr;
 
   const day = d.getDay();
-  const map = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+  const map = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   return map[day] || dateStr;
 }
 
@@ -50,10 +50,10 @@ function timeAgo(iso) {
   const hours = Math.floor(diffMs / 3600000);
   const days = Math.floor(diffMs / 86400000);
 
-  if (mins < 1) return "Vừa xong";
-  if (mins < 60) return `${mins} phút trước`;
-  if (hours < 24) return `${hours} giờ trước`;
-  return `${days} ngày trước`;
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins} minutes ago`;
+  if (hours < 24) return `${hours} hours ago`;
+  return `${days} days ago`;
 }
 
 export default function Dashboard() {
@@ -134,7 +134,7 @@ export default function Dashboard() {
         );
       } catch (e) {
         console.error(e);
-        setErr(e.message || "Lỗi tải dashboard");
+        setErr(e.message || "Error loading dashboard");
       } finally {
         setLoading(false);
       }
@@ -173,7 +173,7 @@ export default function Dashboard() {
       : [];
 
     if (range === "today") {
-      return [{ label: "Hôm nay", value: Number(dashboard.traffic?.today_views || 0) }];
+      return [{ label: "Today", value: Number(dashboard.traffic?.today_views || 0) }];
     }
 
     return rows.map((x) => ({
@@ -188,7 +188,7 @@ export default function Dashboard() {
       : [];
 
     if (range === "today") {
-      return [{ label: "Hôm nay", value: Number(dashboard.revenue?.today_revenue || 0) }];
+      return [{ label: "Today", value: Number(dashboard.revenue?.today_revenue || 0) }];
     }
 
     return rows.map((x) => ({
@@ -216,9 +216,9 @@ export default function Dashboard() {
           <div className="container-fluid px-4 py-4">
             <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
               <div>
-                <h2 className="m-0 ad-title">Dashboard Tổng quan</h2>
+                <h2 className="m-0 ad-title">Dashboard Overview</h2>
                 <div className="text-secondary small">
-                  Thống kê traffic, doanh thu toàn sàn, user mới
+                  Traffic, platform revenue, and new users statistics
                 </div>
               </div>
 
@@ -229,21 +229,21 @@ export default function Dashboard() {
                     className={`btn ${range === "today" ? "btn-dark" : "btn-outline-dark"}`}
                     onClick={() => setRange("today")}
                   >
-                    Hôm nay
+                    Today
                   </button>
                   <button
                     type="button"
                     className={`btn ${range === "7d" ? "btn-dark" : "btn-outline-dark"}`}
                     onClick={() => setRange("7d")}
                   >
-                    7 ngày
+                    7 days
                   </button>
                   <button
                     type="button"
                     className={`btn ${range === "30d" ? "btn-dark" : "btn-outline-dark"}`}
                     onClick={() => setRange("30d")}
                   >
-                    30 ngày
+                    30 days
                   </button>
                 </div>
               </div>
@@ -265,7 +265,7 @@ export default function Dashboard() {
                     <div className="ad-kpi-value mt-1">
                       {loading ? "..." : fmtNum(trafficValue)}
                     </div>
-                    <div className="ad-kpi-sub mt-auto">lượt truy cập</div>
+                    <div className="ad-kpi-sub mt-auto">visits</div>
                   </div>
                 </div>
               </div>
@@ -280,11 +280,11 @@ export default function Dashboard() {
                 
                     </div>
 
-                    <div className="text-secondary small mt-3">Doanh thu toàn sàn</div>
+                    <div className="text-secondary small mt-3">Total Platform Revenue</div>
                     <div className="ad-kpi-value mt-1">
                       {loading ? "..." : fmtVND(revenueValue)}
                     </div>
-                    <div className="ad-kpi-sub mt-auto">tổng doanh thu</div>
+                    <div className="ad-kpi-sub mt-auto">total revenue</div>
                   </div>
                 </div>
               </div>
@@ -299,11 +299,11 @@ export default function Dashboard() {
                       
                     </div>
 
-                    <div className="text-secondary small mt-3">User mới</div>
+                    <div className="text-secondary small mt-3">New Users</div>
                     <div className="ad-kpi-value mt-1">
                       {loading ? "..." : fmtNum(newUsersValue)}
                     </div>
-                    <div className="ad-kpi-sub mt-auto">người dùng</div>
+                    <div className="ad-kpi-sub mt-auto">users</div>
                   </div>
                 </div>
               </div>
@@ -318,11 +318,11 @@ export default function Dashboard() {
                      
                     </div>
 
-                    <div className="text-secondary small mt-3">Giao dịch</div>
+                    <div className="text-secondary small mt-3">Transactions</div>
                     <div className="ad-kpi-value mt-1">
                       {loading ? "..." : fmtNum(ordersValue)}
                     </div>
-                    <div className="ad-kpi-sub mt-auto">đơn mua chap/gói</div>
+                    <div className="ad-kpi-sub mt-auto">chapter/package purchases</div>
                   </div>
                 </div>
               </div>
@@ -333,7 +333,7 @@ export default function Dashboard() {
                 <div className="card shadow-sm border-0 ad-card">
                   <div className="card-body">
                     <div className="d-flex justify-content-between align-items-center">
-                      <h5 className="fw-bold m-0">Traffic theo ngày</h5>
+                      <h5 className="fw-bold m-0">Daily Traffic</h5>
                       <span className="text-secondary small">({range})</span>
                     </div>
 
@@ -354,7 +354,7 @@ export default function Dashboard() {
                       ))}
 
                       {!loading && trafficSeries.length === 0 ? (
-                        <div className="text-secondary">Chưa có dữ liệu traffic</div>
+                        <div className="text-secondary">No traffic data available</div>
                       ) : null}
                     </div>
                   </div>
@@ -365,7 +365,7 @@ export default function Dashboard() {
                 <div className="card shadow-sm border-0 ad-card">
                   <div className="card-body">
                     <div className="d-flex justify-content-between align-items-center">
-                      <h5 className="fw-bold m-0">Doanh thu theo ngày</h5>
+                      <h5 className="fw-bold m-0">Daily Revenue</h5>
                       <span className="text-secondary small">({range})</span>
                     </div>
 
@@ -386,7 +386,7 @@ export default function Dashboard() {
                       ))}
 
                       {!loading && revenueSeries.length === 0 ? (
-                        <div className="text-secondary">Chưa có dữ liệu doanh thu</div>
+                        <div className="text-secondary">No revenue data available</div>
                       ) : null}
                     </div>
                   </div>
@@ -400,7 +400,7 @@ export default function Dashboard() {
               <div className="col-12 col-xl-12">
                 <div className="card shadow-sm border-0 ad-card">
                   <div className="card-body">
-                    <h5 className="fw-bold mb-3">User mới</h5>
+                    <h5 className="fw-bold mb-3">New Users</h5>
 
                     <div className="ad-users">
                       {(dashboard.users?.latest_users || []).map((u, idx) => (
@@ -417,12 +417,12 @@ export default function Dashboard() {
                       ))}
 
                       {!loading && (!dashboard.users?.latest_users || dashboard.users.latest_users.length === 0) ? (
-                        <div className="text-secondary">Chưa có user mới</div>
+                        <div className="text-secondary">No new users yet</div>
                       ) : null}
                     </div>
 
                     <button className="btn btn-outline-dark w-100 mt-3" type="button">
-                      Xem danh sách user
+                      View user list
                     </button>
                   </div>
                 </div>

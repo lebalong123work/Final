@@ -16,11 +16,11 @@ async function sendNewPasswordMail(toEmail, newPassword) {
   return transporter.sendMail({
     from: `Readink <${from}>`,
     to: toEmail,
-    subject: "Readink - Mật khẩu mới của bạn",
+    subject: "Readink - Your new password",
     html: `
       <div style="font-family:Arial; line-height:1.6">
-        <h3>Yêu cầu đặt lại mật khẩu</h3>
-        <p>Bạn vừa yêu cầu đặt lại mật khẩu. Đây là mật khẩu mới:</p>
+        <h3>Password reset request</h3>
+        <p>You have requested to reset your password. Here is your new password:</p>
         <p style="font-size:18px; font-weight:bold;">${newPassword}</p>
       </div>
     `,

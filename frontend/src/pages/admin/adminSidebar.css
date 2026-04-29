@@ -99,7 +99,7 @@
   position: static;            
 }
 
-/* ===== MOBILE: sidebar thành thanh ngang trên ===== */
+/* ===== MOBILE: sidebar becomes top horizontal bar ===== */
 @media (max-width: 992px) {
   .ad-side {
     width: 100%;
@@ -112,7 +112,7 @@
 
   .ad-side-nav {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr)); /* menu 2 cột */
+    grid-template-columns: repeat(2, minmax(0, 1fr)); /* 2-column menu */
     gap: 10px;
   }
 
@@ -125,7 +125,7 @@
   }
 }
 
-/* ===== MOBILE nhỏ hơn nữa: menu 1 cột ===== */
+/* ===== MOBILE smaller: 1-column menu ===== */
 @media (max-width: 576px) {
   .ad-side-nav {
     grid-template-columns: 1fr;

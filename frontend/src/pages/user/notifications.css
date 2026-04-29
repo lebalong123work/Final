@@ -1,22 +1,33 @@
+/* =====================================================
+   NOTIFICATIONS PAGE — Readink "Obsidian Premium"
+   Dark glassmorphism — zero logic touched
+===================================================== */
+
+/* ── Page wrapper ── */
 .nt-wrap {
   max-width: 960px;
 }
 
+/* ── Glass card ── */
 .nt-card {
-  background: #fff;
-  border: 1px solid #eef0f2;
-  border-radius: 18px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(59, 130, 246, 0.10);
+  border-radius: 24px;
+  box-shadow:
+    0 20px 60px rgba(8, 12, 24, 0.10),
+    0 1px 0 rgba(255, 255, 255, 0.90) inset;
   overflow: hidden;
 }
 
+/* ── Header ── */
 .nt-head {
-  padding: 16px 18px;
-  border-bottom: 1px solid #f1f3f5;
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  background: linear-gradient(135deg, rgba(59,130,246,.04), rgba(99,102,241,.03));
 }
 
 .nt-title {
@@ -24,67 +35,141 @@
   font-size: 18px;
   display: flex;
   align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #1e3a8a, #4f46e5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
+.nt-title i {
+  -webkit-text-fill-color: #3b82f6;
+}
+
+/* ── Actions row ── */
 .nt-actions {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
+/* ── Unread badge ── */
 .nt-badge {
   font-size: 12px;
   font-weight: 800;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
-  background: #f1f3f5;
-  border: 1px solid #e9ecef;
-  color: #495057;
+  background: rgba(226,232,240,.80);
+  border: 1px solid rgba(148,163,184,.25);
+  color: #475569;
+  letter-spacing: .2px;
+  transition: background .2s, color .2s, border-color .2s;
 }
 
 .nt-badge.on {
-  background: rgba(220, 53, 69, 0.1);
-  border-color: rgba(220, 53, 69, 0.25);
-  color: #dc3545;
+  background: rgba(239, 68, 68, 0.10);
+  border-color: rgba(239, 68, 68, 0.28);
+  color: #dc2626;
+  animation: nt-pulse .8s ease-in-out infinite alternate;
 }
 
+@keyframes nt-pulse {
+  from { box-shadow: 0 0 0 0 rgba(239,68,68,.20); }
+  to   { box-shadow: 0 0 0 6px rgba(239,68,68,.00); }
+}
+
+/* ── Reload button (uses Bootstrap .btn.btn-outline-dark) ── */
+.nt-actions .btn {
+  border-radius: 10px !important;
+  font-weight: 700;
+  font-size: 13px;
+  border-color: rgba(0,0,0,.10) !important;
+  color: #374151 !important;
+  background: rgba(255,255,255,.80) !important;
+  backdrop-filter: blur(8px);
+  transition: background .2s, box-shadow .2s, transform .15s !important;
+}
+
+.nt-actions .btn:hover {
+  background: rgba(59,130,246,.06) !important;
+  border-color: rgba(59,130,246,.22) !important;
+  color: #2563eb !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(37,99,235,.10) !important;
+}
+
+/* ── Loading ── */
 .nt-loading {
-  padding: 18px;
+  padding: 22px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: #6c757d;
+  gap: 12px;
+  color: #64748b;
+  font-weight: 600;
 }
 
+.nt-loading .spinner-border {
+  color: #3b82f6;
+}
+
+/* ── Empty ── */
 .nt-empty {
-  padding: 42px 18px;
+  padding: 52px 22px;
   text-align: center;
-  color: #6c757d;
+  color: #94a3b8;
 }
 
 .nt-empty i {
-  font-size: 34px;
-  opacity: 0.9;
+  font-size: 44px;
+  opacity: .75;
+  display: block;
+  margin-bottom: 10px;
+  color: #64748b;
 }
 
+.nt-empty .fw-bold {
+  font-size: 17px;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+/* ── Notification list ── */
 .nt-list {
   display: flex;
   flex-direction: column;
 }
 
+/* ── Single notification item ── */
 .nt-item {
   width: 100%;
   text-align: left;
-  border: 0;
-  background: #fff;
-  padding: 14px 18px;
-  border-bottom: 1px solid #f1f3f5;
-  transition: background 0.15s ease, transform 0.15s ease;
+  border: none;
+  background: transparent;
+  padding: 16px 22px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.045);
+  transition: background 0.18s ease, transform 0.15s ease;
   cursor: pointer;
+  position: relative;
+}
+
+.nt-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background .2s;
+  border-radius: 0 3px 3px 0;
 }
 
 .nt-item:hover {
-  background: #fafbfc;
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.nt-item:hover::before {
+  background: rgba(59, 130, 246, 0.40);
 }
 
 .nt-item:active {
@@ -92,45 +177,59 @@
 }
 
 .nt-item.unread {
-  background: rgba(13, 110, 253, 0.04);
+  background: rgba(59, 130, 246, 0.045);
 }
 
+.nt-item.unread::before {
+  background: linear-gradient(180deg, #3b82f6, #6366f1);
+}
+
+/* ── Item top row ── */
 .nt-itemTop {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
 .nt-itemTitle {
-  font-weight: 900;
-  color: #111;
+  font-weight: 800;
+  color: #111827;
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  line-height: 1.4;
 }
 
+/* ── Unread dot ── */
 .nt-dot {
   width: 9px;
   height: 9px;
   border-radius: 999px;
-  background: #0d6efd;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
   display: inline-block;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .16);
 }
 
+/* ── Timestamp ── */
 .nt-time {
   font-size: 12px;
-  color: #6c757d;
+  color: #94a3b8;
   white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 500;
 }
 
+/* ── Body text ── */
 .nt-body {
-  margin-top: 6px;
-  color: #343a40;
+  margin-top: 7px;
+  color: #475569;
   font-size: 14px;
-  line-height: 1.35;
+  line-height: 1.55;
 }
 
+/* ── Meta chips row ── */
 .nt-meta {
   margin-top: 10px;
   display: flex;
@@ -140,20 +239,99 @@
 }
 
 .nt-metaChip {
-  font-size: 12px;
-  font-weight: 800;
-  border: 1px solid #e9ecef;
-  background: #f8f9fa;
+  font-size: 11.5px;
+  font-weight: 700;
+  border: 1px solid rgba(99, 102, 241, .14);
+  background: rgba(99, 102, 241, .06);
   border-radius: 999px;
-  padding: 5px 10px;
-  color: #495057;
+  padding: 4px 10px;
+  color: #6366f1;
+  letter-spacing: .1px;
 }
 
+/* ── "Open" link chip ── */
 .nt-metaLink {
   margin-left: auto;
   font-size: 12px;
-  font-weight: 900;
-  color: #0d6efd;
+  font-weight: 800;
+  color: #3b82f6;
   display: inline-flex;
   align-items: center;
+  gap: 4px;
+  opacity: .80;
+  transition: opacity .15s;
+}
+
+.nt-item:hover .nt-metaLink {
+  opacity: 1;
+}
+
+/* ── Alert inside card ── */
+.nt-card .alert-danger {
+  margin: 14px 18px;
+  border-radius: 14px;
+  font-size: 14px;
+}
+
+/* ── Login prompt empty state ── */
+.nt-card .nt-empty .btn {
+  border-radius: 12px !important;
+  font-weight: 700;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, #1e40af, #4f46e5) !important;
+  border: none !important;
+  box-shadow: 0 8px 24px rgba(37,99,235,.28);
+  transition: transform .2s, box-shadow .2s !important;
+}
+
+.nt-card .nt-empty .btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 32px rgba(37,99,235,.38) !important;
+}
+
+/* ── Responsive ── */
+@media (max-width: 767.98px) {
+  .nt-wrap {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .nt-head {
+    padding: 14px 16px;
+    flex-wrap: wrap;
+  }
+
+  .nt-item {
+    padding: 14px 16px;
+  }
+
+  .nt-title {
+    font-size: 16px;
+  }
+
+  .nt-badge {
+    font-size: 11.5px;
+    padding: 5px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .nt-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .nt-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .nt-itemTop {
+    flex-wrap: wrap;
+  }
+
+  .nt-time {
+    width: 100%;
+    margin-top: 4px;
+  }
 }

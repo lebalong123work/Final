@@ -38,7 +38,7 @@ export default function TrafficTracker() {
   useEffect(() => {
     const path = location.pathname + location.search;
 
-    // bỏ qua admin/auth nếu muốn
+    // skip admin/auth routes if desired
     if (
       location.pathname.startsWith("/admin") ||
       location.pathname === "/login" ||

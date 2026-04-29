@@ -15,12 +15,12 @@ function getUserFromToken(token) {
   }
 }
 
-/**
- * Build payload notification theo loại truyện
- * comicKind:
- *   - "external"
- *   - "self"
- */
+/** 
+* Build notification payload according to story type 
+* comicKind: 
+* - "external" 
+* - "self" 
+*/
 function buildComicNotificationPayload({
   comicKind,
   comicSlug,
@@ -30,22 +30,22 @@ function buildComicNotificationPayload({
   if (comicKind === "self") {
     return {
       type: "NEW_SELF_COMIC",
-      title: "Tác giả bạn theo dõi vừa đăng truyện chữ mới",
-      body: comicName ? `${comicName}` : "Có truyện chữ mới",
+      title: "The author you follow has just posted a new novel.",
+      body: comicName ? `${comicName}` : "There is a new comic available.",
       url: `/self-comics/${comicId}`,
     };
   }
 
   return {
     type: "NEW_COMIC",
-    title: "Tác giả bạn theo dõi vừa đăng truyện mới",
-    body: comicName ? `${comicName}` : "Có truyện mới",
+    title: "The author you follow has just posted a new comic.",
+    body: comicName ? `${comicName}` : "There is a new comic available.",
     url: `/truyen/${comicSlug}`,
   };
 }
 
 /**
- * Gửi thông báo cho follower khi tác giả đăng truyện mới
+ * Send notification to followers when an author posts a new comic
  *
  * payload:
  * {
@@ -169,111 +169,63 @@ function initSocket(httpServer) {
     // =========================
     // CHAPTER ROOMS
     // =========================
-    socket.on("chapter:join", ({ chapterId }) => {
+    socket.on("chapter:join", ({ chapterType, chapterId }) => {
       if (!chapterId) return;
-      socket.join(`chapter:${chapterId}`);
+      const room = chapterType
+        ? `chapter:${chapterType}:${chapterId}`
+        : `chapter:${chapterId}`;
+      socket.join(room);
     });
 
-    socket.on("chapter:leave", ({ chapterId }) => {
+    socket.on("chapter:leave", ({ chapterType, chapterId }) => {
       if (!chapterId) return;
-      socket.leave(`chapter:${chapterId}`);
+      const room = chapterType
+        ? `chapter:${chapterType}:${chapterId}`
+        : `chapter:${chapterId}`;
+      socket.leave(room);
     });
 
     // =========================
     // COMMENTS
+    // REST API is the single source of truth for DB writes.
+    // Socket handlers only rebroadcast the already-persisted data.
     // =========================
-    socket.on("comment:create", async ({ chapterId, text, parentId }) => {
-      try {
-        const user = socket.user;
-        if (!user?.id) {
-          socket.emit("comment:error", {
-            message: "Bạn cần đăng nhập để bình luận",
-          });
-          return;
-        }
-
-        if (!chapterId || !String(text || "").trim()) return;
-
-        const cleanText = String(text).trim();
-        const pId = parentId ? Number(parentId) : null;
-
-        const r = await db.query(
-          `
-          INSERT INTO chapter_comments (chapter_id, user_id, parent_id, text)
-          VALUES ($1,$2,$3,$4)
-          RETURNING id, chapter_id, parent_id, text, created_at
-          `,
-          [chapterId, user.id, pId, cleanText]
-        );
-
-        const u = await db.query(`SELECT username FROM users WHERE id = $1`, [user.id]);
-
-        const comment = {
-          ...r.rows[0],
-          user_id: user.id,
-          user_name: u.rows[0]?.username || "User",
-        };
-
-        io.to(`chapter:${chapterId}`).emit("comment:new", {
-          chapterId,
-          comment,
-        });
-      } catch (e) {
-        console.error("socket comment:create error:", e);
-        socket.emit("comment:error", {
-          message: "Server lỗi khi gửi bình luận",
-        });
-      }
+    socket.on("comment:create", ({ chapterType, chapterId, comment }) => {
+      if (!chapterId || !comment) return;
+      const room = chapterType
+        ? `chapter:${chapterType}:${chapterId}`
+        : `chapter:${chapterId}`;
+      io.to(room).emit("comment:new", { chapterType, chapterId, comment });
     });
 
-    socket.on("comment:delete", async ({ chapterId, commentId }) => {
-      try {
-        const user = socket.user;
-        if (!user?.id) return;
-        if (!chapterId || !commentId) return;
-
-        const check = await db.query(
-          `SELECT id, user_id, chapter_id FROM chapter_comments WHERE id = $1`,
-          [commentId]
-        );
-
-        const row = check.rows[0];
-        if (!row) return;
-
-        const isOwner = Number(row.user_id) === Number(user.id);
-        const isAdmin = user.role === "admin" || user.role === 2;
-        if (!isOwner && !isAdmin) return;
-
-        await db.query(`DELETE FROM chapter_comments WHERE id = $1`, [commentId]);
-
-        io.to(`chapter:${chapterId}`).emit("comment:deleted", {
-          chapterId,
-          commentId: Number(commentId),
-        });
-      } catch (e) {
-        console.error("socket comment:delete error:", e);
-      }
+    socket.on("comment:delete", ({ chapterType, chapterId, commentId }) => {
+      if (!chapterId || !commentId) return;
+      const room = chapterType
+        ? `chapter:${chapterType}:${chapterId}`
+        : `chapter:${chapterId}`;
+      io.to(room).emit("comment:deleted", {
+        chapterType,
+        chapterId,
+        commentId: Number(commentId),
+      });
     });
 
     // =========================
     // REACTIONS
+    // REST API already toggled and returned updated counts.
+    // Client forwards the result; socket rebroadcasts to room.
     // =========================
-    socket.on("reaction:toggle", async ({ chapterId }) => {
-      try {
-        if (!chapterId) return;
-
-        const cnt = await db.query(
-          `SELECT COUNT(*)::int AS cnt FROM chapter_reactions WHERE chapter_id = $1`,
-          [chapterId]
-        );
-
-        io.to(`chapter:${chapterId}`).emit("reaction:update", {
-          chapterId,
-          likeCount: cnt.rows[0]?.cnt || 0,
-        });
-      } catch (e) {
-        console.error("socket reaction:toggle error:", e);
-      }
+    socket.on("reaction:toggle", ({ chapterType, chapterId, likeCount, liked }) => {
+      if (!chapterId) return;
+      const room = chapterType
+        ? `chapter:${chapterType}:${chapterId}`
+        : `chapter:${chapterId}`;
+      io.to(room).emit("reaction:update", {
+        chapterType,
+        chapterId,
+        likeCount: Number(likeCount || 0),
+        liked: !!liked,
+      });
     });
 
     // =========================

@@ -14,7 +14,7 @@ async function fetchJSON(url, options = {}) {
   try {
     json = text ? JSON.parse(text) : null;
   } catch {
-    throw new Error(`API không trả JSON: ${url}`);
+    throw new Error(`API did not return JSON: ${url}`);
   }
 
   if (!res.ok) {
@@ -50,19 +50,19 @@ function buildDetailUrl(item) {
 
 function buildSubtitle(item, idx) {
   const topText =
-    idx === 0 ? "Top 1 đọc nhiều" : idx === 1 ? "Top 2 nổi bật" : "Top 3 xu hướng";
+    idx === 0 ? "Top 1 Most Read" : idx === 1 ? "Top 2 Featured" : "Top 3 Trending";
 
-  let statusText = "Đang cập nhật";
+  let statusText = "Updating";
   if (item?.comic_type === "self") {
-    statusText = Number(item?.status) === 1 ? "Đang hiển thị" : "Ẩn / nháp";
+    statusText = Number(item?.status) === 1 ? "Visible" : "Hidden / Draft";
   } else {
     const raw = String(item?.status || "").toLowerCase();
-    if (raw === "ongoing") statusText = "Đang phát hành";
-    else if (raw === "completed") statusText = "Hoàn thành";
-    else if (raw === "coming_soon") statusText = "Sắp ra mắt";
+    if (raw === "ongoing") statusText = "Ongoing";
+    else if (raw === "completed") statusText = "Completed";
+    else if (raw === "coming_soon") statusText = "Coming Soon";
   }
 
-  return `${topText} • ${statusText} • ${Number(item?.read_count || 0)} lượt đọc`;
+  return `${topText} • ${statusText} • ${Number(item?.read_count || 0)} reads`;
 }
 
 export default function FeaturedBanner() {
@@ -84,7 +84,7 @@ export default function FeaturedBanner() {
         setSlides(Array.isArray(data?.data) ? data.data : []);
       } catch (e) {
         console.error(e);
-        setErr(e.message || "Lỗi tải banner");
+        setErr(e.message || "Error loading banner");
         setSlides([]);
       } finally {
         setLoading(false);
@@ -124,7 +124,7 @@ export default function FeaturedBanner() {
   if (loading) {
     return (
       <section className="fb-wrap">
-        <div className="container-fluid px-4 py-4 text-secondary">Đang tải banner...</div>
+        <div className="container-fluid px-4 py-4 text-secondary">Loading banner...</div>
       </section>
     );
   }
@@ -187,7 +187,7 @@ export default function FeaturedBanner() {
                       type="button"
                       onClick={() => navigate(buildDetailUrl(s))}
                     >
-                     Xem chi tiết
+                     View details
                     </button>
                   </div>
                 </div>

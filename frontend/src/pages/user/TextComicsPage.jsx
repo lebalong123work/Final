@@ -34,7 +34,7 @@ function fmtVND(n) {
 function normalizeSelfComic(c) {
   return {
     id: c.id,
-    name: c.title || "Không tên",
+    name: c.title || "Untitled",
     cover: buildSelfCover(c.cover_image),
     tags: c.category_name ? [c.category_name] : [],
     updated: fmtDate(c.updated_at || c.created_at),
@@ -45,7 +45,7 @@ function normalizeSelfComic(c) {
 }
 
 export default function SelfComicSlider({
-  title = "Truyện chữ mới cập nhật",
+  title = "Recently Updated Novels",
   perPage = 4,
   limit = 24,
   q = "",
@@ -77,7 +77,7 @@ export default function SelfComicSlider({
 
         const res = await fetch(url.toString());
         const data = await res.json();
-        if (!res.ok) throw new Error(data?.message || "Lỗi tải self comics");
+        if (!res.ok) throw new Error(data?.message || "Failed to load novels");
 
         const rows = Array.isArray(data?.data) ? data.data : [];
         setItems(rows.map(normalizeSelfComic));
@@ -104,8 +104,8 @@ export default function SelfComicSlider({
         </div>
 
     <div className="cs-actions d-flex align-items-center gap-2">
-  <Link to={viewAllHref} className="cs-viewAll" aria-label="Xem tất cả">
-    Xem tất cả <i className="bi bi-arrow-right ms-1" />
+  <Link to={viewAllHref} className="cs-viewAll" aria-label="View all">
+    View all <i className="bi bi-arrow-right ms-1" />
   </Link>
 
   <div className="cs-controls d-none d-md-flex gap-2">
@@ -130,7 +130,7 @@ export default function SelfComicSlider({
         {loading ? (
           <div className="cs-loading">
             <div className="spinner-border spinner-border-sm me-2" />
-            Đang tải...
+            Loading...
           </div>
         ) : (
           <div className="row g-3">
@@ -155,16 +155,16 @@ export default function SelfComicSlider({
                         <div className="cs-badges cs-badges-right">
                           {c.latest ? (
                             <span className="cs-badge cs-badge-dark">
-                              {c.latest} chương
+                              Ch.{c.latest}
                             </span>
                           ) : null}
 
                           {c.is_paid ? (
                             <span className="cs-badge cs-badge-pay">
-                              Trả phí • {fmtVND(c.price)}
+                              Paid • {fmtVND(c.price)}
                             </span>
                           ) : (
-                            <span className="cs-badge cs-badge-free">Miễn phí</span>
+                            <span className="cs-badge cs-badge-free">Free</span>
                           )}
                         </div>
 
@@ -174,13 +174,13 @@ export default function SelfComicSlider({
                           </div>
                           <div className="cs-overlayMeta">
                             <i className="bi bi-clock me-1" />
-                            Cập nhật: <span>{c.updated}</span>
+                            Updated: <span>{c.updated}</span>
                           </div>
 
                           <div className="cs-overlayActions">
                             <span className="cs-btnGhost">
                               <i className="bi bi-eye me-1" />
-                              Xem chi tiết
+                              View Details
                             </span>
                           </div>
                         </div>
@@ -193,7 +193,7 @@ export default function SelfComicSlider({
                       </div>
                       <div className="cs-update">
                         <i className="bi bi-clock me-1" />
-                        Cập nhật <span>{c.updated}</span>
+                        Updated <span>{c.updated}</span>
                       </div>
                     </div>
                   </div>
@@ -202,7 +202,7 @@ export default function SelfComicSlider({
             })}
 
             {!loading && current.length === 0 ? (
-              <div className="col-12 text-secondary py-4">Không có dữ liệu.</div>
+              <div className="col-12 text-secondary py-4">No data found.</div>
             ) : null}
           </div>
         )}

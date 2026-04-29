@@ -20,7 +20,7 @@ function requireAdmin(req, res, next) {
   const role = req.user?.role;
 
   if (!["admin", "sub_admin"].includes(role)) {
-    return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    return res.status(403).json({ message: "This chapter was popular." });
   }
 
   next();

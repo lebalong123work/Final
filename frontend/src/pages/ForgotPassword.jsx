@@ -12,7 +12,7 @@ function isEmail(v) {
 }
 
 export default function ForgotPassword() {
-  const [value, setValue] = useState(""); // email hoặc phone (hiện xử lý email)
+  const [value, setValue] = useState("");
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -20,9 +20,8 @@ export default function ForgotPassword() {
     e.preventDefault();
     const v = value.trim();
 
-    // Hiện backend reset theo email local -> kiểm tra email
     if (!isEmail(v)) {
-      toast.error("Vui lòng nhập đúng Email (hiện chưa hỗ trợ SĐT)");
+      toast.error("Please enter a valid Email address");
       return;
     }
 
@@ -39,16 +38,16 @@ export default function ForgotPassword() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        toast.error(data.message || "Gửi yêu cầu thất bại");
+        toast.error(data.message || "Request failed");
         return;
       }
 
-      toast.success(data.message || "Đã gửi mật khẩu mới về email");
+      toast.success(data.message || "New password has been sent to your email");
       setSent(true);
       setValue("");
     } catch (err) {
       console.error("forgot password error:", err);
-      toast.error("Không kết nối được server");
+      toast.error("Cannot connect to server");
     } finally {
       setSubmitting(false);
     }
@@ -58,7 +57,6 @@ export default function ForgotPassword() {
     <div className="login-page">
       <Header />
 
-      {/* Toast phải có để hiển thị */}
       <ToastContainer position="top-right" autoClose={2000} />
 
       <div className="container py-5">
@@ -81,16 +79,16 @@ export default function ForgotPassword() {
               </div>
 
               <h2 className="hero-title position-relative">
-                Khôi phục mật khẩu nhanh chóng
+                Recover your password quickly
               </h2>
               <p className="hero-sub position-relative">
-                Nhập Email để cấp mật khẩu mới
+                Enter your Email to receive a new password
               </p>
 
               <div className="hero-badges mt-4 position-relative">
-                <span className="badge rounded-pill text-bg-light">An toàn</span>
-                <span className="badge rounded-pill text-bg-light">Nhanh</span>
-                <span className="badge rounded-pill text-bg-light">Dễ dùng</span>
+                <span className="badge rounded-pill text-bg-light">Secure</span>
+                <span className="badge rounded-pill text-bg-light">Fast</span>
+                <span className="badge rounded-pill text-bg-light">Easy</span>
               </div>
             </div>
           </div>
@@ -105,18 +103,18 @@ export default function ForgotPassword() {
                   </div>
                 </div>
 
-                <p className="text-secondary mb-4 text-center">Quên mật khẩu?</p>
+                <p className="text-secondary mb-4 text-center">Forgot your password?</p>
 
                 {sent && (
                   <div className="alert alert-success" role="alert">
-                    Mật khẩu mới đã được cấp, vui lòng kiểm tra mail.
+                    A new password has been issued, please check your email.
                   </div>
                 )}
 
                 <form className="login-form" onSubmit={onSubmit}>
                   <div className="mb-3">
                     <label className="form-label fw-semibold text-start w-100">
-                      Email hoặc Số điện thoại
+                      Email or Phone Number
                     </label>
                     <div className="input-group">
                       <span className="input-group-text">
@@ -127,7 +125,7 @@ export default function ForgotPassword() {
   value={value}
   onChange={(e) => setValue(e.target.value)}
   className="form-control"
-  placeholder="vd: abc@gmail.com"
+  placeholder="ex: abc@gmail.com"
   required
   autoComplete="email"
   disabled={submitting}
@@ -140,23 +138,23 @@ export default function ForgotPassword() {
                     className="btn btn-primary w-100 py-2 fw-semibold"
                     disabled={submitting}
                   >
-                    {submitting ? "Đang gửi..." : "Gửi mật khẩu mới"}
+                    {submitting ? "Sending..." : "Send new password"}
                   </button>
                 </form>
 
                 <div className="text-center mt-4 text-secondary">
-                  Nhớ mật khẩu rồi?{" "}
+                  Remember your password?{" "}
                   <Link
                     to="/login"
                     className="link-primary fw-semibold text-decoration-none"
                   >
-                    Đăng nhập
+                    Login
                   </Link>
                 </div>
 
                 <div className="text-center mt-2">
                   <Link to="/register" className="text-decoration-none small">
-                    Tạo tài khoản mới
+                    Create a new account
                   </Link>
                 </div>
               </div>

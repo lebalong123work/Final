@@ -19,67 +19,61 @@ export default function Register() {
   const onChange = (e) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
- const onSubmit = async (e) => {
-  e.preventDefault();
+  const onSubmit = async (e) => {
+    e.preventDefault();
 
-  if (form.password !== form.confirmPassword) {
-    toast.error("Mật khẩu xác nhận không khớp!");
-    return;
-  }
-
-  try {
-    const res = await fetch("http://localhost:5000/api/auth/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username: form.username,
-        email: form.email,
-        phone: form.phone,
-        password: form.password,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      toast.error(data.message);
+    if (form.password !== form.confirmPassword) {
+      toast.error("Passwords do not match!");
       return;
     }
 
-    toast.success("Đăng ký thành công ");
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: form.username,
+          email: form.email,
+          phone: form.phone,
+          password: form.password,
+        }),
+      });
 
-    setForm({
-      username: "",
-      email: "",
-      phone: "",
-      password: "",
-      confirmPassword: "",
-    });
+      const data = await res.json();
 
- } catch (error) {
-  console.error(error);
+      if (!res.ok) {
+        toast.error(data.message);
+        return;
+      }
 
-  toast.error(
-    error?.message || "Lỗi kết nối server"
-  );
-}
-};
+      toast.success("Registration successful");
 
+      setForm({
+        username: "",
+        email: "",
+        phone: "",
+        password: "",
+        confirmPassword: "",
+      });
+    } catch (error) {
+      console.error(error);
+
+      toast.error(error?.message || "Server connection error");
+    }
+  };
 
   const registerWithGoogle = () => {
-      toast("Google register (UI). Tích hợp thật sẽ làm ở bước tiếp theo.");
+    toast(
+      "Google register (UI). Real integration will be done in the next step.",
+    );
   };
 
   return (
     <div className="login-page">
       <Header />
-  <ToastContainer 
-      position="top-right"
-      autoClose={3000}
-      theme="colored"
-    />
+      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
       <div className="container py-5">
         <div className="row justify-content-center align-items-center g-4">
           {/* Left banner */}
@@ -87,27 +81,34 @@ export default function Register() {
             <div className="login-hero p-4 p-xl-5 position-relative overflow-hidden">
               <div className="hero-bg-img" />
 
-            <div className="d-flex align-items-center gap-2 mb-3 position-relative">
-    <a href="/"><img  className="hero-logo" src="https://i.ibb.co/MxWp9rJW/logo-fotor-bg-remover-202603048410-2.png" alt="logo-fotor-bg-remover-202603048410-1" border="0"/></a>
-          
+              <div className="d-flex align-items-center gap-2 mb-3 position-relative">
+                <a href="/">
+                  <img
+                    className="hero-logo"
+                    src="https://i.ibb.co/MxWp9rJW/logo-fotor-bg-remover-202603048410-2.png"
+                    alt="logo-fotor-bg-remover-202603048410-1"
+                    border="0"
+                  />
+                </a>
 
-  <span className="hero-brand">
-    <span className="hero-z">R</span>eadink
-  </span>
-</div>
+                <span className="hero-brand">
+                  <span className="hero-z">R</span>eadink
+                </span>
+              </div>
 
               <h2 className="hero-title position-relative">
-                Tạo tài khoản để lưu truyện yêu thích
+                Create an account to save your favorite comics
               </h2>
 
               <p className="hero-sub position-relative">
-                Lưu lịch sử đọc, theo dõi truyện và nhận thông báo chap mới.
+                Save reading history, follow comics, and get new chapter
+                notifications.
               </p>
 
               <div className="hero-badges mt-4 position-relative">
-                <span className="badge rounded-pill text-bg-light">Nhanh</span>
-                <span className="badge rounded-pill text-bg-light">Bảo mật</span>
-                <span className="badge rounded-pill text-bg-light">Mượt</span>
+                <span className="badge rounded-pill text-bg-light">Fast</span>
+                <span className="badge rounded-pill text-bg-light">Secure</span>
+                <span className="badge rounded-pill text-bg-light">Smooth</span>
               </div>
             </div>
           </div>
@@ -123,7 +124,7 @@ export default function Register() {
                 </div>
 
                 <p className="text-secondary mb-4 text-center">
-                  Đăng ký để bắt đầu
+                  Register to get started
                 </p>
 
                 {/* Form */}
@@ -131,7 +132,7 @@ export default function Register() {
                   {/* Username */}
                   <div className="mb-3">
                     <label className="form-label fw-semibold text-start w-100">
-                      Tên người dùng
+                      Username
                     </label>
                     <div className="input-group">
                       <span className="input-group-text">
@@ -142,7 +143,7 @@ export default function Register() {
                         value={form.username}
                         onChange={onChange}
                         className="form-control"
-                        placeholder="vd: duy_thuan"
+                        placeholder="ex: ba_long_90"
                         required
                       />
                     </div>
@@ -163,7 +164,7 @@ export default function Register() {
                         value={form.email}
                         onChange={onChange}
                         className="form-control"
-                        placeholder="vd: abc@gmail.com"
+                        placeholder="ex: abc@gmail.com"
                         required
                       />
                     </div>
@@ -172,7 +173,7 @@ export default function Register() {
                   {/* Phone */}
                   <div className="mb-3">
                     <label className="form-label fw-semibold text-start w-100">
-                      Số điện thoại
+                      Phone Number
                     </label>
                     <div className="input-group">
                       <span className="input-group-text">
@@ -184,7 +185,7 @@ export default function Register() {
                         value={form.phone}
                         onChange={onChange}
                         className="form-control"
-                        placeholder="vd: 090xxxxxxx"
+                        placeholder="ex: 090xxxxxxx"
                         required
                       />
                     </div>
@@ -193,7 +194,7 @@ export default function Register() {
                   {/* Password */}
                   <div className="mb-3">
                     <label className="form-label fw-semibold text-start w-100">
-                      Mật khẩu
+                      Password
                     </label>
                     <div className="input-group">
                       <span className="input-group-text">
@@ -205,7 +206,7 @@ export default function Register() {
                         onChange={onChange}
                         type={showPass ? "text" : "password"}
                         className="form-control"
-                        placeholder="Nhập mật khẩu"
+                        placeholder="Enter password"
                         required
                         minLength={6}
                       />
@@ -215,16 +216,20 @@ export default function Register() {
                         onClick={() => setShowPass((s) => !s)}
                         aria-label="toggle password"
                       >
-                        <i className={`bi ${showPass ? "bi-eye-slash" : "bi-eye"}`} />
+                        <i
+                          className={`bi ${showPass ? "bi-eye-slash" : "bi-eye"}`}
+                        />
                       </button>
                     </div>
-                    <div className="form-text">Mật khẩu tối thiểu 6 ký tự.</div>
+                    <div className="form-text">
+                      Password must be at least 6 characters.
+                    </div>
                   </div>
 
                   {/* Confirm Password */}
                   <div className="mb-3">
                     <label className="form-label fw-semibold text-start w-100">
-                      Xác nhận mật khẩu
+                      Confirm Password
                     </label>
                     <div className="input-group">
                       <span className="input-group-text">
@@ -236,7 +241,7 @@ export default function Register() {
                         onChange={onChange}
                         type={showConfirm ? "text" : "password"}
                         className="form-control"
-                        placeholder="Nhập lại mật khẩu"
+                        placeholder="Re-enter password"
                         required
                         minLength={6}
                       />
@@ -246,27 +251,28 @@ export default function Register() {
                         onClick={() => setShowConfirm((s) => !s)}
                         aria-label="toggle confirm password"
                       >
-                        <i className={`bi ${showConfirm ? "bi-eye-slash" : "bi-eye"}`} />
+                        <i
+                          className={`bi ${showConfirm ? "bi-eye-slash" : "bi-eye"}`}
+                        />
                       </button>
                     </div>
                   </div>
 
                   {/* Terms */}
-                  
-<div className="d-flex">
-  <button
-    type="submit"
-    className="btn btn-primary w-100 py-2 fw-semibold d-flex align-items-center justify-content-center"
-  >
-    Đăng ký
-  </button>
-</div>
 
+                  <div className="d-flex">
+                    <button
+                      type="submit"
+                      className="btn btn-primary w-100 py-2 fw-semibold d-flex align-items-center justify-content-center"
+                    >
+                      Register
+                    </button>
+                  </div>
                 </form>
 
                 {/* Separator */}
                 <div className="login-sep my-4">
-                  <span>hoặc</span>
+                  <span>or</span>
                 </div>
 
                 {/* Google */}
@@ -280,19 +286,20 @@ export default function Register() {
                     src="https://www.svgrepo.com/show/475656/google-color.svg"
                     alt="google"
                   />
-                  Đăng ký với Google
+                  Register with Google
                 </button>
 
                 <div className="text-center mt-4 text-secondary">
-                  Đã có tài khoản?{" "}
-                  <Link to="/login" className="link-primary fw-semibold text-decoration-none">
-                    Đăng nhập
+                  Already have an account?{" "}
+                  <Link
+                    to="/login"
+                    className="link-primary fw-semibold text-decoration-none"
+                  >
+                    Login
                   </Link>
                 </div>
               </div>
             </div>
-
-       
           </div>
         </div>
       </div>

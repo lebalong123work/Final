@@ -13,7 +13,7 @@ async function fetchJSON(url, options) {
   try {
     json = await res.json();
   } catch {
-    // nếu không phải JSON thì bỏ qua
+    //
   }
 
   if (!res.ok) {
@@ -65,7 +65,7 @@ export default function NotificationsPage() {
       setItems(Array.isArray(listRes?.data) ? listRes.data : []);
       setUnread(Number(unreadRes?.data?.unread || 0));
     } catch (e) {
-      setErr(e.message || "Lỗi tải thông báo");
+      setErr(e.message || "Failed to load notifications");
       setItems([]);
       setUnread(0);
     } finally {
@@ -109,17 +109,17 @@ export default function NotificationsPage() {
             <div className="nt-head">
               <div className="nt-title">
                 <i className="bi bi-bell-fill me-2" />
-                Thông báo
+                Notifications
               </div>
             </div>
             <div className="nt-empty">
               <i className="bi bi-shield-lock" />
-              <div className="fw-bold mt-2">Bạn cần đăng nhập</div>
-              <div className="text-secondary">Đăng nhập để xem thông báo của bạn.</div>
+              <div className="fw-bold mt-2">You need to log in</div>
+              <div className="text-secondary">Log in to view your notifications.</div>
               <div className="mt-3">
                 <Link className="btn btn-dark" to="/login">
                   <i className="bi bi-box-arrow-in-right me-2" />
-                  Đăng nhập
+                  Log In
                 </Link>
               </div>
             </div>
@@ -138,17 +138,17 @@ export default function NotificationsPage() {
           <div className="nt-head">
             <div className="nt-title">
               <i className="bi bi-bell-fill me-2" />
-              Thông báo
+              Notifications
             </div>
 
             <div className="nt-actions">
               <span className={`nt-badge ${unread > 0 ? "on" : ""}`}>
-                {unread > 0 ? `${unread} chưa đọc` : "Đã đọc hết"}
+                {unread > 0 ? `${unread} unread` : "All read"}
               </span>
 
               <button className="btn btn-outline-dark btn-sm" onClick={loadAll} disabled={loading} type="button">
                 <i className={`bi ${loading ? "bi-arrow-repeat" : "bi-arrow-clockwise"} me-2`} />
-                Tải lại
+                Refresh
               </button>
             </div>
           </div>
@@ -163,13 +163,13 @@ export default function NotificationsPage() {
           {loading ? (
             <div className="nt-loading">
               <div className="spinner-border spinner-border-sm" />
-              <span>Đang tải thông báo...</span>
+              <span>Loading notifications...</span>
             </div>
           ) : items.length === 0 ? (
             <div className="nt-empty">
               <i className="bi bi-inbox" />
-              <div className="fw-bold mt-2">Chưa có thông báo</div>
-              <div className="text-secondary">Khi có thông báo mới, nó sẽ xuất hiện ở đây.</div>
+              <div className="fw-bold mt-2">No notifications yet</div>
+              <div className="text-secondary">New notifications will appear here.</div>
             </div>
           ) : (
             <div className="nt-list">
@@ -185,7 +185,7 @@ export default function NotificationsPage() {
                     <div className="nt-itemTop">
                       <div className="nt-itemTitle">
                         {isUnread ? <span className="nt-dot" /> : null}
-                        {n.title || "Thông báo"}
+                        {n.title || "Notification"}
                       </div>
                       <div className="nt-time">{fmtTime(n.created_at)}</div>
                     </div>
@@ -209,7 +209,7 @@ export default function NotificationsPage() {
 
                       {n.url ? (
                         <span className="nt-metaLink">
-                          Mở <i className="bi bi-chevron-right ms-1" />
+                          Open <i className="bi bi-chevron-right ms-1" />
                         </span>
                       ) : (
                         <span className="text-secondary small">—</span>

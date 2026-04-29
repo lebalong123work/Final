@@ -46,9 +46,8 @@ app.get("/health", async (req, res) => {
 app.use("/api/admin", require("./routes/adminExternalComics"));
 app.use("/api/external-comics", require("./routes/externalComics"));
 app.use("/api/purchases", require("./routes/purchaseComic"));
-app.use("/api/purchases", require("./routes/purchases"));
 app.use("/api/admin", adminDashboard);
-app.use("/levels", levelsRoute);
+app.use("/api/levels", levelsRoute);
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/me", meRoutes);

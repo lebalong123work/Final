@@ -1,70 +1,32 @@
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./header.css";
 import { io } from "socket.io-client";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "bootstrap-icons/font/bootstrap-icons.css";
+import NotificationDropdown from "./header/NotificationDropdown";
+import UserMenuDropdown from "./header/UserMenuDropdown";
+import CategoryNav from "./header/CategoryNav";
 
 const API_BASE = "http://localhost:5000";
 
 async function fetchJSON(url, options) {
   const res = await fetch(url, options);
   const text = await res.text();
-
   let json = null;
-  try {
-    json = text ? JSON.parse(text) : null;
-  } catch {
-    //
-  }
-
-  if (!res.ok) {
-    throw new Error(json?.message || `HTTP ${res.status}`);
-  }
-
+  try { json = text ? JSON.parse(text) : null; } catch { /* ignore */ }
+  if (!res.ok) throw new Error(json?.message || `HTTP ${res.status}`);
   return json;
-}
-
-function getNotifMeta(n) {
-  const type = String(n?.type || "").toUpperCase();
-
-  if (type === "NEW_SELF_COMIC") {
-    return {
-      label: "Truyện chữ mới",
-      icon: "bi bi-journal-text",
-      badgeClass: "self",
-    };
-  }
-
-  if (type === "NEW_COMIC") {
-    return {
-      label: "Truyện tranh mới",
-      icon: "bi bi-book",
-      badgeClass: "comic",
-    };
-  }
-
-  return {
-    label: "Thông báo",
-    icon: "bi bi-bell",
-    badgeClass: "default",
-  };
 }
 
 export default function Header() {
   const navigate = useNavigate();
-
   const [tick, setTick] = useState(0);
 
   const user = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("user");
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      console.error("Parse user error:", e);
-      return null;
-    }
+    try { const raw = localStorage.getItem("user"); return raw ? JSON.parse(raw) : null; }
+    catch { return null; }
   }, [tick]);
 
   const token = useMemo(() => localStorage.getItem("token") || "", [tick]);
@@ -75,8 +37,8 @@ export default function Header() {
   const [notifs, setNotifs] = useState([]);
 
   const [categories, setCategories] = useState([]);
-  const [catLoading, setCatLoading] = useState(false);
   const [catErr, setCatErr] = useState("");
+  const [catLoading, setCatLoading] = useState(false);
 
   const [moreOpen, setMoreOpen] = useState(false);
   const [textOpen, setTextOpen] = useState(false);
@@ -106,54 +68,24 @@ export default function Header() {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
-        setUserMenuOpen(false);
-      }
-
-      if (notifWrapRef.current && !notifWrapRef.current.contains(e.target)) {
-        setNotifOpen(false);
-      }
-
-      if (navRef.current && !navRef.current.contains(e.target)) {
-        setMoreOpen(false);
-        setTextOpen(false);
-      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setUserMenuOpen(false);
+      if (notifWrapRef.current && !notifWrapRef.current.contains(e.target)) setNotifOpen(false);
+      if (navRef.current && !navRef.current.contains(e.target)) { setMoreOpen(false); setTextOpen(false); }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
-    return () => {
-      if (notifHoverTimerRef.current) clearTimeout(notifHoverTimerRef.current);
-    };
+    return () => { if (notifHoverTimerRef.current) clearTimeout(notifHoverTimerRef.current); };
   }, []);
 
-  const closeAllMenus = () => {
-    setMoreOpen(false);
-    setTextOpen(false);
-    setUserMenuOpen(false);
-  };
-
-  const closeNavMenusOnly = () => {
-    setMoreOpen(false);
-    setTextOpen(false);
-  };
+  const closeAllMenus = () => { setMoreOpen(false); setTextOpen(false); setUserMenuOpen(false); };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-
-    if (socketRef.current) {
-      try {
-        socketRef.current.disconnect();
-      } catch {
-        //
-      }
-      socketRef.current = null;
-    }
-
+    if (socketRef.current) { try { socketRef.current.disconnect(); } catch { /* ignore */ } socketRef.current = null; }
     setUnread(0);
     setNotifs([]);
     closeAllMenus();
@@ -170,108 +102,63 @@ export default function Header() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const j = await r.json();
-      if (r.ok && Array.isArray(j?.data)) {
-        setNotifs(j.data);
-      }
-    } catch {
-      //
-    }
+      if (r.ok && Array.isArray(j?.data)) setNotifs(j.data);
+    } catch { /* ignore */ }
   };
 
   useEffect(() => {
     const run = async () => {
       try {
-        setCatLoading(true);
-        setCatErr("");
-
+        setCatLoading(true); setCatErr("");
         const data = await fetchJSON(`${API_BASE}/api/external-categories`);
-        const rows = Array.isArray(data?.data) ? data.data : [];
-        setCategories(rows);
-      } catch (e) {
-        console.error("Load external categories error:", e);
-        setCatErr(e?.message || "Lỗi tải danh mục");
-        setCategories([]);
-      } finally {
-        setCatLoading(false);
-      }
+        setCategories(Array.isArray(data?.data) ? data.data : []);
+      } catch (e) { setCatErr(e?.message || "Error loading categories"); setCategories([]); }
+      finally { setCatLoading(false); }
     };
-
     run();
   }, []);
 
   useEffect(() => {
     const run = async () => {
       try {
-        setOtherCatLoading(true);
-        setOtherCatErr("");
-
+        setOtherCatLoading(true); setOtherCatErr("");
         const data = await fetchJSON(`${API_BASE}/api/categories`);
-        const rows = Array.isArray(data?.data) ? data.data : [];
-        setOtherCategories(rows);
-      } catch (e) {
-        console.error("Load other categories error:", e);
-        setOtherCatErr(e?.message || "Lỗi tải mục khác");
-        setOtherCategories([]);
-      } finally {
-        setOtherCatLoading(false);
-      }
+        setOtherCategories(Array.isArray(data?.data) ? data.data : []);
+      } catch (e) { setOtherCatErr(e?.message || "Error loading other categories"); setOtherCategories([]); }
+      finally { setOtherCatLoading(false); }
     };
-
     run();
   }, []);
 
   useEffect(() => {
     if (!token || !user?.id) {
-      if (socketRef.current) {
-        try {
-          socketRef.current.disconnect();
-        } catch {
-          //
-        }
-        socketRef.current = null;
-      }
-      setUnread(0);
-      setNotifs([]);
+      if (socketRef.current) { try { socketRef.current.disconnect(); } catch { /* ignore */ } socketRef.current = null; }
+      setUnread(0); setNotifs([]);
       return;
     }
 
     if (!socketRef.current) {
-      socketRef.current = io(API_BASE, {
-        transports: ["websocket", "polling"],
-        withCredentials: true,
-        auth: { token },
-      });
-
-      socketRef.current.on("connect", () => {
-        socketRef.current?.emit("notif:unread:get");
-      });
-
-      socketRef.current.on("connect_error", (e) => {
-        console.log("socket connect_error:", e.message);
-      });
+      socketRef.current = io(API_BASE, { transports: ["websocket", "polling"], withCredentials: true, auth: { token } });
+      socketRef.current.on("connect", () => socketRef.current?.emit("notif:unread:get"));
+      socketRef.current.on("connect_error", (e) => console.log("socket connect_error:", e.message));
     } else {
       socketRef.current.auth = { token };
       if (!socketRef.current.connected) socketRef.current.connect();
     }
 
     const s = socketRef.current;
-
-    const onUnread = (payload) => {
-      if (typeof payload?.unread === "number") setUnread(payload.unread);
-    };
-
+    const onUnread = (payload) => { if (typeof payload?.unread === "number") setUnread(payload.unread); };
     const onNotifNew = (payload) => {
       const n = payload?.notification;
       if (!n?.id) return;
       setNotifs((prev) => {
-        const existedIdx = prev.findIndex((x) => Number(x.id) === Number(n.id));
         const copy = [...prev];
-        if (existedIdx >= 0) copy.splice(existedIdx, 1);
+        const idx = copy.findIndex((x) => Number(x.id) === Number(n.id));
+        if (idx >= 0) copy.splice(idx, 1);
         copy.unshift(n);
         return copy;
       });
     };
-
     const onNotifUpdated = (payload) => {
       const n = payload?.notification;
       if (!n?.id) return;
@@ -280,31 +167,19 @@ export default function Header() {
         if (idx < 0) return [n, ...prev];
         const copy = [...prev];
         copy[idx] = { ...copy[idx], ...n };
-        const moved = copy[idx];
-        copy.splice(idx, 1);
+        const moved = copy.splice(idx, 1)[0];
         copy.unshift(moved);
         return copy;
       });
     };
-
     s.on("notif:unread", onUnread);
     s.on("notif:new", onNotifNew);
     s.on("notif:updated", onNotifUpdated);
-
     fetchNotifications();
-
-    return () => {
-      s.off("notif:unread", onUnread);
-      s.off("notif:new", onNotifNew);
-      s.off("notif:updated", onNotifUpdated);
-    };
+    return () => { s.off("notif:unread", onUnread); s.off("notif:new", onNotifNew); s.off("notif:updated", onNotifUpdated); };
   }, [token, user?.id]);
 
-  const openNotif = () => {
-    if (notifHoverTimerRef.current) clearTimeout(notifHoverTimerRef.current);
-    setNotifOpen(true);
-  };
-
+  const openNotif = () => { if (notifHoverTimerRef.current) clearTimeout(notifHoverTimerRef.current); setNotifOpen(true); };
   const closeNotif = () => {
     if (notifHoverTimerRef.current) clearTimeout(notifHoverTimerRef.current);
     notifHoverTimerRef.current = setTimeout(() => setNotifOpen(false), 180);
@@ -312,367 +187,168 @@ export default function Header() {
 
   const markReadAndGo = (notif) => {
     if (!notif?.id) return;
-
     setNotifs((prev) =>
-      prev.map((x) =>
-        Number(x.id) === Number(notif.id)
-          ? { ...x, read_at: x.read_at || new Date().toISOString() }
-          : x
-      )
+      prev.map((x) => Number(x.id) === Number(notif.id) ? { ...x, read_at: x.read_at || new Date().toISOString() } : x)
     );
-
     socketRef.current?.emit("notif:read", { notifId: notif.id });
-
-    if (notif?.url) {
-      setNotifOpen(false);
-      setNavOpen(false);
-      closeAllMenus();
-      navigate(notif.url);
-    }
-  };
-
-  const fmtTime = (iso) => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "";
-    return d.toLocaleString("vi-VN");
+    if (notif?.url) { setNotifOpen(false); setNavOpen(false); closeAllMenus(); navigate(notif.url); }
   };
 
   const goSelfCategory = (catId) => {
-    closeAllMenus();
-    setNotifOpen(false);
-    setNavOpen(false);
+    closeAllMenus(); setNotifOpen(false); setNavOpen(false);
     navigate(`/self-comics?page=1&categoryId=${catId}`);
   };
 
   return (
-    <header className="zt-header border-bottom bg-white">
-      <nav className="navbar navbar-expand-lg navbar-light" ref={navRef}>
-        <div className="container-fluid px-4">
-          <Link
-            to="/"
-            className="navbar-brand d-flex align-items-center gap-2"
-            onClick={() => {
-              closeAllMenus();
-              setNavOpen(false);
-            }}
-          >
-            <div className="d-flex align-items-center gap-2 mb-0">
-              <img
-                className="hero-logo"
-                src="https://i.ibb.co/MxWp9rJW/logo-fotor-bg-remover-202603048410-2.png"
-                alt="logo"
-              />
+    <header className="rk-header">
 
-              <span className="brand-text">
-                <span className="brand-z">R</span>eadink
-              </span>
-            </div>
-          </Link>
+      {/* ════════════════════════════════════════
+          MAIN NAV BAR
+      ════════════════════════════════════════ */}
+      <div className="rk-nav" ref={navRef}>
 
-          <button
-            className="navbar-toggler"
-            type="button"
-            onClick={() => {
-              setNavOpen((v) => {
-                const next = !v;
-                if (!next) closeAllMenus();
-                return next;
-              });
-            }}
-            aria-controls="ztNav"
-            aria-expanded={navOpen}
-            aria-label="Toggle navigation"
-          >
-            <span className="navbar-toggler-icon" />
-          </button>
+        {/* Brand */}
+        <Link
+          to="/"
+          className="rk-brand"
+          onClick={() => { closeAllMenus(); setNavOpen(false); }}
+        >
+          <img
+            className="rk-logo"
+            src="https://i.ibb.co/MxWp9rJW/logo-fotor-bg-remover-202603048410-2.png"
+            alt="Readink logo"
+          />
+          <span className="rk-wordmark">
+            <span className="rk-wordmark-r">R</span>eadink
+          </span>
+        </Link>
 
-          <div className={`navbar-collapse collapse ${navOpen ? "show" : ""}`} id="ztNav">
-            <ul className="navbar-nav mx-auto mb-2 mb-lg-0 zt-nav">
-              {visibleCategories.map((cat) => (
-                <li className="nav-item" key={cat.id}>
-                  <NavLink
-                    className="nav-link"
-                    to={`/truyen?category=${cat.slug}`}
-                    onClick={() => {
-                      setNavOpen(false);
-                      closeAllMenus();
-                    }}
-                  >
-                    {cat.name}
-                  </NavLink>
-                </li>
-              ))}
-
-              {moreCategories.length > 0 ? (
-                <li className={`nav-item dropdown zt-catMore ${moreOpen ? "open" : ""}`}>
-                  <button
-                    type="button"
-                    className="nav-link zt-catMoreBtn zt-catToggleBtn"
-                    onClick={() => {
-                      setMoreOpen((v) => !v);
-                      setTextOpen(false);
-                    }}
-                  >
-                    Xem thêm
-                    <i className={`bi ms-1 ${moreOpen ? "bi-chevron-up" : "bi-chevron-down"}`} />
-                  </button>
-
-                  <div className={`zt-catDropdown ${moreOpen ? "show" : ""}`}>
-                    <div className="zt-catGrid">
-                      {moreCategories.map((cat) => (
-                        <Link
-                          key={cat.id}
-                          className="zt-catItem"
-                          to={`/truyen?category=${cat.slug}`}
-                          onClick={() => {
-                            closeNavMenusOnly();
-                            setNavOpen(false);
-                          }}
-                        >
-                          {cat.name}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                </li>
-              ) : null}
-
-              <li className={`nav-item dropdown zt-catMore ${textOpen ? "open" : ""}`}>
-                <button
-                  type="button"
-                  className="nav-link zt-catMoreBtn zt-catToggleBtn"
-                  onClick={() => {
-                    setTextOpen((v) => !v);
-                    setMoreOpen(false);
-                  }}
-                >
-                  Truyện chữ
-                  <i className={`bi ms-1 ${textOpen ? "bi-chevron-up" : "bi-chevron-down"}`} />
-                </button>
-
-                <div className={`zt-catDropdown ${textOpen ? "show" : ""}`}>
-                  <div className="zt-catDropdownInner">
-                    <Link
-                      className="zt-catItem zt-catItemAll"
-                      to="/self-comics?page=1"
-                      onClick={() => {
-                        closeNavMenusOnly();
-                        setNavOpen(false);
-                      }}
-                    >
-                      Tất cả truyện chữ
-                    </Link>
-
-                    {otherCatLoading ? (
-                      <div className="zt-catStatus">Đang tải...</div>
-                    ) : otherCatErr ? (
-                      <div className="zt-catStatus text-danger">{otherCatErr}</div>
-                    ) : otherCategories.length === 0 ? (
-                      <div className="zt-catStatus">Chưa có dữ liệu.</div>
-                    ) : (
-                      <div className="zt-catGrid">
-                        {otherCategories.map((cat) => (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            className="zt-catItem zt-catItemBtn"
-                            onClick={() => goSelfCategory(cat.id)}
-                          >
-                            {cat.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </li>
-            </ul>
-
-            <div className="d-flex align-items-center gap-2 flex-wrap">
-              <div
-                className="zt-notifWrap"
-                ref={notifWrapRef}
-                onMouseEnter={openNotif}
-                onMouseLeave={closeNotif}
-              >
-                <button
-                  className="btn zt-notifBtn"
-                  type="button"
-                  onClick={() => setNotifOpen((v) => !v)}
-                  title={user ? "Thông báo" : "Đăng nhập để nhận thông báo"}
-                  disabled={!user}
-                >
-                  <i className="bi bi-bell fs-5" />
-                  {user && unread > 0 ? (
-                    <span className="zt-notifBadge">{unread > 99 ? "99+" : unread}</span>
-                  ) : null}
-                </button>
-
-                {notifOpen && user ? (
-                  <div className="zt-notifDropdown">
-                    <div className="zt-notifHead">
-                      <div className="zt-notifTitle">
-                        <i className="bi bi-bell-fill me-2" />
-                        Thông báo
-                      </div>
-                      <button
-                        className="zt-notifRefresh"
-                        type="button"
-                        onClick={fetchNotifications}
-                        title="Tải lại"
-                      >
-                        <i className="bi bi-arrow-clockwise" />
-                      </button>
-                    </div>
-
-                    <div className="zt-notifList">
-                      {notifs.length === 0 ? (
-                        <div className="zt-notifEmpty">
-                          <i className="bi bi-inbox" />
-                          <div>Chưa có thông báo.</div>
-                        </div>
-                      ) : (
-                        notifs.map((n) => {
-                          const isUnread = !n.read_at;
-                          const meta = getNotifMeta(n);
-
-                          return (
-                            <button
-                              key={n.id}
-                              type="button"
-                              className={`zt-notifItem ${isUnread ? "unread" : ""}`}
-                              onClick={() => markReadAndGo(n)}
-                            >
-                              <div className="zt-notifItemTop">
-                                <div className="zt-notifItemTitle">
-                                  {isUnread ? <span className="dot" /> : null}
-                                  <i className={`${meta.icon} me-1`} />
-                                  {n.title || "Thông báo"}
-                                </div>
-                                <div className="zt-notifItemTime">{fmtTime(n.created_at)}</div>
-                              </div>
-
-                              <div className="zt-notifItemMetaRow">
-                                <span className={`zt-notifTypeBadge ${meta.badgeClass}`}>
-                                  {meta.label}
-                                </span>
-                              </div>
-
-                              {n.body ? <div className="zt-notifItemBody">{n.body}</div> : null}
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-
-                    <div className="zt-notifFoot">
-                      <Link
-                        className="zt-notifAll"
-                        to="/notifications"
-                        onClick={() => setNotifOpen(false)}
-                      >
-                        Xem tất cả <i className="bi bi-chevron-right ms-1" />
-                      </Link>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="zt-userMenu" ref={userMenuRef}>
-                <button
-                  className="btn user-btn zt-userToggle"
-                  type="button"
-                  onClick={() => setUserMenuOpen((v) => !v)}
-                >
-                  <i className="bi bi-person-circle fs-4 me-1" />
-                  {user ? user.username : "Tài khoản"}
-                  <i className={`bi ms-1 ${userMenuOpen ? "bi-chevron-up" : "bi-chevron-down"}`} />
-                </button>
-
-                {userMenuOpen && (
-                  <ul className="zt-userDropdown">
-                    {!user && (
-                      <>
-                        <li>
-                          <Link
-                            className="zt-userItem"
-                            to="/login"
-                            onClick={() => setUserMenuOpen(false)}
-                          >
-                            <i className="bi bi-box-arrow-in-right me-2" />
-                            Đăng nhập
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            className="zt-userItem"
-                            to="/register"
-                            onClick={() => setUserMenuOpen(false)}
-                          >
-                            <i className="bi bi-person-plus me-2" />
-                            Đăng ký
-                          </Link>
-                        </li>
-                      </>
-                    )}
-
-                    {user && (
-                      <>
-                        <li>
-                          <Link
-                            className="zt-userItem"
-                            to="/profile"
-                            onClick={() => setUserMenuOpen(false)}
-                          >
-                            <i className="bi bi-person me-2" />
-                            Trang cá nhân
-                          </Link>
-                        </li>
-
-
-                        {(user.role === "admin" || user.role === "sub_admin") && (
-                          <li>
-                            <Link
-                              className="zt-userItem text-danger"
-                              to="/admin"
-                              onClick={() => setUserMenuOpen(false)}
-                            >
-                              <i className="bi bi-speedometer2 me-2" />
-                              Quản trị
-                            </Link>
-                          </li>
-                        )}
-
-                        <li>
-                          <hr className="dropdown-divider" />
-                        </li>
-
-                        <li>
-                          <button
-                            className="zt-userItem zt-userBtn"
-                            type="button"
-                            onClick={() => {
-                              setUserMenuOpen(false);
-                              handleLogout();
-                            }}
-                          >
-                            <i className="bi bi-box-arrow-right me-2" />
-                            Đăng xuất
-                          </button>
-                        </li>
-                      </>
-                    )}
-                  </ul>
-                )}
-              </div>
-            </div>
-          </div>
+        {/* Desktop center — CategoryNav chips */}
+        <div className="rk-desktop-nav">
+          <CategoryNav
+            visibleCategories={visibleCategories}
+            moreCategories={moreCategories}
+            otherCategories={otherCategories}
+            otherCatLoading={otherCatLoading}
+            otherCatErr={otherCatErr}
+            moreOpen={moreOpen}
+            textOpen={textOpen}
+            setMoreOpen={setMoreOpen}
+            setTextOpen={setTextOpen}
+            onCategoryClick={() => { setNavOpen(false); closeAllMenus(); }}
+            onSelfCategoryClick={goSelfCategory}
+          />
         </div>
 
-        {catErr ? <div className="px-4 pb-2 text-danger small">Lỗi danh mục: {catErr}</div> : null}
-        {catLoading ? <div className="px-4 pb-2 text-muted small">Đang tải danh mục...</div> : null}
-      </nav>
+        {/* Right actions */}
+        <div className="rk-nav-end">
+
+          <NotificationDropdown
+            user={user}
+            unread={unread}
+            notifs={notifs}
+            notifOpen={notifOpen}
+            notifWrapRef={notifWrapRef}
+            onMouseEnter={openNotif}
+            onMouseLeave={closeNotif}
+            onToggle={() => setNotifOpen((v) => !v)}
+            onRefresh={fetchNotifications}
+            onMarkReadAndGo={markReadAndGo}
+            setNotifOpen={setNotifOpen}
+          />
+
+          <UserMenuDropdown
+            user={user}
+            userMenuOpen={userMenuOpen}
+            userMenuRef={userMenuRef}
+            onToggle={() => setUserMenuOpen((v) => !v)}
+            onLogout={handleLogout}
+            setUserMenuOpen={setUserMenuOpen}
+          />
+
+          {/* Mobile hamburger */}
+          <button
+            className={`rk-hamburger ${navOpen ? "open" : ""}`}
+            type="button"
+            onClick={() => { setNavOpen((v) => { const next = !v; if (!next) closeAllMenus(); return next; }); }}
+            aria-label="Toggle navigation"
+            aria-expanded={navOpen}
+          >
+            <span className="rk-hamburger-line" />
+            <span className="rk-hamburger-line" />
+            <span className="rk-hamburger-line" />
+          </button>
+
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════
+          MOBILE DRAWER — all categories as chips
+      ════════════════════════════════════════ */}
+      <div className={`rk-drawer ${navOpen ? "open" : ""}`} aria-hidden={!navOpen}>
+
+        {/* Comic categories */}
+        {categories.length > 0 && (
+          <>
+            <span className="rk-drawer-label">Comic Genres</span>
+            <div className="rk-drawer-chips">
+              {categories.map((cat) => (
+                <Link
+                  key={cat.id}
+                  className="rk-drawer-chip"
+                  to={`/truyen?category=${cat.slug}`}
+                  onClick={() => { setNavOpen(false); closeAllMenus(); }}
+                >
+                  {cat.name}
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
+
+        {catLoading && (
+          <div className="rk-drawer-chips">
+            <span className="rk-drawer-chip" style={{ opacity: .45, pointerEvents: "none" }}>Loading...</span>
+          </div>
+        )}
+
+        {(categories.length > 0 || otherCategories.length > 0) && (
+          <div className="rk-drawer-divider" />
+        )}
+
+        {/* Text novel categories */}
+        <span className="rk-drawer-label">Novels</span>
+        <div className="rk-drawer-chips">
+          <Link
+            className="rk-drawer-chip rk-drawer-chip--text"
+            to="/self-comics?page=1"
+            onClick={() => { setNavOpen(false); closeAllMenus(); }}
+          >
+            <i className="bi bi-journals" />
+            All Novels
+          </Link>
+
+          {otherCatLoading ? (
+            <span className="rk-drawer-chip" style={{ opacity: .45, pointerEvents: "none" }}>Loading...</span>
+          ) : (
+            otherCategories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                className="rk-drawer-chip"
+                onClick={() => goSelfCategory(cat.id)}
+              >
+                {cat.name}
+              </button>
+            ))
+          )}
+        </div>
+
+      </div>
+
+      {/* ── Status feedback ── */}
+      {catErr ? <div className="rk-cat-error">Category error: {catErr}</div> : null}
+
     </header>
   );
 }

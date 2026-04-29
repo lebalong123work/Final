@@ -79,7 +79,7 @@ export default function AdminCategories() {
 
   const saveCategory = async () => {
     if (!name.trim()) {
-      toast.error("Tên danh mục không được trống");
+      toast.error("Category name cannot be empty");
       return;
     }
 
@@ -103,7 +103,7 @@ export default function AdminCategories() {
           prev.map((x) => (x.id === editing.id ? res.data : x))
         );
 
-        toast.success("Cập nhật danh mục thành công");
+        toast.success("Category updated successfully");
       } else {
         const res = await fetchJSON(`${API_BASE}/api/categories`, {
           method: "POST",
@@ -116,7 +116,7 @@ export default function AdminCategories() {
 
         setRows((prev) => [res.data, ...prev]);
 
-        toast.success("Thêm danh mục thành công");
+        toast.success("Category added successfully");
       }
 
       closeModal();
@@ -129,12 +129,12 @@ export default function AdminCategories() {
 
   const deleteCategory = async (id) => {
   const result = await Swal.fire({
-    title: "Xóa danh mục?",
-    text: "Bạn sẽ không thể khôi phục sau khi xóa.",
+    title: "Delete category?",
+    text: "You will not be able to recover it after deletion.",
     icon: "warning",
     showCancelButton: true,
-    confirmButtonText: "Xóa",
-    cancelButtonText: "Hủy",
+    confirmButtonText: "Delete",
+    cancelButtonText: "Cancel",
     confirmButtonColor: "#dc3545",
     reverseButtons: true,
     focusCancel: true,
@@ -149,7 +149,7 @@ export default function AdminCategories() {
     });
 
     setRows((prev) => prev.filter((x) => x.id !== id));
-    toast.success("Đã xóa danh mục");
+    toast.success("Category deleted");
   } catch (e) {
     toast.error(e.message);
   }
@@ -173,15 +173,15 @@ export default function AdminCategories() {
           {/* Header */}
           <div className="d-flex justify-content-between align-items-center mb-3">
             <div>
-              <h2 className="ad-title m-0">Quản lý danh mục</h2>
+              <h2 className="ad-title m-0">Manage Categories</h2>
               <div className="small text-secondary">
-                Tổng: <b>{rows.length}</b> danh mục
+                Total: <b>{rows.length}</b> categories
               </div>
             </div>
 
             <button className="btn btn-dark" onClick={openAdd}>
               <i className="bi bi-plus-lg me-1"></i>
-              Thêm danh mục
+              Add Category
             </button>
           </div>
 
@@ -199,9 +199,9 @@ export default function AdminCategories() {
                   <thead>
                     <tr className="text-secondary small">
                       <th>ID</th>
-                      <th>Tên danh mục</th>
-                      <th>Ngày tạo</th>
-                      <th className="text-end">Hành động</th>
+                      <th>Category Name</th>
+                      <th>Created At</th>
+                      <th className="text-end">Actions</th>
                     </tr>
                   </thead>
 
@@ -209,13 +209,13 @@ export default function AdminCategories() {
                     {loading ? (
                       <tr>
                         <td colSpan={4} className="text-center py-4">
-                          Đang tải...
+                          Loading...
                         </td>
                       </tr>
                     ) : rows.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="text-center py-5 text-secondary">
-                          Không có danh mục
+                          No categories found
                         </td>
                       </tr>
                     ) : (
@@ -258,7 +258,7 @@ export default function AdminCategories() {
 
                 <div className="d-flex justify-content-between mb-3">
                   <div className="fw-bold">
-                    {editing ? "Sửa danh mục" : "Thêm danh mục"}
+                    {editing ? "Edit Category" : "Add Category"}
                   </div>
 
                   <button
@@ -269,7 +269,7 @@ export default function AdminCategories() {
                   </button>
                 </div>
 
-                <label className="form-label">Tên danh mục</label>
+                <label className="form-label">Category Name</label>
 
                 <input
                   className="form-control"
@@ -282,7 +282,7 @@ export default function AdminCategories() {
                     className="btn btn-outline-secondary w-100"
                     onClick={closeModal}
                   >
-                    Huỷ
+                    Cancel
                   </button>
 
                   <button
@@ -290,7 +290,7 @@ export default function AdminCategories() {
                     onClick={saveCategory}
                     disabled={saving}
                   >
-                    {saving ? "Đang lưu..." : "Lưu"}
+                    {saving ? "Saving..." : "Save"}
                   </button>
                 </div>
 

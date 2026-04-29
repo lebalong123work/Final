@@ -35,15 +35,14 @@ const onSubmit = async (e) => {
     const data = await res.json();
 
     if (!res.ok) {
-      toast.error(data.message || "Đăng nhập thất bại");
+      toast.error(data.message || "Login failed");
       return;
     }
 
-    // lưu token + user
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
 
-    toast.success("Đăng nhập thành công");
+    toast.success("Login successful");
 
     setTimeout(() => {
       if (data.user.role === "admin" || data.user.role === "sub_admin") {
@@ -55,7 +54,7 @@ const onSubmit = async (e) => {
 
   } catch (error) {
     console.error(error);
-    toast.error("Không kết nối được server");
+    toast.error("Cannot connect to server");
   }
 };
 
@@ -70,7 +69,6 @@ const onSubmit = async (e) => {
           {/* Left banner */}
          <div className="col-lg-6 d-none d-lg-block">
   <div className="login-hero p-4 p-xl-5 position-relative overflow-hidden">
-    {/* Ảnh chìm nền */}
     <div className="hero-bg-img" />
 
     <div className="d-flex align-items-center gap-2 mb-3 position-relative">
@@ -83,17 +81,17 @@ const onSubmit = async (e) => {
 </div>
 
     <h2 className="hero-title position-relative">
-      Chào mừng đến với <span className="hero-z">Z</span>truyện
+      Welcome to <span className="hero-z">R</span>eadink
     </h2>
 
     <p className="hero-sub position-relative">
-      Đồng bộ lịch sử đọc, theo dõi truyện yêu thích 
+      Sync reading history, follow your favorite comics
     </p>
 
     <div className="hero-badges mt-4 position-relative">
-      <span className="badge rounded-pill text-bg-light">Nhanh</span>
-      <span className="badge rounded-pill text-bg-light">Bảo mật</span>
-      <span className="badge rounded-pill text-bg-light">Mượt</span>
+      <span className="badge rounded-pill text-bg-light">Fast</span>
+      <span className="badge rounded-pill text-bg-light">Secure</span>
+      <span className="badge rounded-pill text-bg-light">Smooth</span>
     </div>
   </div>
 </div>
@@ -109,7 +107,7 @@ const onSubmit = async (e) => {
   </div>
 </div>
 
-                <p className="text-secondary mb-4 text-center">Đăng nhập để tiếp tục</p>
+                <p className="text-secondary mb-4 text-center">Log in to continue</p>
 
                 {/* Form */}
                 <form onSubmit={onSubmit}>
@@ -126,14 +124,14 @@ const onSubmit = async (e) => {
                         value={form.email}
                         onChange={onChange}
                         className="form-control"
-                        placeholder="vd: admin@gmail.com"
+                        placeholder="ẽ: admin@gmail.com"
                         required
                       />
                     </div>
                   </div>
 
                   <div className="mb-2">
-        <label className="form-label fw-semibold text-start w-100">Mật khẩu</label>
+        <label className="form-label fw-semibold text-start w-100">Password</label>
                     <div className="input-group">
                       <span className="input-group-text">
                         <i className="bi bi-lock" />
@@ -144,7 +142,7 @@ const onSubmit = async (e) => {
                         onChange={onChange}
                         type={showPass ? "text" : "password"}
                         className="form-control"
-                        placeholder="Nhập mật khẩu"
+                        placeholder="Enter password"
                         required
                       />
                       <button
@@ -170,7 +168,7 @@ const onSubmit = async (e) => {
                       to="/forgot-password"
                       className="link-primary text-decoration-none"
                     >
-                      Quên mật khẩu?
+                      Forgot password?
                     </Link>
                   </div>
 
@@ -178,20 +176,20 @@ const onSubmit = async (e) => {
                     type="submit"
                     className="btn btn-primary w-100 py-2 fw-semibold"
                   >
-                    Đăng nhập
+                    Login
                   </button>
                 </form>
 
                 {/* Separator */}
                 <div className="login-sep my-4">
-                  <span>hoặc</span>
+                  <span>or</span>
                 </div>
 
               <GoogleLogin
         onSuccess={async (res) => {
           if (loading) return;
 
-          const toastId = toast.loading("Đang đăng nhập Google...");
+          const toastId = toast.loading("Logging in with Google...");
           setLoading(true);
 
           try {
@@ -204,14 +202,14 @@ const onSubmit = async (e) => {
             const data = await r.json().catch(() => ({}));
 
             if (!r.ok) {
-              throw new Error(data?.message || "Đăng nhập thất bại");
+              throw new Error(data?.message || "Login failed");
             }
 
             localStorage.setItem("token", data.token);
             localStorage.setItem("user", JSON.stringify(data.user));
 
             toast.update(toastId, {
-              render: "Đăng nhập thành công ",
+              render: "Login successful",
               type: "success",
               isLoading: false,
               autoClose: 2000,
@@ -222,7 +220,7 @@ const onSubmit = async (e) => {
             console.error("Google login error:", err);
 
             toast.update(toastId, {
-              render: err.message || "Đăng nhập thất bại",
+              render: err.message || "Login failed",
               type: "error",
               isLoading: false,
               autoClose: 3000,
@@ -237,12 +235,12 @@ const onSubmit = async (e) => {
       />
 
                 <div className="text-center mt-4 text-secondary">
-                  Chưa có tài khoản?{" "}
+                  Don't have an account?{" "}
                   <Link
                     to="/register"
                     className="link-primary fw-semibold text-decoration-none"
                   >
-                    Đăng ký
+                    Register
                   </Link>
                 </div>
               </div>

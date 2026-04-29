@@ -26,20 +26,20 @@ export default function AdminSidebar() {
     { to: "/admin", icon: "bi-grid", label: "Dashboard", end: true, allow: ["admin", "sub_admin"] },
 
    
-    { to: "/admin/users", icon: "bi-people", label: "Quản lý người dùng", allow: ["admin"] },
+    { to: "/admin/users", icon: "bi-people", label: "Manage Users", allow: ["admin"] },
 
-    
-    { to: "/admin/comics", icon: "bi-journal-bookmark", label: "Quản lý truyện", allow: ["admin", "sub_admin"] },
 
-{ to: "/admin/categories", icon: "bi-collection", label: "Quản lý danh mục", allow: ["admin", "sub_admin"] },
-   
-    { to: "/admin/transactions", icon: "bi-receipt", label: "Giao dịch", allow: ["admin"] },
+    { to: "/admin/comics", icon: "bi-journal-bookmark", label: "Manage Comics", allow: ["admin", "sub_admin"] },
 
-    
-    { to: "/admin/levels", icon: "bi-layers", label: "Quản lý level", allow: ["admin"] },
+{ to: "/admin/categories", icon: "bi-collection", label: "Manage Categories", allow: ["admin", "sub_admin"] },
 
- 
-    { to: "/", icon: "bi-house-fill", label: "Trang chủ", allow: ["admin", "sub_admin", ""] },
+    { to: "/admin/transactions", icon: "bi-receipt", label: "Transactions", allow: ["admin"] },
+
+
+    { to: "/admin/levels", icon: "bi-layers", label: "Manage Levels", allow: ["admin"] },
+
+
+    { to: "/", icon: "bi-house-fill", label: "Home", allow: ["admin", "sub_admin", ""] },
   ];
 
   
@@ -55,7 +55,7 @@ export default function AdminSidebar() {
         <div>
           <div className="ad-side-name">Readink Admin</div>
           <div className="ad-side-sub">
-            {role === "admin" ? "Admin chính" : role === "sub_admin" ? "Admin phụ" : "User"}
+            {role === "admin" ? "Main Admin" : role === "sub_admin" ? "Sub Admin" : "User"}
           </div>
         </div>
       </div>
@@ -77,7 +77,7 @@ export default function AdminSidebar() {
       <div className="ad-side-footer">
         <button className="btn btn-outline-light w-100" type="button" onClick={handleLogout}>
           <i className="bi bi-box-arrow-right me-2" />
-          Đăng xuất
+          Logout
         </button>
       </div>
     </aside>

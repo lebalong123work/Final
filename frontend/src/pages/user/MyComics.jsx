@@ -36,14 +36,14 @@ function fmtDate(iso) {
 }
 
 function statusLabel(status) {
-  if (Number(status) === 1) return "Hiển thị";
-  if (Number(status) === 0) return "Ẩn";
-  return "Không rõ";
+  if (Number(status) === 1) return "Visible";
+  if (Number(status) === 0) return "Hidden";
+  return "Unknown";
 }
 
 function priceLabel(item) {
-  if (item?.is_paid) return item?.price > 0 ? fmtVND(item.price) : "Trả phí";
-  return "Miễn phí";
+  if (item?.is_paid) return item?.price > 0 ? fmtVND(item.price) : "Paid";
+  return "Free";
 }
 
 export default function MyComics() {
@@ -69,7 +69,6 @@ export default function MyComics() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // ===== modal thêm / sửa truyện =====
   const [selfModalOpen, setSelfModalOpen] = useState(false);
   const [selfSaving, setSelfSaving] = useState(false);
   const [editingSelfId, setEditingSelfId] = useState(null);
@@ -88,21 +87,19 @@ export default function MyComics() {
     price: 0,
   });
 
-  // ===== modal quản lý chương =====
   const [chapterModalOpen, setChapterModalOpen] = useState(false);
   const [chapterComic, setChapterComic] = useState(null);
   const [chapterItems, setChapterItems] = useState([]);
   const [chapterLoading, setChapterLoading] = useState(false);
   const [chapterError, setChapterError] = useState("");
 
-  // ===== modal thêm / sửa chương =====
   const [chapterFormOpen, setChapterFormOpen] = useState(false);
   const [chapterSaving, setChapterSaving] = useState(false);
   const [editingChapterId, setEditingChapterId] = useState(null);
   const [chapterDraft, setChapterDraft] = useState({
     comic_id: "",
     chapter_no: 1,
-    chapter_title: "Chương 1",
+    chapter_title: "Chapter 1",
   });
 
   const coverInputRef = useRef(null);
@@ -113,7 +110,7 @@ export default function MyComics() {
     extensions: [
       StarterKit,
       Placeholder.configure({
-        placeholder: "Nhập mô tả truyện...",
+        placeholder: "Enter comic description...",
       }),
       TiptapLink.configure({
         openOnClick: false,
@@ -138,7 +135,7 @@ export default function MyComics() {
     extensions: [
       StarterKit,
       Placeholder.configure({
-        placeholder: "Nhập nội dung chương...",
+        placeholder: "Enter chapter content...",
       }),
       TiptapLink.configure({
         openOnClick: false,
@@ -161,7 +158,7 @@ export default function MyComics() {
 
   useEffect(() => {
     if (!token) {
-      toast.warning("Bạn cần đăng nhập để vào trang này.");
+      toast.warning("You need to log in to access this page.");
       navigate("/login");
     }
   }, [token, navigate]);
@@ -197,7 +194,7 @@ export default function MyComics() {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Không tải được truyện tự đăng");
+      if (!res.ok) throw new Error(data?.message || "Failed to load self-published comics");
 
       setItems(Array.isArray(data?.data) ? data.data : []);
       setPage(data?.page || p);
@@ -206,7 +203,7 @@ export default function MyComics() {
       setItems([]);
       setPage(1);
       setTotalPages(1);
-      setError(e.message || "Có lỗi xảy ra");
+      setError(e.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -221,12 +218,12 @@ export default function MyComics() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Lỗi tải danh sách chương");
+      if (!res.ok) throw new Error(data?.message || "Failed to load chapter list");
 
       setChapterItems(Array.isArray(data?.data) ? data.data : []);
     } catch (e) {
       setChapterItems([]);
-      setChapterError(e.message || "Không tải được chương");
+      setChapterError(e.message || "Failed to load chapters");
     } finally {
       setChapterLoading(false);
     }
@@ -243,12 +240,12 @@ export default function MyComics() {
 
   const handleDelete = async (comic) => {
     const result = await Swal.fire({
-      title: "Xóa truyện này?",
-      text: `Bạn có chắc muốn xóa "${comic?.title || "truyện này"}" không?`,
+      title: "Delete this comic?",
+      text: `Are you sure you want to delete "${comic?.title || "this comic"}"?`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Xóa",
-      cancelButtonText: "Hủy",
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
       reverseButtons: true,
       confirmButtonColor: "#d33",
     });
@@ -264,20 +261,19 @@ export default function MyComics() {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Xóa truyện thất bại");
+      if (!res.ok) throw new Error(data?.message || "Failed to delete comic");
 
-      toast.success("Đã xóa truyện!");
+      toast.success("Comic deleted!");
       fetchMyComics(page);
     } catch (e) {
-      toast.error(e.message || "Lỗi xóa truyện");
+      toast.error(e.message || "Error deleting comic");
     }
   };
 
-  // ================== editor helpers ==================
   const setEditorLink = (editor) => {
     if (!editor) return;
     const prev = editor.getAttributes("link").href || "";
-    const url = window.prompt("Nhập link:", prev);
+    const url = window.prompt("Enter link:", prev);
     if (url === null) return;
 
     const v = url.trim();
@@ -290,7 +286,7 @@ export default function MyComics() {
 
   const addImageByUrlToEditor = (editor) => {
     if (!editor) return;
-    const url = window.prompt("Nhập URL ảnh:");
+    const url = window.prompt("Enter image URL:");
     if (!url) return;
     const v = url.trim();
     if (!v) return;
@@ -300,12 +296,12 @@ export default function MyComics() {
   const pickDescImageFile = () => descImageInputRef.current?.click();
   const pickChapterImageFile = () => chapterImageInputRef.current?.click();
 
-  const uploadImageToEditor = (e, editor, successMsg = "Đã chèn ảnh") => {
+  const uploadImageToEditor = (e, editor, successMsg = "Image inserted") => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Vui lòng chọn file ảnh");
+      toast.error("Please select an image file");
       e.target.value = "";
       return;
     }
@@ -322,7 +318,6 @@ export default function MyComics() {
     e.target.value = "";
   };
 
-  // ================== cover image ==================
   const pickCoverFile = () => coverInputRef.current?.click();
 
   const onUploadCoverImage = (e) => {
@@ -330,7 +325,7 @@ export default function MyComics() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Vui lòng chọn file ảnh hợp lệ");
+      toast.error("Please select a valid image file");
       e.target.value = "";
       return;
     }
@@ -340,7 +335,7 @@ export default function MyComics() {
       const base64 = reader.result;
       if (typeof base64 === "string") {
         setSelfDraft((p) => ({ ...p, cover_image: base64 }));
-        toast.success("Đã chọn ảnh chính");
+        toast.success("Cover image selected");
       }
     };
     reader.readAsDataURL(file);
@@ -351,7 +346,6 @@ export default function MyComics() {
     setSelfDraft((p) => ({ ...p, cover_image: "" }));
   };
 
-  // ================== category ensure ==================
   const ensureCategoryId = async () => {
     const categoryName = String(selfDraft.category_name || "").trim();
 
@@ -368,13 +362,12 @@ export default function MyComics() {
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data?.message || "Không thể tạo / kiểm tra danh mục");
+      throw new Error(data?.message || "Failed to create/check category");
     }
 
     return data?.data?.id || null;
   };
 
-  // ================== self modal ==================
   const resetSelfDraft = () => {
     setSelfDraft({
       title: "",
@@ -395,7 +388,7 @@ export default function MyComics() {
 
   const openSelfModal = () => {
     if (!token) {
-      toast.warning("Bạn cần đăng nhập để đăng truyện.");
+      toast.warning("You need to log in to post a comic.");
       return;
     }
     resetSelfDraft();
@@ -404,7 +397,7 @@ export default function MyComics() {
 
   const openEditSelfModal = (comic) => {
     if (!token) {
-      toast.warning("Bạn cần đăng nhập.");
+      toast.warning("You need to log in.");
       return;
     }
 
@@ -436,7 +429,7 @@ export default function MyComics() {
   };
 
   const saveSelfComic = async () => {
-    if (!token) return toast.error("Thiếu token đăng nhập.");
+    if (!token) return toast.error("Missing login token.");
 
     const title = String(selfDraft.title || "").trim();
     const author = String(selfDraft.author || "").trim();
@@ -445,15 +438,15 @@ export default function MyComics() {
     const descriptionHTML = descEditor?.getHTML?.() || "";
     const totalChapters = Math.max(1, Number(selfDraft.total_chapters || 1));
 
-    if (!title) return toast.error("Vui lòng nhập tiêu đề");
-    if (!coverImage) return toast.error("Vui lòng thêm ảnh chính");
-    if (totalChapters < 1) return toast.error("Tổng số chương phải >= 1");
+    if (!title) return toast.error("Please enter a title");
+    if (!coverImage) return toast.error("Please add a cover image");
+    if (totalChapters < 1) return toast.error("Total chapters must be >= 1");
 
     const isPaid = !!selfDraft.is_paid;
     const price = Math.max(0, Number(selfDraft.price || 0));
 
     if (isPaid && price <= 0) {
-      return toast.error("Giá phải > 0 khi bật trả phí");
+      return toast.error("Price must be > 0 for paid access");
     }
 
     try {
@@ -493,24 +486,23 @@ export default function MyComics() {
       const data = await r.json().catch(() => ({}));
       if (!r.ok) {
         throw new Error(
-          data?.message || (isEdit ? "Cập nhật truyện thất bại" : "Tạo truyện thất bại")
+          data?.message || (isEdit ? "Failed to update comic" : "Failed to create comic")
         );
       }
 
-      toast.success(isEdit ? "Đã cập nhật truyện!" : "Đã tạo truyện!");
+      toast.success(isEdit ? "Comic updated!" : "Comic created!");
 
       closeSelfModal();
       await fetchCategories();
       await fetchMyComics(1);
       setPage(1);
     } catch (e) {
-      toast.error(e.message || "Lỗi lưu truyện");
+      toast.error(e.message || "Error saving comic");
     } finally {
       setSelfSaving(false);
     }
   };
 
-  // ================== chapter manager ==================
   const openChapterManager = async (comic) => {
     setChapterComic(comic);
     setChapterModalOpen(true);
@@ -539,7 +531,7 @@ export default function MyComics() {
     setChapterDraft({
       comic_id: chapterComic.id,
       chapter_no: nextNo,
-      chapter_title: `Chương ${nextNo}`,
+      chapter_title: `Chapter ${nextNo}`,
     });
     setChapterFormOpen(true);
 
@@ -553,7 +545,7 @@ export default function MyComics() {
     setChapterDraft({
       comic_id: chapter.comic_id,
       chapter_no: Number(chapter.chapter_no || 1),
-      chapter_title: chapter.chapter_title || `Chương ${chapter.chapter_no || 1}`,
+      chapter_title: chapter.chapter_title || `Chapter ${chapter.chapter_no || 1}`,
     });
     setChapterFormOpen(true);
 
@@ -562,13 +554,13 @@ export default function MyComics() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Không tải được chi tiết chương");
+      if (!res.ok) throw new Error(data?.message || "Failed to load chapter details");
 
       setTimeout(() => {
         chapterEditor?.commands?.setContent(data?.data?.content || "");
       }, 0);
     } catch (e) {
-      toast.error(e.message || "Lỗi tải chương");
+      toast.error(e.message || "Error loading chapter");
     }
   };
 
@@ -579,7 +571,7 @@ export default function MyComics() {
     setChapterDraft({
       comic_id: "",
       chapter_no: 1,
-      chapter_title: "Chương 1",
+      chapter_title: "Chapter 1",
     });
     setTimeout(() => {
       chapterEditor?.commands?.setContent("");
@@ -592,25 +584,25 @@ export default function MyComics() {
       ...p,
       chapter_no: n,
       chapter_title:
-        !p.chapter_title || p.chapter_title.startsWith("Chương ")
-          ? `Chương ${n}`
+        !p.chapter_title || p.chapter_title.startsWith("Chapter ")
+          ? `Chapter ${n}`
           : p.chapter_title,
     }));
   };
 
   const saveChapter = async () => {
-    if (!token) return toast.error("Thiếu token đăng nhập.");
-    if (!chapterComic) return toast.error("Thiếu truyện.");
+    if (!token) return toast.error("Missing login token.");
+    if (!chapterComic) return toast.error("No comic selected.");
 
     const chapterNo = Math.max(1, Number(chapterDraft.chapter_no || 1));
     const chapterTitle =
-      String(chapterDraft.chapter_title || "").trim() || `Chương ${chapterNo}`;
+      String(chapterDraft.chapter_title || "").trim() || `Chapter ${chapterNo}`;
     const contentHTML = chapterEditor?.getHTML?.() || "";
     const plainText = chapterEditor?.getText?.().trim() || "";
     const hasImage = contentHTML.includes("<img");
 
-    if (!chapterTitle) return toast.error("Vui lòng nhập tiêu đề chương");
-    if (!plainText && !hasImage) return toast.error("Vui lòng nhập nội dung chương");
+    if (!chapterTitle) return toast.error("Please enter a chapter title");
+    if (!plainText && !hasImage) return toast.error("Please enter chapter content");
 
     try {
       setChapterSaving(true);
@@ -646,16 +638,16 @@ export default function MyComics() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(
-          data?.message || (isEdit ? "Cập nhật chương thất bại" : "Thêm chương thất bại")
+          data?.message || (isEdit ? "Failed to update chapter" : "Failed to add chapter")
         );
       }
 
-      toast.success(isEdit ? "Đã cập nhật chương!" : "Đã thêm chương!");
+      toast.success(isEdit ? "Chapter updated!" : "Chapter added!");
       closeChapterForm();
       await fetchChaptersByComic(chapterComic.id);
       await fetchMyComics(page);
     } catch (e) {
-      toast.error(e.message || "Lỗi lưu chương");
+      toast.error(e.message || "Error saving chapter");
     } finally {
       setChapterSaving(false);
     }
@@ -663,12 +655,12 @@ export default function MyComics() {
 
   const deleteChapter = async (chapter) => {
     const result = await Swal.fire({
-      title: "Xóa chương này?",
-      text: `Bạn có chắc muốn xóa "${chapter?.chapter_title || "chương này"}" không?`,
+      title: "Delete this chapter?",
+      text: `Are you sure you want to delete "${chapter?.chapter_title || "this chapter"}"?`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Xóa",
-      cancelButtonText: "Hủy",
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
       reverseButtons: true,
       confirmButtonColor: "#d33",
     });
@@ -684,13 +676,13 @@ export default function MyComics() {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Xóa chương thất bại");
+      if (!res.ok) throw new Error(data?.message || "Failed to delete chapter");
 
-      toast.success("Đã xóa chương!");
+      toast.success("Chapter deleted!");
       await fetchChaptersByComic(chapterComic.id);
       await fetchMyComics(page);
     } catch (e) {
-      toast.error(e.message || "Lỗi xóa chương");
+      toast.error(e.message || "Error deleting chapter");
     }
   };
 
@@ -708,25 +700,25 @@ export default function MyComics() {
                 Creator Studio
               </div>
 
-              <h1 className="mc-title">Truyện của tôi</h1>
+              <h1 className="mc-title">My Comics</h1>
               <p className="mc-subtitle">
-                Quản lý truyện tự đăng, cập nhật nội dung và theo dõi danh sách truyện của bạn.
+                Manage self-published comics, update content and track your comic list.
               </p>
 
               <div className="mc-hero__stats">
                 <div className="mc-stat">
                   <span className="mc-stat__value">{items.length}</span>
-                  <span className="mc-stat__label">Truyện hiện tại</span>
+                  <span className="mc-stat__label">Current comics</span>
                 </div>
 
                 <div className="mc-stat">
                   <span className="mc-stat__value">{page}</span>
-                  <span className="mc-stat__label">Trang hiện tại</span>
+                  <span className="mc-stat__label">Current page</span>
                 </div>
 
                 <div className="mc-stat">
                   <span className="mc-stat__value">{totalPages}</span>
-                  <span className="mc-stat__label">Tổng trang</span>
+                  <span className="mc-stat__label">Total pages</span>
                 </div>
               </div>
             </div>
@@ -738,12 +730,12 @@ export default function MyComics() {
                 onClick={openSelfModal}
               >
                 <i className="bi bi-plus-circle me-2" />
-                Thêm truyện mới
+                Add New Comic
               </button>
 
               <Link className="btn mc-btn-light" to="/profile">
                 <i className="bi bi-person-circle me-2" />
-                Về trang cá nhân
+                Back to Profile
               </Link>
             </div>
           </div>
@@ -753,7 +745,7 @@ export default function MyComics() {
               <i className="bi bi-search" />
               <input
                 type="text"
-                placeholder="Tìm theo tên truyện..."
+                placeholder="Search by comic title..."
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
@@ -769,7 +761,7 @@ export default function MyComics() {
                 }}
                 disabled={catLoading}
               >
-                <option value="">Tất cả danh mục</option>
+                <option value="">All categories</option>
                 {cats.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -791,7 +783,7 @@ export default function MyComics() {
           {loading ? (
             <div className="mc-loading">
               <div className="spinner-border spinner-border-sm" />
-              <span>Đang tải truyện...</span>
+              <span>Loading comics...</span>
             </div>
           ) : null}
 
@@ -800,15 +792,15 @@ export default function MyComics() {
               <div className="mc-empty__icon">
                 <i className="bi bi-journal-x" />
               </div>
-              <h3>Bạn chưa có truyện nào</h3>
-              <p>Hãy bắt đầu tạo bộ truyện đầu tiên của bạn ngay hôm nay.</p>
+              <h3>You have no comics yet</h3>
+              <p>Start creating your first comic series today.</p>
               <button
                 className="btn mc-btn-primary"
                 type="button"
                 onClick={openSelfModal}
               >
                 <i className="bi bi-plus-lg me-2" />
-                Tạo truyện đầu tiên
+                Create Your First Comic
               </button>
             </div>
           ) : null}
@@ -837,33 +829,33 @@ export default function MyComics() {
 
                     <div className="mc-card__body">
                       <h3 className="mc-card__title" title={c?.title || ""}>
-                        {c?.title || "Không có tiêu đề"}
+                        {c?.title || "Untitled"}
                       </h3>
 
                       <div className="mc-card__meta">
                         <div>
                           <i className="bi bi-person me-2" />
-                          <b>Tác giả:</b> {c?.author || user?.name || "—"}
+                          <b>Author:</b> {c?.author || user?.name || "—"}
                         </div>
 
                         <div>
                           <i className="bi bi-translate me-2" />
-                          <b>Dịch bởi:</b> {c?.translated_by || "—"}
+                          <b>Translated by:</b> {c?.translated_by || "—"}
                         </div>
 
                         <div>
                           <i className="bi bi-grid me-2" />
-                          <b>Danh mục:</b> {c?.category_name || "—"}
+                          <b>Category:</b> {c?.category_name || "—"}
                         </div>
 
                         <div>
                           <i className="bi bi-collection-play me-2" />
-                          <b>Tổng chương:</b> {c?.total_chapters || 1}
+                          <b>Total chapters:</b> {c?.total_chapters || 1}
                         </div>
 
                         <div>
                           <i className="bi bi-clock-history me-2" />
-                          <b>Cập nhật:</b> {fmtDate(c?.updated_at || c?.created_at)}
+                          <b>Updated:</b> {fmtDate(c?.updated_at || c?.created_at)}
                         </div>
                       </div>
 
@@ -874,7 +866,7 @@ export default function MyComics() {
                           onClick={() => openEditSelfModal(c)}
                         >
                           <i className="bi bi-pencil-square me-2" />
-                          Sửa
+                          Edit
                         </button>
 
                         <button
@@ -883,7 +875,7 @@ export default function MyComics() {
                           onClick={() => openChapterManager(c)}
                         >
                           <i className="bi bi-collection me-2" />
-                          Chương
+                          Chapters
                         </button>
 
                         <button
@@ -892,7 +884,7 @@ export default function MyComics() {
                           onClick={() => handleDelete(c)}
                         >
                           <i className="bi bi-trash me-2" />
-                          Xóa
+                          Delete
                         </button>
                       </div>
                     </div>
@@ -914,7 +906,7 @@ export default function MyComics() {
               </button>
 
               <div className="mc-page-indicator">
-                Trang <b>{page}</b> / {totalPages}
+                Page <b>{page}</b> / {totalPages}
               </div>
 
               <button
@@ -936,10 +928,10 @@ export default function MyComics() {
             <div className="ad-modal-header d-flex align-items-start justify-content-between gap-3 mb-2">
               <div className="min-w-0">
                 <div className="fw-bold">
-                  {editingSelfId ? "Sửa truyện tự đăng" : "Thêm truyện tự đăng"}
+                  {editingSelfId ? "Edit Self-published Comic" : "Add Self-published Comic"}
                 </div>
                 <div className="text-secondary small">
-                  Ảnh chính + mô tả + tác giả + tổng số chương + miễn phí / trả phí
+                  Cover image + description + author + total chapters + free / paid
                 </div>
               </div>
 
@@ -954,48 +946,48 @@ export default function MyComics() {
             </div>
 
             <div className="ad-modal-body-scroll mt-3">
-              <label className="form-label fw-semibold">Tiêu đề</label>
+              <label className="form-label fw-semibold">Title</label>
               <input
                 className="form-control"
                 value={selfDraft.title}
                 onChange={(e) => setSelfDraft((p) => ({ ...p, title: e.target.value }))}
-                placeholder="Ví dụ: Truyện tự đăng của tôi..."
+                placeholder="E.g.: My self-published comic..."
                 disabled={selfSaving}
               />
 
               <div className="mt-3">
-                <label className="form-label fw-semibold">Tác giả</label>
+                <label className="form-label fw-semibold">Author</label>
                 <input
                   className="form-control"
                   value={selfDraft.author}
                   onChange={(e) => setSelfDraft((p) => ({ ...p, author: e.target.value }))}
-                  placeholder="Ví dụ: Nguyễn Văn A"
+                  placeholder="E.g.: John Doe"
                   disabled={selfSaving}
                 />
               </div>
 
               <div className="mt-3">
-                <label className="form-label fw-semibold">Dịch bởi</label>
+                <label className="form-label fw-semibold">Translated by</label>
                 <input
                   className="form-control"
                   value={selfDraft.translated_by}
                   onChange={(e) =>
                     setSelfDraft((p) => ({ ...p, translated_by: e.target.value }))
                   }
-                  placeholder="Ví dụ: Nhóm dịch ABC"
+                  placeholder="E.g.: Translation Group ABC"
                   disabled={selfSaving}
                 />
               </div>
 
               <div className="mt-3">
-                <label className="form-label fw-semibold">Ảnh chính</label>
+                <label className="form-label fw-semibold">Cover Image</label>
 
                 <div className="d-flex flex-wrap gap-2 mb-2">
                   <input
                     className="form-control"
                     value={selfDraft.cover_image}
                     onChange={(e) => setSelfDraft((p) => ({ ...p, cover_image: e.target.value }))}
-                    placeholder="Nhập URL ảnh chính hoặc upload từ máy..."
+                    placeholder="Enter cover image URL or upload from device..."
                     disabled={selfSaving}
                   />
 
@@ -1007,7 +999,7 @@ export default function MyComics() {
                       disabled={selfSaving}
                     >
                       <i className="bi bi-upload me-1" />
-                      Upload ảnh chính
+                      Upload Cover Image
                     </button>
 
                     <button
@@ -1017,7 +1009,7 @@ export default function MyComics() {
                       disabled={selfSaving || !selfDraft.cover_image}
                     >
                       <i className="bi bi-x-circle me-1" />
-                      Xóa ảnh
+                      Remove Image
                     </button>
                   </div>
                 </div>
@@ -1039,12 +1031,12 @@ export default function MyComics() {
                     />
                   </div>
                 ) : (
-                  <div className="text-secondary small mt-2">Chưa có ảnh chính.</div>
+                  <div className="text-secondary small mt-2">No cover image yet.</div>
                 )}
               </div>
 
               <div className="mt-3">
-                <label className="form-label fw-semibold">Mô tả truyện</label>
+                <label className="form-label fw-semibold">Description</label>
 
                 <div className="d-flex flex-wrap gap-2 mb-2">
                   <button
@@ -1098,7 +1090,7 @@ export default function MyComics() {
                     onClick={() => addImageByUrlToEditor(descEditor)}
                     disabled={!descEditor}
                   >
-                    <i className="bi bi-image" /> Ảnh URL
+                    <i className="bi bi-image" /> Image URL
                   </button>
 
                   <button
@@ -1107,7 +1099,7 @@ export default function MyComics() {
                     onClick={pickDescImageFile}
                     disabled={!descEditor}
                   >
-                    <i className="bi bi-upload" /> Upload ảnh
+                    <i className="bi bi-upload" /> Upload Image
                   </button>
 
                   <button
@@ -1116,7 +1108,7 @@ export default function MyComics() {
                     onClick={() => descEditor?.chain().focus().clearContent().run()}
                     disabled={!descEditor}
                   >
-                    Xóa mô tả
+                    Clear Description
                   </button>
                 </div>
 
@@ -1125,7 +1117,7 @@ export default function MyComics() {
                   type="file"
                   accept="image/*"
                   hidden
-                  onChange={(e) => uploadImageToEditor(e, descEditor, "Đã chèn ảnh vào mô tả")}
+                  onChange={(e) => uploadImageToEditor(e, descEditor, "Image inserted into description")}
                 />
 
                 <div className="border rounded-3 p-3 bg-white editor-scroll-box">
@@ -1135,7 +1127,7 @@ export default function MyComics() {
 
               <div className="row g-3 mt-1">
                 <div className="col-md-4">
-                  <label className="form-label fw-semibold">Tổng số chương</label>
+                  <label className="form-label fw-semibold">Total Chapters</label>
                   <input
                     type="number"
                     min="1"
@@ -1152,37 +1144,37 @@ export default function MyComics() {
                 </div>
 
                 <div className="col-md-8">
-                  <label className="form-label fw-semibold">Danh mục</label>
+                  <label className="form-label fw-semibold">Category</label>
                   <input
                     className="form-control"
                     value={selfDraft.category_name}
                     onChange={(e) =>
                       setSelfDraft((p) => ({ ...p, category_name: e.target.value }))
                     }
-                    placeholder="Ví dụ: Hành động, Tu tiên, Ngôn tình..."
+                    placeholder="E.g.: Action, Fantasy, Romance..."
                     disabled={selfSaving}
                   />
                   <div className="text-secondary small mt-1">
-                    Nếu danh mục chưa có trong CSDL, hệ thống sẽ tự thêm mới.
+                    If the category does not exist in the database, the system will create it automatically.
                   </div>
                 </div>
               </div>
 
               <div className="mt-3">
-                <label className="form-label fw-semibold">Trạng thái</label>
+                <label className="form-label fw-semibold">Status</label>
                 <select
                   className="form-select"
                   value={selfDraft.status}
                   onChange={(e) => setSelfDraft((p) => ({ ...p, status: Number(e.target.value) }))}
                   disabled={selfSaving}
                 >
-                  <option value={1}>Hiển thị</option>
-                  <option value={0}>Ẩn</option>
+                  <option value={1}>Visible</option>
+                  <option value={0}>Hidden</option>
                 </select>
               </div>
 
               <div className="mt-3">
-                <label className="form-label fw-semibold">Hình thức xem</label>
+                <label className="form-label fw-semibold">Access type</label>
                 <select
                   className="form-select"
                   value={selfDraft.is_paid ? "paid" : "free"}
@@ -1196,25 +1188,25 @@ export default function MyComics() {
                   }}
                   disabled={selfSaving}
                 >
-                  <option value="free">Miễn phí</option>
-                  <option value="paid">Trả phí</option>
+                  <option value="free">Free</option>
+                  <option value="paid">Paid</option>
                 </select>
 
                 {selfDraft.is_paid ? (
                   <div className="mt-2">
-                    <label className="form-label fw-semibold mb-1">Giá (VNĐ)</label>
+                    <label className="form-label fw-semibold mb-1">Price (VND)</label>
                     <input
                       type="number"
                       min="0"
                       className="form-control"
                       value={selfDraft.price}
                       onChange={(e) => setSelfDraft((p) => ({ ...p, price: e.target.value }))}
-                      placeholder="Ví dụ: 5000"
+                      placeholder="E.g.: 5000"
                       disabled={selfSaving}
                     />
                   </div>
                 ) : (
-                  <div className="text-secondary small mt-2">User sẽ được xem miễn phí.</div>
+                  <div className="text-secondary small mt-2">Users will be able to read for free.</div>
                 )}
               </div>
             </div>
@@ -1226,7 +1218,7 @@ export default function MyComics() {
                 onClick={closeSelfModal}
                 disabled={selfSaving}
               >
-                Hủy
+                Cancel
               </button>
               <button
                 className="btn btn-primary w-100"
@@ -1234,7 +1226,7 @@ export default function MyComics() {
                 onClick={saveSelfComic}
                 disabled={selfSaving}
               >
-                {selfSaving ? "Đang lưu..." : editingSelfId ? "Cập nhật" : "Lưu"}
+                {selfSaving ? "Saving..." : editingSelfId ? "Update" : "Save"}
               </button>
             </div>
           </div>
@@ -1246,9 +1238,9 @@ export default function MyComics() {
           <div className="ad-modal ad-modal-lg" onMouseDown={(e) => e.stopPropagation()}>
             <div className="ad-modal-header d-flex align-items-start justify-content-between gap-3 mb-2">
               <div className="min-w-0">
-                <div className="fw-bold">Quản lý chương</div>
+                <div className="fw-bold">Manage Chapters</div>
                 <div className="text-secondary small">
-                  {chapterComic?.title || "—"} • Tổng chương: {chapterComic?.total_chapters || 1}
+                  {chapterComic?.title || "—"} • Total chapters: {chapterComic?.total_chapters || 1}
                 </div>
               </div>
 
@@ -1264,7 +1256,7 @@ export default function MyComics() {
 
             <div className="d-flex justify-content-between align-items-center gap-2 my-3 flex-wrap">
               <div className="text-secondary small">
-                Đã có: <b>{chapterItems.length}</b> / {chapterComic?.total_chapters || 1} chương
+                Existing: <b>{chapterItems.length}</b> / {chapterComic?.total_chapters || 1} chapters
               </div>
 
               <button
@@ -1273,7 +1265,7 @@ export default function MyComics() {
                 onClick={openCreateChapterForm}
               >
                 <i className="bi bi-plus-lg me-1" />
-                Thêm chương
+                Add Chapter
               </button>
             </div>
 
@@ -1288,7 +1280,7 @@ export default function MyComics() {
               <div className="card border-0 shadow-sm rounded-4">
                 <div className="card-body d-flex align-items-center gap-2">
                   <div className="spinner-border spinner-border-sm" />
-                  <span className="text-secondary">Đang tải chương...</span>
+                  <span className="text-secondary">Loading chapters...</span>
                 </div>
               </div>
             ) : null}
@@ -1297,7 +1289,7 @@ export default function MyComics() {
               <div className="card border-0 shadow-sm rounded-4">
                 <div className="card-body text-center text-secondary">
                   <i className="bi bi-inbox fs-3 d-block mb-2" />
-                  Chưa có chương nào.
+                  No chapters yet.
                 </div>
               </div>
             ) : null}
@@ -1308,10 +1300,10 @@ export default function MyComics() {
                   <thead>
                     <tr>
                       <th>ID</th>
-                      <th>Chương</th>
-                      <th>Tiêu đề</th>
-                      <th>Ngày tạo</th>
-                      <th className="text-end">Thao tác</th>
+                      <th>Chapter</th>
+                      <th>Title</th>
+                      <th>Created At</th>
+                      <th className="text-end">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1329,7 +1321,7 @@ export default function MyComics() {
                               onClick={() => openEditChapterForm(ch)}
                             >
                               <i className="bi bi-pencil-square me-1" />
-                              Sửa
+                              Edit
                             </button>
 
                             <button
@@ -1338,7 +1330,7 @@ export default function MyComics() {
                               onClick={() => deleteChapter(ch)}
                             >
                               <i className="bi bi-trash me-1" />
-                              Xóa
+                              Delete
                             </button>
                           </div>
                         </td>
@@ -1358,7 +1350,7 @@ export default function MyComics() {
             <div className="ad-modal-header d-flex align-items-start justify-content-between gap-3 mb-2">
               <div className="min-w-0">
                 <div className="fw-bold">
-                  {editingChapterId ? "Sửa chương" : "Thêm chương"}
+                  {editingChapterId ? "Edit Chapter" : "Add Chapter"}
                 </div>
                 <div className="text-secondary small">
                   {chapterComic?.title || "—"}
@@ -1378,7 +1370,7 @@ export default function MyComics() {
             <div className="ad-modal-body-scroll mt-3">
               <div className="row g-3">
                 <div className="col-md-4">
-                  <label className="form-label fw-semibold">Số chương</label>
+                  <label className="form-label fw-semibold">Chapter number</label>
                   <input
                     type="number"
                     min="1"
@@ -1389,27 +1381,27 @@ export default function MyComics() {
                   />
                   {editingChapterId ? (
                     <div className="text-secondary small mt-1">
-                      Khi sửa, API hiện tại không cập nhật số chương.
+                      When editing, the current API does not update the chapter number.
                     </div>
                   ) : null}
                 </div>
 
                 <div className="col-md-8">
-                  <label className="form-label fw-semibold">Tiêu đề chương</label>
+                  <label className="form-label fw-semibold">Chapter title</label>
                   <input
                     className="form-control"
                     value={chapterDraft.chapter_title}
                     onChange={(e) =>
                       setChapterDraft((p) => ({ ...p, chapter_title: e.target.value }))
                     }
-                    placeholder="Ví dụ: Chương 1"
+                    placeholder="E.g.: Chapter 1"
                     disabled={chapterSaving}
                   />
                 </div>
               </div>
 
               <div className="mt-3">
-                <label className="form-label fw-semibold">Nội dung chương</label>
+                <label className="form-label fw-semibold">Chapter content</label>
 
                 <div className="d-flex flex-wrap gap-2 mb-2">
                   <button
@@ -1463,7 +1455,7 @@ export default function MyComics() {
                     onClick={() => addImageByUrlToEditor(chapterEditor)}
                     disabled={!chapterEditor}
                   >
-                    <i className="bi bi-image" /> Ảnh URL
+                    <i className="bi bi-image" /> Image URL
                   </button>
 
                   <button
@@ -1472,7 +1464,7 @@ export default function MyComics() {
                     onClick={pickChapterImageFile}
                     disabled={!chapterEditor}
                   >
-                    <i className="bi bi-upload" /> Upload ảnh
+                    <i className="bi bi-upload" /> Upload Image
                   </button>
 
                   <button
@@ -1481,7 +1473,7 @@ export default function MyComics() {
                     onClick={() => chapterEditor?.chain().focus().clearContent().run()}
                     disabled={!chapterEditor}
                   >
-                    Xóa nội dung
+                    Clear Content
                   </button>
                 </div>
 
@@ -1490,7 +1482,7 @@ export default function MyComics() {
                   type="file"
                   accept="image/*"
                   hidden
-                  onChange={(e) => uploadImageToEditor(e, chapterEditor, "Đã chèn ảnh vào chương")}
+                  onChange={(e) => uploadImageToEditor(e, chapterEditor, "Image inserted into chapter")}
                 />
 
                 <div className="border rounded-3 p-3 bg-white editor-scroll-box">
@@ -1506,7 +1498,7 @@ export default function MyComics() {
                 onClick={closeChapterForm}
                 disabled={chapterSaving}
               >
-                Hủy
+                Cancel
               </button>
               <button
                 className="btn btn-primary w-100"
@@ -1514,7 +1506,7 @@ export default function MyComics() {
                 onClick={saveChapter}
                 disabled={chapterSaving}
               >
-                {chapterSaving ? "Đang lưu..." : editingChapterId ? "Cập nhật chương" : "Lưu chương"}
+                {chapterSaving ? "Saving..." : editingChapterId ? "Update Chapter" : "Save Chapter"}
               </button>
             </div>
           </div>

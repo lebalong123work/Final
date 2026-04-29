@@ -5,12 +5,16 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Swal from "sweetalert2";
 
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import Image from "@tiptap/extension-image";
+
+import ExternalComicSettingModal from "./components/ExternalComicSettingModal";
+import SelfComicFormModal from "./components/SelfComicFormModal";
+import ChapterModal from "./components/ChapterModal";
 
 const API_BASE = "http://localhost:5000";
 const LIMIT = 12;
@@ -39,10 +43,10 @@ function fmtVND(n) {
 }
 
 function normalizeStatusLabel(status) {
-  if (status === "ongoing") return "Đang ra";
-  if (status === "completed") return "Hoàn thành";
-  if (Number(status) === 1) return "Hiển thị";
-  if (Number(status) === 0) return "Ẩn";
+  if (status === "ongoing") return "Ongoing";
+  if (status === "completed") return "Completed";
+  if (Number(status) === 1) return "Visible";
+  if (Number(status) === 0) return "Hidden";
   return String(status || "unknown");
 }
 
@@ -114,7 +118,7 @@ export default function AdminComics() {
   const [chapterDraft, setChapterDraft] = useState({
     comic_id: "",
     chapter_no: 1,
-    chapter_title: "Chương 1",
+    chapter_title: "Chapter 1",
   });
 
   const token = localStorage.getItem("token") || "";
@@ -126,7 +130,7 @@ export default function AdminComics() {
     extensions: [
       StarterKit,
       Placeholder.configure({
-        placeholder: "Nhập mô tả truyện...",
+        placeholder: "Enter comic description...",
       }),
       Link.configure({
         openOnClick: false,
@@ -151,7 +155,7 @@ export default function AdminComics() {
     extensions: [
       StarterKit,
       Placeholder.configure({
-        placeholder: "Nhập nội dung chương...",
+        placeholder: "Enter chapter content...",
       }),
       Link.configure({
         openOnClick: false,
@@ -194,7 +198,7 @@ export default function AdminComics() {
 
       const res = await fetch(url.toString());
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Lỗi tải truyện từ DB");
+      if (!res.ok) throw new Error(data?.message || "Failed to load comics from DB");
 
       setExtItems(Array.isArray(data?.data) ? data.data : []);
       setPage(data.page || p);
@@ -203,7 +207,7 @@ export default function AdminComics() {
       setExtItems([]);
       setPage(1);
       setTotalPages(1);
-      setExtError(e.message || "Không tải được");
+      setExtError(e.message || "Failed to load");
     } finally {
       setExtLoading(false);
     }
@@ -224,7 +228,7 @@ export default function AdminComics() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Lỗi tải truyện tự đăng");
+      if (!res.ok) throw new Error(data?.message || "Failed to load self-published comics");
 
       setSelfItems(Array.isArray(data?.data) ? data.data : []);
       setPage(data.page || p);
@@ -233,7 +237,7 @@ export default function AdminComics() {
       setSelfItems([]);
       setPage(1);
       setTotalPages(1);
-      setSelfError(e.message || "Không tải được");
+      setSelfError(e.message || "Failed to load");
     } finally {
       setSelfLoading(false);
     }
@@ -246,12 +250,12 @@ export default function AdminComics() {
 
       const res = await fetch(`${API_BASE}/api/self-chapters/comic/${comicId}`);
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Lỗi tải danh sách chương");
+      if (!res.ok) throw new Error(data?.message || "Failed to load chapter list");
 
       setChapterItems(Array.isArray(data?.data) ? data.data : []);
     } catch (e) {
       setChapterItems([]);
-      setChapterError(e.message || "Không tải được chương");
+      setChapterError(e.message || "Failed to load chapters");
     } finally {
       setChapterLoading(false);
     }
@@ -259,11 +263,11 @@ export default function AdminComics() {
 
   const handleSyncToDB = async () => {
     if (!token) {
-      toast.warning("Bạn cần đăng nhập admin để đồng bộ.");
+      toast.warning("You need to log in as admin to sync.");
       return;
     }
 
-    const toastId = toast.loading("Đang đồng bộ dữ liệu...");
+    const toastId = toast.loading("Syncing data...");
     try {
       setExtLoading(true);
 
@@ -279,19 +283,19 @@ export default function AdminComics() {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Đồng bộ thất bại");
+      if (!res.ok) throw new Error(data?.message || "Sync failed");
 
       await fetchExternalFromDB(1);
 
       toast.update(toastId, {
-        render: `Đồng bộ thành công! ${data?.stats?.upsertedComics || 0} truyện`,
+        render: `Sync successful! ${data?.stats?.upsertedComics || 0} comics`,
         type: "success",
         isLoading: false,
         autoClose: 3000,
       });
     } catch (e) {
       toast.update(toastId, {
-        render: e.message || "Không đồng bộ được",
+        render: e.message || "Sync failed",
         type: "error",
         isLoading: false,
         autoClose: 3000,
@@ -319,11 +323,11 @@ export default function AdminComics() {
     if (!comic) return null;
     if (comic.is_paid) {
       return {
-        text: `Trả phí${comic.price ? ` • ${fmtVND(comic.price)}` : ""}`,
+        text: `Paid${comic.price ? ` • ${fmtVND(comic.price)}` : ""}`,
         tone: "danger",
       };
     }
-    return { text: "Miễn phí", tone: "success" };
+    return { text: "Free", tone: "success" };
   };
 
   const openSetting = (comic) => {
@@ -349,13 +353,13 @@ export default function AdminComics() {
   };
 
   const saveSetting = async () => {
-    if (!token) return toast.error("Thiếu token admin.");
+    if (!token) return toast.error("Admin token missing.");
     if (!settingComic?.api_id) return;
 
     const isPaid = settingDraft.type === "paid";
     const price = Math.max(0, Number(settingDraft.price || 0));
 
-    if (isPaid && price <= 0) return toast.error("Giá phải > 0 khi bật trả phí");
+    if (isPaid && price <= 0) return toast.error("Price must be > 0 when paid mode is enabled");
 
     try {
       setSavingSetting(true);
@@ -373,7 +377,7 @@ export default function AdminComics() {
       );
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Lưu cài đặt thất bại");
+      if (!res.ok) throw new Error(data?.message || "Failed to save settings");
 
       setExtItems((prev) =>
         prev.map((x) =>
@@ -383,19 +387,19 @@ export default function AdminComics() {
         )
       );
 
-      toast.success("Đã lưu cài đặt giá!");
+      toast.success("Pricing settings saved!");
       closeSetting();
     } catch (e) {
-      toast.error(e.message || "Lỗi lưu");
+      toast.error(e.message || "Save error");
     } finally {
       setSavingSetting(false);
     }
   };
 
   const saveTranslator = async () => {
-    if (!token) return toast.error("Thiếu token admin.");
+    if (!token) return toast.error("Admin token missing.");
     if (!settingComic?.slug && !settingComic?.api_id) {
-      return toast.error("Không tìm thấy định danh truyện.");
+      return toast.error("Comic identifier not found.");
     }
 
     const comicKey = settingComic?.slug || settingComic?.api_id;
@@ -420,7 +424,7 @@ export default function AdminComics() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data?.message || "Lưu translator thất bại");
+        throw new Error(data?.message || "Failed to save translator");
       }
 
       setExtItems((prev) =>
@@ -445,9 +449,9 @@ export default function AdminComics() {
         translator: data?.data?.translator || "",
       }));
 
-      toast.success(data?.message || "Đã cập nhật translator");
+      toast.success(data?.message || "Translator updated");
     } catch (e) {
-      toast.error(e.message || "Lỗi lưu translator");
+      toast.error(e.message || "Save translator error");
     } finally {
       setSavingSetting(false);
     }
@@ -456,7 +460,7 @@ export default function AdminComics() {
   const setEditorLink = (editor) => {
     if (!editor) return;
     const prev = editor.getAttributes("link").href || "";
-    const url = window.prompt("Nhập link:", prev);
+    const url = window.prompt("Enter URL:", prev);
     if (url === null) return;
 
     const v = url.trim();
@@ -469,7 +473,7 @@ export default function AdminComics() {
 
   const addImageByUrlToEditor = (editor) => {
     if (!editor) return;
-    const url = window.prompt("Nhập URL ảnh:");
+    const url = window.prompt("Enter image URL:");
     if (!url) return;
     const v = url.trim();
     if (!v) return;
@@ -479,12 +483,12 @@ export default function AdminComics() {
   const pickDescImageFile = () => descImageInputRef.current?.click();
   const pickChapterImageFile = () => chapterImageInputRef.current?.click();
 
-  const uploadImageToEditor = (e, editor, successMsg = "Đã chèn ảnh") => {
+  const uploadImageToEditor = (e, editor, successMsg = "Image inserted") => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Vui lòng chọn file ảnh");
+      toast.error("Please select an image file");
       e.target.value = "";
       return;
     }
@@ -508,7 +512,7 @@ export default function AdminComics() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Vui lòng chọn file ảnh hợp lệ");
+      toast.error("Please select a valid image file");
       e.target.value = "";
       return;
     }
@@ -518,7 +522,7 @@ export default function AdminComics() {
       const base64 = reader.result;
       if (typeof base64 === "string") {
         setSelfDraft((p) => ({ ...p, cover_image: base64 }));
-        toast.success("Đã chọn ảnh chính");
+        toast.success("Cover image selected");
       }
     };
     reader.readAsDataURL(file);
@@ -547,13 +551,13 @@ export default function AdminComics() {
   };
 
   const openSelfModal = () => {
-    if (!token) return toast.warning("Bạn cần đăng nhập để đăng truyện.");
+    if (!token) return toast.warning("You need to log in to publish a comic.");
     resetSelfDraft();
     setSelfModalOpen(true);
   };
 
   const openEditSelfModal = (comic) => {
-    if (!token) return toast.warning("Bạn cần đăng nhập.");
+    if (!token) return toast.warning("You need to log in.");
     setEditingSelfId(comic.id);
 
     setSelfDraft({
@@ -584,7 +588,7 @@ export default function AdminComics() {
   };
 
   const saveSelfComic = async () => {
-    if (!token) return toast.error("Thiếu token đăng nhập.");
+    if (!token) return toast.error("Login token missing.");
 
     const title = String(selfDraft.title || "").trim();
     const author = String(selfDraft.author || "").trim();
@@ -596,18 +600,18 @@ export default function AdminComics() {
       ? [...new Set(selfDraft.category_ids.map((x) => Number(x)).filter((x) => Number.isInteger(x) && x > 0))]
       : [];
 
-    if (!title) return toast.error("Vui lòng nhập tiêu đề");
-    if (!coverImage) return toast.error("Vui lòng thêm ảnh chính");
-    if (totalChapters < 1) return toast.error("Tổng số chương phải >= 1");
+    if (!title) return toast.error("Please enter a title");
+    if (!coverImage) return toast.error("Please add a cover image");
+    if (totalChapters < 1) return toast.error("Total chapters must be >= 1");
     if (normalizedCategoryIds.length === 0) {
-      return toast.error("Vui lòng chọn ít nhất 1 danh mục");
+      return toast.error("Please select at least 1 category");
     }
 
     const isPaid = !!selfDraft.is_paid;
     const price = Math.max(0, Number(selfDraft.price || 0));
 
     if (isPaid && price <= 0) {
-      return toast.error("Giá phải > 0 khi bật trả phí");
+      return toast.error("Price must be > 0 when paid mode is enabled");
     }
 
     try {
@@ -645,16 +649,16 @@ export default function AdminComics() {
       const data = await r.json().catch(() => ({}));
       if (!r.ok) {
         throw new Error(
-          data?.message || (isEdit ? "Cập nhật truyện thất bại" : "Tạo truyện thất bại")
+          data?.message || (isEdit ? "Failed to update comic" : "Failed to create comic")
         );
       }
 
-      toast.success(isEdit ? "Đã cập nhật truyện!" : "Đã tạo truyện!");
+      toast.success(isEdit ? "Comic updated!" : "Comic created!");
       closeSelfModal();
       await fetchSelfFromDB(1);
       setPage(1);
     } catch (e) {
-      toast.error(e.message || "Lỗi lưu truyện");
+      toast.error(e.message || "Error saving comic");
     } finally {
       setSelfSaving(false);
     }
@@ -662,12 +666,12 @@ export default function AdminComics() {
 
   const deleteSelfComic = async (comic) => {
     const result = await Swal.fire({
-      title: "Xóa truyện này?",
-      text: `Bạn có chắc muốn xóa "${comic?.title || "truyện này"}" không?`,
+      title: "Delete this comic?",
+      text: `Are you sure you want to delete "${comic?.title || "this comic"}"?`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Xóa",
-      cancelButtonText: "Hủy",
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
       reverseButtons: true,
       confirmButtonColor: "#d33",
     });
@@ -683,12 +687,12 @@ export default function AdminComics() {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Xóa truyện thất bại");
+      if (!res.ok) throw new Error(data?.message || "Failed to delete comic");
 
-      toast.success("Đã xóa truyện!");
+      toast.success("Comic deleted!");
       await fetchSelfFromDB(page);
     } catch (e) {
-      toast.error(e.message || "Lỗi xóa truyện");
+      toast.error(e.message || "Error deleting comic");
     }
   };
 
@@ -720,7 +724,7 @@ export default function AdminComics() {
     setChapterDraft({
       comic_id: chapterComic.id,
       chapter_no: nextNo,
-      chapter_title: `Chương ${nextNo}`,
+      chapter_title: `Chapter ${nextNo}`,
     });
     setChapterFormOpen(true);
 
@@ -734,20 +738,20 @@ export default function AdminComics() {
     setChapterDraft({
       comic_id: chapter.comic_id,
       chapter_no: Number(chapter.chapter_no || 1),
-      chapter_title: chapter.chapter_title || `Chương ${chapter.chapter_no || 1}`,
+      chapter_title: chapter.chapter_title || `Chapter ${chapter.chapter_no || 1}`,
     });
     setChapterFormOpen(true);
 
     try {
       const res = await fetch(`${API_BASE}/api/self-chapters/${chapter.id}`);
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Không tải được chi tiết chương");
+      if (!res.ok) throw new Error(data?.message || "Failed to load chapter details");
 
       setTimeout(() => {
         chapterEditor?.commands?.setContent(data?.data?.content || "");
       }, 0);
     } catch (e) {
-      toast.error(e.message || "Lỗi tải chương");
+      toast.error(e.message || "Error loading chapter");
     }
   };
 
@@ -758,7 +762,7 @@ export default function AdminComics() {
     setChapterDraft({
       comic_id: "",
       chapter_no: 1,
-      chapter_title: "Chương 1",
+      chapter_title: "Chapter 1",
     });
     setTimeout(() => {
       chapterEditor?.commands?.setContent("");
@@ -771,25 +775,25 @@ export default function AdminComics() {
       ...p,
       chapter_no: n,
       chapter_title:
-        !p.chapter_title || p.chapter_title.startsWith("Chương ")
-          ? `Chương ${n}`
+        !p.chapter_title || p.chapter_title.startsWith("Chapter ")
+          ? `Chapter ${n}`
           : p.chapter_title,
     }));
   };
 
   const saveChapter = async () => {
-    if (!token) return toast.error("Thiếu token đăng nhập.");
-    if (!chapterComic) return toast.error("Thiếu truyện.");
+    if (!token) return toast.error("Login token missing.");
+    if (!chapterComic) return toast.error("Missing comic.");
 
     const chapterNo = Math.max(1, Number(chapterDraft.chapter_no || 1));
     const chapterTitle =
-      String(chapterDraft.chapter_title || "").trim() || `Chương ${chapterNo}`;
+      String(chapterDraft.chapter_title || "").trim() || `Chapter ${chapterNo}`;
     const contentHTML = chapterEditor?.getHTML?.() || "";
     const plainText = chapterEditor?.getText?.().trim() || "";
     const hasImage = contentHTML.includes("<img");
 
-    if (!chapterTitle) return toast.error("Vui lòng nhập tiêu đề chương");
-    if (!plainText && !hasImage) return toast.error("Vui lòng nhập nội dung chương");
+    if (!chapterTitle) return toast.error("Please enter a chapter title");
+    if (!plainText && !hasImage) return toast.error("Please enter chapter content");
 
     try {
       setChapterSaving(true);
@@ -824,14 +828,14 @@ export default function AdminComics() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data?.message || (isEdit ? "Cập nhật chương thất bại" : "Thêm chương thất bại"));
+        throw new Error(data?.message || (isEdit ? "Failed to update chapter" : "Failed to add chapter"));
       }
 
-      toast.success(isEdit ? "Đã cập nhật chương!" : "Đã thêm chương!");
+      toast.success(isEdit ? "Chapter updated!" : "Chapter added!");
       closeChapterForm();
       await fetchChaptersByComic(chapterComic.id);
     } catch (e) {
-      toast.error(e.message || "Lỗi lưu chương");
+      toast.error(e.message || "Error saving chapter");
     } finally {
       setChapterSaving(false);
     }
@@ -839,12 +843,12 @@ export default function AdminComics() {
 
   const deleteChapter = async (chapter) => {
     const result = await Swal.fire({
-      title: "Xóa chương này?",
-      text: `Bạn có chắc muốn xóa "${chapter?.chapter_title || "chương này"}" không?`,
+      title: "Delete this chapter?",
+      text: `Are you sure you want to delete "${chapter?.chapter_title || "this chapter"}"?`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Xóa",
-      cancelButtonText: "Hủy",
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
       reverseButtons: true,
       confirmButtonColor: "#d33",
     });
@@ -860,12 +864,12 @@ export default function AdminComics() {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Xóa chương thất bại");
+      if (!res.ok) throw new Error(data?.message || "Failed to delete chapter");
 
-      toast.success("Đã xóa chương!");
+      toast.success("Chapter deleted!");
       await fetchChaptersByComic(chapterComic.id);
     } catch (e) {
-      toast.error(e.message || "Lỗi xóa chương");
+      toast.error(e.message || "Error deleting chapter");
     }
   };
 
@@ -880,9 +884,9 @@ export default function AdminComics() {
           <div className="container-fluid px-4 py-4">
             <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
               <div>
-                <h2 className="m-0 ad-title">Quản lý truyện</h2>
+                <h2 className="m-0 ad-title">Manage Comics</h2>
                 <div className="text-secondary small">
-                  Truyện ngoài (DB) & truyện tự đăng
+                  External Comics (DB) &amp; Self-published Comics
                 </div>
               </div>
 
@@ -893,7 +897,7 @@ export default function AdminComics() {
                   </span>
                   <input
                     className="form-control"
-                    placeholder="Tìm truyện..."
+                    placeholder="Search comics..."
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                   />
@@ -910,7 +914,7 @@ export default function AdminComics() {
                         setPage(1);
                       }}
                     >
-                      <option value="">Tất cả danh mục</option>
+                      <option value="">All categories</option>
                       {cats.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
@@ -924,7 +928,7 @@ export default function AdminComics() {
                       onClick={openSelfModal}
                     >
                       <i className="bi bi-plus-lg" />
-                      Thêm truyện
+                      Add Comic
                     </button>
                   </>
                 ) : (
@@ -935,7 +939,7 @@ export default function AdminComics() {
                     disabled={extLoading}
                   >
                     <i className={`bi ${extLoading ? "bi-arrow-repeat" : "bi-cloud-download"}`} />
-                    Đồng bộ
+                    Sync
                   </button>
                 )}
               </div>
@@ -948,7 +952,7 @@ export default function AdminComics() {
                 type="button"
               >
                 <i className="bi bi-globe2 me-2" />
-                Truyện ngoài (DB)
+                External Comics (DB)
                 <span className="ms-2 badge rounded-pill text-bg-light">{extItems.length}</span>
               </button>
 
@@ -958,7 +962,7 @@ export default function AdminComics() {
                 type="button"
               >
                 <i className="bi bi-person-lines-fill me-2" />
-                Truyện tự đăng
+                Self-published Comics
                 <span className="ms-2 badge rounded-pill text-bg-light">{selfItems.length}</span>
               </button>
             </div>
@@ -981,7 +985,7 @@ export default function AdminComics() {
               <div className="card border-0 shadow-sm rounded-4">
                 <div className="card-body d-flex align-items-center gap-2">
                   <div className="spinner-border spinner-border-sm" />
-                  <span className="text-secondary">Đang tải dữ liệu...</span>
+                  <span className="text-secondary">Loading data...</span>
                 </div>
               </div>
             ) : null}
@@ -990,7 +994,7 @@ export default function AdminComics() {
               <div className="card border-0 shadow-sm rounded-4">
                 <div className="card-body d-flex align-items-center gap-2">
                   <div className="spinner-border spinner-border-sm" />
-                  <span className="text-secondary">Đang tải dữ liệu...</span>
+                  <span className="text-secondary">Loading data...</span>
                 </div>
               </div>
             ) : null}
@@ -998,7 +1002,7 @@ export default function AdminComics() {
             <div className="row g-3 mt-1">
               {current.map((c) => {
                 const id = c?.api_id || c?.id;
-                const name = c?.name || c?.title || "Không tên";
+                const name = c?.name || c?.title || "Untitled";
                 const status = c?.status || "unknown";
                 const updatedAt = c?.updated_at || c?.updatedAt || c?.created_at;
                 const priceBadge = pricingLabel(c);
@@ -1026,7 +1030,7 @@ export default function AdminComics() {
                           {tab === "external" ? (
                             <button className="btn btn-warning btn-sm" type="button" onClick={() => openSetting(c)}>
                               <i className="bi bi-gear me-1" />
-                              Cài đặt
+                              Settings
                             </button>
                           ) : (
                             <>
@@ -1036,7 +1040,7 @@ export default function AdminComics() {
                                 onClick={() => openEditSelfModal(c)}
                               >
                                 <i className="bi bi-pencil-square me-1" />
-                                Sửa
+                                Edit
                               </button>
 
                               <button
@@ -1045,7 +1049,7 @@ export default function AdminComics() {
                                 onClick={() => openChapterManager(c)}
                               >
                                 <i className="bi bi-collection-play me-1" />
-                                Chương
+                                Chapters
                               </button>
 
                               <button
@@ -1054,7 +1058,7 @@ export default function AdminComics() {
                                 onClick={() => deleteSelfComic(c)}
                               >
                                 <i className="bi bi-trash me-1" />
-                                Xóa
+                                Delete
                               </button>
                             </>
                           )}
@@ -1068,25 +1072,25 @@ export default function AdminComics() {
 
                         {tab === "external" ? (
                           <div className="text-secondary small mt-2">
-                            Dịch bởi: <b>{c?.translator || "—"}</b>
+                            Translated by: <b>{c?.translator || "—"}</b>
                           </div>
                         ) : null}
 
                         {tab === "self" ? (
                           <>
                             <div className="text-secondary small mt-2">
-                              Tác giả: <b>{c?.author || "—"}</b>
+                              Author: <b>{c?.author || "—"}</b>
                             </div>
 
                             <div className="text-secondary small mt-2">
-                              Dịch bởi: <b>{c?.translated_by || "—"}</b>
+                              Translated by: <b>{c?.translated_by || "—"}</b>
                             </div>
 
                             <div className="text-secondary small mt-2">
-                              Tổng chương: <b>{c?.total_chapters || 1}</b>
+                              Total chapters: <b>{c?.total_chapters || 1}</b>
                             </div>
 
-                            <div className="text-secondary small mt-2">Danh mục:</div>
+                            <div className="text-secondary small mt-2">Categories:</div>
                             <div className="d-flex flex-wrap gap-2 mt-1">
                               {Array.isArray(c?.categories) && c.categories.length > 0 ? (
                                 c.categories.map((cat) => (
@@ -1100,7 +1104,7 @@ export default function AdminComics() {
                             </div>
 
                             <div className="text-secondary small mt-2">
-                              Ảnh chính: <b>{c?.cover_image ? "Đã có" : "Chưa có"}</b>
+                              Cover image: <b>{c?.cover_image ? "Set" : "Not set"}</b>
                             </div>
                           </>
                         ) : null}
@@ -1122,7 +1126,7 @@ export default function AdminComics() {
                   <div className="card border-0 shadow-sm rounded-4">
                     <div className="card-body text-center text-secondary">
                       <i className="bi bi-inbox fs-3 d-block mb-2" />
-                      Không có truyện nào.
+                      No comics found.
                     </div>
                   </div>
                 </div>
@@ -1133,7 +1137,7 @@ export default function AdminComics() {
                   <div className="card border-0 shadow-sm rounded-4">
                     <div className="card-body text-center text-secondary">
                       <i className="bi bi-inbox fs-3 d-block mb-2" />
-                      Chưa có truyện tự đăng.
+                      No self-published comics yet.
                     </div>
                   </div>
                 </div>
@@ -1174,780 +1178,62 @@ export default function AdminComics() {
           </div>
         </div>
 
-        {selfModalOpen ? (
-          <div className="ad-modal-backdrop" onMouseDown={closeSelfModal}>
-            <div className="ad-modal ad-modal-lg" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="ad-modal-header d-flex align-items-start justify-content-between gap-3 mb-2">
-                <div className="min-w-0">
-                  <div className="fw-bold">
-                    {editingSelfId ? "Sửa truyện tự đăng" : "Thêm truyện tự đăng"}
-                  </div>
-                  <div className="text-secondary small">
-                    Ảnh chính + mô tả + tác giả + tổng số chương + nhiều danh mục + miễn phí / trả phí
-                  </div>
-                </div>
-
-                <button
-                  className="btn btn-light btn-sm"
-                  type="button"
-                  onClick={closeSelfModal}
-                  disabled={selfSaving}
-                >
-                  <i className="bi bi-x-lg" />
-                </button>
-              </div>
-
-              <div className="ad-modal-body-scroll mt-3">
-                <label className="form-label fw-semibold">Tiêu đề</label>
-                <input
-                  className="form-control"
-                  value={selfDraft.title}
-                  onChange={(e) => setSelfDraft((p) => ({ ...p, title: e.target.value }))}
-                  placeholder="Ví dụ: Truyện tự đăng của tôi..."
-                  disabled={selfSaving}
-                />
-
-                <div className="mt-3">
-                  <label className="form-label fw-semibold">Tác giả</label>
-                  <input
-                    className="form-control"
-                    value={selfDraft.author}
-                    onChange={(e) => setSelfDraft((p) => ({ ...p, author: e.target.value }))}
-                    placeholder="Ví dụ: Nguyễn Văn A"
-                    disabled={selfSaving}
-                  />
-                  <div className="text-secondary small mt-1">
-                    Có thể để trống nếu chưa muốn thêm tác giả.
-                  </div>
-                </div>
-
-                <div className="mt-3">
-                  <label className="form-label fw-semibold">Dịch bởi</label>
-                  <input
-                    className="form-control"
-                    value={selfDraft.translated_by}
-                    onChange={(e) =>
-                      setSelfDraft((p) => ({ ...p, translated_by: e.target.value }))
-                    }
-                    placeholder="Ví dụ: Nhóm dịch ABC"
-                    disabled={selfSaving}
-                  />
-                  <div className="text-secondary small mt-1">
-                    Có thể để trống nếu truyện không có nhóm dịch.
-                  </div>
-                </div>
-
-                <div className="mt-3">
-                  <label className="form-label fw-semibold">Ảnh chính</label>
-
-                  <div className="d-flex flex-wrap gap-2 mb-2">
-                    <input
-                      className="form-control"
-                      value={selfDraft.cover_image}
-                      onChange={(e) => setSelfDraft((p) => ({ ...p, cover_image: e.target.value }))}
-                      placeholder="Nhập URL ảnh chính hoặc upload từ máy..."
-                      disabled={selfSaving}
-                    />
-
-                    <div className="d-flex gap-2">
-                      <button
-                        type="button"
-                        className="btn btn-outline-success btn-sm"
-                        onClick={pickCoverFile}
-                        disabled={selfSaving}
-                      >
-                        <i className="bi bi-upload me-1" />
-                        Upload ảnh chính
-                      </button>
-
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary btn-sm"
-                        onClick={removeCoverImage}
-                        disabled={selfSaving || !selfDraft.cover_image}
-                      >
-                        <i className="bi bi-x-circle me-1" />
-                        Xóa ảnh
-                      </button>
-                    </div>
-                  </div>
-
-                  <input
-                    ref={coverInputRef}
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={onUploadCoverImage}
-                  />
-
-                  {selfDraft.cover_image ? (
-                    <div className="mt-2">
-                      <img
-                        src={buildSelfCover(selfDraft.cover_image)}
-                        alt="cover preview"
-                        className="self-cover-preview"
-                      />
-                    </div>
-                  ) : (
-                    <div className="text-secondary small mt-2">Chưa có ảnh chính.</div>
-                  )}
-                </div>
-
-                <div className="mt-3">
-                  <label className="form-label fw-semibold">Mô tả truyện</label>
-
-                  <div className="d-flex flex-wrap gap-2 mb-2">
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${descEditor?.isActive("bold") ? "btn-dark" : "btn-outline-dark"}`}
-                      onClick={() => descEditor?.chain().focus().toggleBold().run()}
-                      disabled={!descEditor}
-                    >
-                      <b>B</b>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${descEditor?.isActive("italic") ? "btn-dark" : "btn-outline-dark"}`}
-                      onClick={() => descEditor?.chain().focus().toggleItalic().run()}
-                      disabled={!descEditor}
-                    >
-                      <i>I</i>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${descEditor?.isActive("underline") ? "btn-dark" : "btn-outline-dark"}`}
-                      onClick={() => descEditor?.chain().focus().toggleUnderline().run()}
-                      disabled={!descEditor}
-                    >
-                      <u>U</u>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${descEditor?.isActive("bulletList") ? "btn-dark" : "btn-outline-dark"}`}
-                      onClick={() => descEditor?.chain().focus().toggleBulletList().run()}
-                      disabled={!descEditor}
-                    >
-                      • List
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn btn-outline-dark btn-sm"
-                      onClick={() => setEditorLink(descEditor)}
-                      disabled={!descEditor}
-                    >
-                      <i className="bi bi-link-45deg" /> Link
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn btn-outline-primary btn-sm"
-                      onClick={() => addImageByUrlToEditor(descEditor)}
-                      disabled={!descEditor}
-                    >
-                      <i className="bi bi-image" /> Ảnh URL
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn btn-outline-success btn-sm"
-                      onClick={pickDescImageFile}
-                      disabled={!descEditor}
-                    >
-                      <i className="bi bi-upload" /> Upload ảnh
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary btn-sm"
-                      onClick={() => descEditor?.chain().focus().clearContent().run()}
-                      disabled={!descEditor}
-                    >
-                      Xóa mô tả
-                    </button>
-                  </div>
-
-                  <input
-                    ref={descImageInputRef}
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={(e) => uploadImageToEditor(e, descEditor, "Đã chèn ảnh vào mô tả")}
-                  />
-
-                  <div className="border rounded-3 p-3 bg-white editor-scroll-box">
-                    <EditorContent editor={descEditor} />
-                  </div>
-                </div>
-
-                <div className="row g-3 mt-1">
-                  <div className="col-md-4">
-                    <label className="form-label fw-semibold">Tổng số chương</label>
-                    <input
-                      type="number"
-                      min="1"
-                      className="form-control"
-                      value={selfDraft.total_chapters}
-                      onChange={(e) =>
-                        setSelfDraft((p) => ({
-                          ...p,
-                          total_chapters: Math.max(1, Number(e.target.value || 1)),
-                        }))
-                      }
-                      disabled={selfSaving}
-                    />
-                  </div>
-
-                <div className="col-md-8">
-  <label className="form-label fw-semibold">Danh mục</label>
-  <select
-    className="form-select category-multi-select"
-    multiple
-    size={8}
-    value={selfDraft.category_ids}
-    onChange={(e) =>
-      setSelfDraft((p) => ({
-        ...p,
-        category_ids: getSelectedValues(e.target),
-      }))
-    }
-    disabled={selfSaving}
-  >
-    {cats.map((c) => (
-      <option key={c.id} value={String(c.id)}>
-        {c.name}
-      </option>
-    ))}
-  </select>
-
-  <div className="text-secondary small mt-1">
-    Giữ <b>Ctrl</b> để chọn nhiều danh mục.
-  </div>
-
-  <div className="d-flex flex-wrap gap-2 mt-2">
-    {selfDraft.category_ids.length > 0 ? (
-      selfDraft.category_ids.map((catIdValue) => {
-        const found = cats.find((x) => String(x.id) === String(catIdValue));
-        return (
-          <span key={catIdValue} className="badge text-bg-light border">
-            {found?.name || catIdValue}
-          </span>
-        );
-      })
-    ) : (
-      <span className="text-secondary small">Chưa chọn danh mục</span>
-    )}
-  </div>
-</div>
-                </div>
-
-                <div className="mt-3">
-                  <label className="form-label fw-semibold">Trạng thái</label>
-                  <select
-                    className="form-select"
-                    value={selfDraft.status}
-                    onChange={(e) => setSelfDraft((p) => ({ ...p, status: Number(e.target.value) }))}
-                    disabled={selfSaving}
-                  >
-                    <option value={1}>Hiển thị</option>
-                    <option value={0}>Ẩn</option>
-                  </select>
-                </div>
-
-                <div className="mt-3">
-                  <label className="form-label fw-semibold">Hình thức xem</label>
-                  <select
-                    className="form-select"
-                    value={selfDraft.is_paid ? "paid" : "free"}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setSelfDraft((p) => ({
-                        ...p,
-                        is_paid: v === "paid",
-                        price: v === "paid" ? Number(p.price || 0) : 0,
-                      }));
-                    }}
-                    disabled={selfSaving}
-                  >
-                    <option value="free">Miễn phí</option>
-                    <option value="paid">Trả phí</option>
-                  </select>
-
-                  {selfDraft.is_paid ? (
-                    <div className="mt-2">
-                      <label className="form-label fw-semibold mb-1">Giá (VNĐ)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        className="form-control"
-                        value={selfDraft.price}
-                        onChange={(e) => setSelfDraft((p) => ({ ...p, price: e.target.value }))}
-                        placeholder="Ví dụ: 5000"
-                        disabled={selfSaving}
-                      />
-                    </div>
-                  ) : (
-                    <div className="text-secondary small mt-2">User sẽ được xem miễn phí.</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="ad-modal-actions mt-4">
-                <button
-                  className="btn btn-outline-secondary w-100"
-                  type="button"
-                  onClick={closeSelfModal}
-                  disabled={selfSaving}
-                >
-                  Hủy
-                </button>
-                <button
-                  className="btn btn-primary w-100"
-                  type="button"
-                  onClick={saveSelfComic}
-                  disabled={selfSaving}
-                >
-                  {selfSaving ? "Đang lưu..." : editingSelfId ? "Cập nhật" : "Lưu"}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {chapterModalOpen ? (
-          <div className="ad-modal-backdrop" onMouseDown={closeChapterManager}>
-            <div className="ad-modal ad-modal-lg" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="ad-modal-header d-flex align-items-start justify-content-between gap-3 mb-2">
-                <div className="min-w-0">
-                  <div className="fw-bold">Quản lý chương</div>
-                  <div className="text-secondary small">
-                    {chapterComic?.title || "—"} • Tổng chương: {chapterComic?.total_chapters || 1}
-                  </div>
-                </div>
-
-                <button
-                  className="btn btn-light btn-sm"
-                  type="button"
-                  onClick={closeChapterManager}
-                  disabled={chapterSaving}
-                >
-                  <i className="bi bi-x-lg" />
-                </button>
-              </div>
-
-              <div className="d-flex justify-content-between align-items-center gap-2 my-3 flex-wrap">
-                <div className="text-secondary small">
-                  Đã có: <b>{chapterItems.length}</b> / {chapterComic?.total_chapters || 1} chương
-                </div>
-
-                <button
-                  className="btn btn-primary btn-sm"
-                  type="button"
-                  onClick={openCreateChapterForm}
-                >
-                  <i className="bi bi-plus-lg me-1" />
-                  Thêm chương
-                </button>
-              </div>
-
-              {chapterError ? (
-                <div className="alert alert-warning rounded-4">
-                  <i className="bi bi-exclamation-triangle me-2" />
-                  {chapterError}
-                </div>
-              ) : null}
-
-              {chapterLoading ? (
-                <div className="card border-0 shadow-sm rounded-4">
-                  <div className="card-body d-flex align-items-center gap-2">
-                    <div className="spinner-border spinner-border-sm" />
-                    <span className="text-secondary">Đang tải chương...</span>
-                  </div>
-                </div>
-              ) : null}
-
-              {!chapterLoading && chapterItems.length === 0 ? (
-                <div className="card border-0 shadow-sm rounded-4">
-                  <div className="card-body text-center text-secondary">
-                    <i className="bi bi-inbox fs-3 d-block mb-2" />
-                    Chưa có chương nào.
-                  </div>
-                </div>
-              ) : null}
-
-              {!chapterLoading && chapterItems.length > 0 ? (
-                <div className="table-responsive">
-                  <table className="table align-middle">
-                    <thead>
-                      <tr>
-                        <th>ID</th>
-                        <th>Chương</th>
-                        <th>Tiêu đề</th>
-                        <th>Ngày tạo</th>
-                        <th className="text-end">Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {chapterItems.map((ch) => (
-                        <tr key={ch.id}>
-                          <td>{ch.id}</td>
-                          <td>{ch.chapter_no}</td>
-                          <td>{ch.chapter_title}</td>
-                          <td>{ch.created_at ? new Date(ch.created_at).toLocaleString("vi-VN") : "—"}</td>
-                          <td className="text-end">
-                            <div className="d-inline-flex gap-2">
-                              <button
-                                className="btn btn-primary btn-sm"
-                                type="button"
-                                onClick={() => openEditChapterForm(ch)}
-                              >
-                                <i className="bi bi-pencil-square me-1" />
-                                Sửa
-                              </button>
-
-                              <button
-                                className="btn btn-danger btn-sm"
-                                type="button"
-                                onClick={() => deleteChapter(ch)}
-                              >
-                                <i className="bi bi-trash me-1" />
-                                Xóa
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-
-        {chapterFormOpen ? (
-          <div className="ad-modal-backdrop" onMouseDown={closeChapterForm}>
-            <div className="ad-modal ad-modal-lg" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="ad-modal-header d-flex align-items-start justify-content-between gap-3 mb-2">
-                <div className="min-w-0">
-                  <div className="fw-bold">
-                    {editingChapterId ? "Sửa chương" : "Thêm chương"}
-                  </div>
-                  <div className="text-secondary small">
-                    {chapterComic?.title || "—"}
-                  </div>
-                </div>
-
-                <button
-                  className="btn btn-light btn-sm"
-                  type="button"
-                  onClick={closeChapterForm}
-                  disabled={chapterSaving}
-                >
-                  <i className="bi bi-x-lg" />
-                </button>
-              </div>
-
-              <div className="ad-modal-body-scroll mt-3">
-                <div className="row g-3">
-                  <div className="col-md-4">
-                    <label className="form-label fw-semibold">Số chương</label>
-                    <input
-                      type="number"
-                      min="1"
-                      className="form-control"
-                      value={chapterDraft.chapter_no}
-                      onChange={(e) => handleChangeChapterNo(e.target.value)}
-                      disabled={chapterSaving || !!editingChapterId}
-                    />
-                    {editingChapterId ? (
-                      <div className="text-secondary small mt-1">
-                        Khi sửa, API hiện tại không cập nhật số chương.
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="col-md-8">
-                    <label className="form-label fw-semibold">Tiêu đề chương</label>
-                    <input
-                      className="form-control"
-                      value={chapterDraft.chapter_title}
-                      onChange={(e) =>
-                        setChapterDraft((p) => ({ ...p, chapter_title: e.target.value }))
-                      }
-                      placeholder="Ví dụ: Chương 1"
-                      disabled={chapterSaving}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-3">
-                  <label className="form-label fw-semibold">Nội dung chương</label>
-
-                  <div className="d-flex flex-wrap gap-2 mb-2">
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${chapterEditor?.isActive("bold") ? "btn-dark" : "btn-outline-dark"}`}
-                      onClick={() => chapterEditor?.chain().focus().toggleBold().run()}
-                      disabled={!chapterEditor}
-                    >
-                      <b>B</b>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${chapterEditor?.isActive("italic") ? "btn-dark" : "btn-outline-dark"}`}
-                      onClick={() => chapterEditor?.chain().focus().toggleItalic().run()}
-                      disabled={!chapterEditor}
-                    >
-                      <i>I</i>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${chapterEditor?.isActive("underline") ? "btn-dark" : "btn-outline-dark"}`}
-                      onClick={() => chapterEditor?.chain().focus().toggleUnderline().run()}
-                      disabled={!chapterEditor}
-                    >
-                      <u>U</u>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${chapterEditor?.isActive("bulletList") ? "btn-dark" : "btn-outline-dark"}`}
-                      onClick={() => chapterEditor?.chain().focus().toggleBulletList().run()}
-                      disabled={!chapterEditor}
-                    >
-                      • List
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn btn-outline-dark btn-sm"
-                      onClick={() => setEditorLink(chapterEditor)}
-                      disabled={!chapterEditor}
-                    >
-                      <i className="bi bi-link-45deg" /> Link
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn btn-outline-primary btn-sm"
-                      onClick={() => addImageByUrlToEditor(chapterEditor)}
-                      disabled={!chapterEditor}
-                    >
-                      <i className="bi bi-image" /> Ảnh URL
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn btn-outline-success btn-sm"
-                      onClick={pickChapterImageFile}
-                      disabled={!chapterEditor}
-                    >
-                      <i className="bi bi-upload" /> Upload ảnh
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary btn-sm"
-                      onClick={() => chapterEditor?.chain().focus().clearContent().run()}
-                      disabled={!chapterEditor}
-                    >
-                      Xóa nội dung
-                    </button>
-                  </div>
-
-                  <input
-                    ref={chapterImageInputRef}
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={(e) => uploadImageToEditor(e, chapterEditor, "Đã chèn ảnh vào chương")}
-                  />
-
-                  <div className="border rounded-3 p-3 bg-white editor-scroll-box">
-                    <EditorContent editor={chapterEditor} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="ad-modal-actions mt-4">
-                <button
-                  className="btn btn-outline-secondary w-100"
-                  type="button"
-                  onClick={closeChapterForm}
-                  disabled={chapterSaving}
-                >
-                  Hủy
-                </button>
-                <button
-                  className="btn btn-primary w-100"
-                  type="button"
-                  onClick={saveChapter}
-                  disabled={chapterSaving}
-                >
-                  {chapterSaving ? "Đang lưu..." : editingChapterId ? "Cập nhật chương" : "Lưu chương"}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {settingComic ? (
-          <div className="ad-modal-backdrop" onMouseDown={closeSetting}>
-            <div className="ad-modal" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
-                <div className="min-w-0">
-                  <div className="fw-bold">Cài đặt truyện (Truyện ngoài DB)</div>
-                  <div className="text-secondary small text-truncate" title={settingComic?.name}>
-                    {settingComic?.name}
-                  </div>
-                </div>
-
-                <button
-                  className="btn btn-light btn-sm"
-                  type="button"
-                  onClick={closeSetting}
-                  disabled={savingSetting}
-                >
-                  <i className="bi bi-x-lg" />
-                </button>
-              </div>
-
-              <div className="mt-3">
-                <div className="d-flex gap-2 flex-wrap mb-3">
-                  <button
-                    type="button"
-                    className={`btn ${
-                      settingDraft.tab === "pricing" ? "btn-dark" : "btn-outline-dark"
-                    }`}
-                    onClick={() => setSettingDraft((p) => ({ ...p, tab: "pricing" }))}
-                    disabled={savingSetting}
-                  >
-                    <i className="bi bi-cash-coin me-2" />
-                    Giá truyện
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`btn ${
-                      settingDraft.tab === "translator" ? "btn-dark" : "btn-outline-dark"
-                    }`}
-                    onClick={() => setSettingDraft((p) => ({ ...p, tab: "translator" }))}
-                    disabled={savingSetting}
-                  >
-                    <i className="bi bi-translate me-2" />
-                    Dịch bởi
-                  </button>
-                </div>
-
-                {settingDraft.tab === "pricing" ? (
-                  <>
-                    <label className="form-label fw-semibold">Hình thức xem</label>
-                    <select
-                      className="form-select"
-                      value={settingDraft.type}
-                      onChange={(e) =>
-                        setSettingDraft((p) => ({ ...p, type: e.target.value }))
-                      }
-                      disabled={savingSetting}
-                    >
-                      <option value="free">Miễn phí</option>
-                      <option value="paid">Trả phí</option>
-                    </select>
-
-                    {settingDraft.type === "paid" ? (
-                      <div className="mt-3">
-                        <label className="form-label fw-semibold">Giá (VNĐ)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          className="form-control"
-                          value={settingDraft.price}
-                          onChange={(e) =>
-                            setSettingDraft((p) => ({ ...p, price: e.target.value }))
-                          }
-                          placeholder="Ví dụ: 5000"
-                          disabled={savingSetting}
-                        />
-                      </div>
-                    ) : (
-                      <div className="text-secondary small mt-2">
-                        User sẽ được xem miễn phí.
-                      </div>
-                    )}
-
-                    <div className="ad-modal-actions mt-4">
-                      <button
-                        className="btn btn-outline-secondary w-100"
-                        type="button"
-                        onClick={closeSetting}
-                        disabled={savingSetting}
-                      >
-                        Hủy
-                      </button>
-                      <button
-                        className="btn btn-primary w-100"
-                        type="button"
-                        onClick={saveSetting}
-                        disabled={savingSetting}
-                      >
-                        {savingSetting ? "Đang lưu..." : "Lưu cài đặt"}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <label className="form-label fw-semibold">Dịch bởi</label>
-                    <input
-                      className="form-control"
-                      value={settingDraft.translator}
-                      onChange={(e) =>
-                        setSettingDraft((p) => ({ ...p, translator: e.target.value }))
-                      }
-                      placeholder="Ví dụ: Nhóm dịch ABC"
-                      disabled={savingSetting}
-                    />
-
-                    <div className="text-secondary small mt-2">
-                      Có thể để trống để xóa thông tin translator.
-                    </div>
-
-                    <div className="mt-3 p-3 rounded-3 border bg-light">
-                      <div className="small text-secondary">Giá trị hiện tại</div>
-                      <div className="fw-semibold">
-                        {String(settingDraft.translator || "").trim() || "—"}
-                      </div>
-                    </div>
-
-                    <div className="ad-modal-actions mt-4">
-                      <button
-                        className="btn btn-outline-secondary w-100"
-                        type="button"
-                        onClick={closeSetting}
-                        disabled={savingSetting}
-                      >
-                        Hủy
-                      </button>
-                      <button
-                        className="btn btn-primary w-100"
-                        type="button"
-                        onClick={saveTranslator}
-                        disabled={savingSetting}
-                      >
-                        {savingSetting ? "Đang lưu..." : "Lưu dịch giả"}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <SelfComicFormModal
+          selfModalOpen={selfModalOpen}
+          selfSaving={selfSaving}
+          editingSelfId={editingSelfId}
+          selfDraft={selfDraft}
+          setSelfDraft={setSelfDraft}
+          cats={cats}
+          coverInputRef={coverInputRef}
+          descImageInputRef={descImageInputRef}
+          descEditor={descEditor}
+          onClose={closeSelfModal}
+          onSave={saveSelfComic}
+          onPickCoverFile={pickCoverFile}
+          onUploadCoverImage={onUploadCoverImage}
+          onRemoveCoverImage={removeCoverImage}
+          onPickDescImageFile={pickDescImageFile}
+          onSetEditorLink={setEditorLink}
+          onAddImageByUrl={addImageByUrlToEditor}
+          onUploadImageToEditor={uploadImageToEditor}
+        />
+
+        <ChapterModal
+          chapterModalOpen={chapterModalOpen}
+          chapterComic={chapterComic}
+          chapterItems={chapterItems}
+          chapterLoading={chapterLoading}
+          chapterError={chapterError}
+          chapterSaving={chapterSaving}
+          onCloseManager={closeChapterManager}
+          onOpenCreateForm={openCreateChapterForm}
+          onOpenEditForm={openEditChapterForm}
+          onDeleteChapter={deleteChapter}
+          chapterFormOpen={chapterFormOpen}
+          editingChapterId={editingChapterId}
+          chapterDraft={chapterDraft}
+          setChapterDraft={setChapterDraft}
+          chapterEditor={chapterEditor}
+          chapterImageInputRef={chapterImageInputRef}
+          onCloseForm={closeChapterForm}
+          onSaveChapter={saveChapter}
+          onChangeChapterNo={handleChangeChapterNo}
+          onSetEditorLink={setEditorLink}
+          onAddImageByUrl={addImageByUrlToEditor}
+          onPickChapterImageFile={pickChapterImageFile}
+          onUploadImageToEditor={uploadImageToEditor}
+        />
+
+        <ExternalComicSettingModal
+          settingComic={settingComic}
+          settingDraft={settingDraft}
+          setSettingDraft={setSettingDraft}
+          savingSetting={savingSetting}
+          onClose={closeSetting}
+          onSavePricing={saveSetting}
+          onSaveTranslator={saveTranslator}
+        />
 
         <style>{`
           .tiptap-content {

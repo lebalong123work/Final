@@ -79,7 +79,7 @@ function normalizeSelfComic(c) {
 
   return {
     id: c.id,
-    name: c.title || "Không tên",
+    name: c.title || "Untitled",
     cover: buildCover(c.cover_image),
     categories,
     tags: categories.map((x) => x.name).filter(Boolean),
@@ -141,7 +141,7 @@ function Pagination({ page, totalPages, onPage }) {
         disabled={page <= 1}
         onClick={() => onPage(page - 1)}
       >
-        <i className="bi bi-chevron-left" /> Trước
+        <i className="bi bi-chevron-left" /> Previous
       </button>
 
       <div className="clp-pagiNums">
@@ -168,7 +168,7 @@ function Pagination({ page, totalPages, onPage }) {
         disabled={page >= totalPages}
         onClick={() => onPage(page + 1)}
       >
-        Sau <i className="bi bi-chevron-right" />
+        Next <i className="bi bi-chevron-right" />
       </button>
     </div>
   );
@@ -222,7 +222,7 @@ export default function SelfComic() {
         const rows = Array.isArray(data?.data) ? data.data : [];
         setCategories(rows);
       } catch (e) {
-        setCatErr(e?.message || "Lỗi tải danh mục");
+        setCatErr(e?.message || "Failed to load categories");
         setCategories([]);
       } finally {
         setCatLoading(false);
@@ -257,7 +257,7 @@ export default function SelfComic() {
           totalPages: Number(data?.totalPages || 1),
         });
       } catch (e) {
-        setErr(e?.message || "Lỗi tải dữ liệu");
+        setErr(e?.message || "Failed to load data");
         setItems([]);
         setMeta({ page: 1, limit, total: 0, totalPages: 1 });
       } finally {
@@ -275,12 +275,12 @@ export default function SelfComic() {
       <div className="clp-wrap">
         <div className="clp-hero mb-3">
           <div className="clp-heroLeft">
-            <h1 className="clp-title">Truyện tự đăng</h1>
+            <h1 className="clp-title">Novels</h1>
             <div className="clp-sub">
               <i className="bi bi-collection me-2" />
-              Tổng: <b className="ms-1">{meta.total}</b>
+              Total: <b className="ms-1">{meta.total}</b>
               <span className="ms-2 text-secondary">
-                • Trang {meta.page}/{meta.totalPages}
+                • Page {meta.page}/{meta.totalPages}
               </span>
             </div>
           </div>
@@ -291,7 +291,7 @@ export default function SelfComic() {
               <input
                 value={q}
                 onChange={(e) => setParam("q", e.target.value)}
-                placeholder="Tìm truyện tự đăng..."
+                placeholder="Search novels..."
               />
               {q ? (
                 <button
@@ -310,7 +310,7 @@ export default function SelfComic() {
               className="clp-select"
               disabled={catLoading}
             >
-              <option value="">Tất cả danh mục</option>
+              <option value="">All categories</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
@@ -323,7 +323,7 @@ export default function SelfComic() {
         {catErr ? (
           <div className="clp-alert">
             <i className="bi bi-exclamation-triangle me-2" />
-            Lỗi danh mục: {catErr}
+            Category error: {catErr}
           </div>
         ) : null}
 
@@ -337,12 +337,12 @@ export default function SelfComic() {
         {loading ? (
           <div className="clp-loading">
             <div className="spinner-border spinner-border-sm me-2" />
-            Đang tải trang {page}...
+            Loading page {page}...
           </div>
         ) : items.length === 0 ? (
           <div className="clp-empty">
             <i className="bi bi-inbox fs-1" />
-            <div className="mt-2">Không có dữ liệu.</div>
+            <div className="mt-2">No data found.</div>
           </div>
         ) : (
           <>
@@ -356,7 +356,7 @@ export default function SelfComic() {
                       <Link
                         to={detailUrl}
                         className="clp-thumbLink"
-                        aria-label={`Xem ${c.name}`}
+                        aria-label={`View ${c.name}`}
                       >
                         <div className="clp-thumb">
                           <img src={c.cover} alt={c.name} loading="lazy" />
@@ -371,15 +371,15 @@ export default function SelfComic() {
 
                           <div className="clp-badgesRight">
                             {c.latest ? (
-                              <span className="clp-badge dark">{c.latest} chap</span>
+                              <span className="clp-badge dark">Ch.{c.latest}</span>
                             ) : null}
 
                             {c.is_paid ? (
                               <span className="clp-badge pay">
-                                Trả phí{c.price ? ` • ${fmtVND(c.price)}` : ""}
+                                Paid{c.price ? ` • ${fmtVND(c.price)}` : ""}
                               </span>
                             ) : (
-                              <span className="clp-badge free">Miễn phí</span>
+                              <span className="clp-badge free">Free</span>
                             )}
                           </div>
 
@@ -388,7 +388,7 @@ export default function SelfComic() {
                               {c.name}
                             </div>
                             <div className="clp-overlayMeta">
-                              <i className="bi bi-clock me-1" /> Cập nhật: <span>{c.updated}</span>
+                              <i className="bi bi-clock me-1" /> Updated: <span>{c.updated}</span>
                             </div>
                           </div>
                         </div>
@@ -403,7 +403,7 @@ export default function SelfComic() {
 
                         <div className="clp-meta">
                           <i className="bi bi-person me-1" />
-                          {c.author || "Chưa có tác giả"}
+                          {c.author || "No author"}
                         </div>
 
                         <div className="clp-meta clp-meta-cats">
@@ -420,7 +420,7 @@ export default function SelfComic() {
                               ))}
                             </span>
                           ) : (
-                            <span className="text-secondary">Chưa có danh mục</span>
+                            <span className="text-secondary">No category</span>
                           )}
                         </div>
 
@@ -430,13 +430,13 @@ export default function SelfComic() {
 
                         <div className="clp-meta">
                           <i className="bi bi-card-text me-1" />
-                          {c.status === 1 ? "Đang phát hành" : "Ẩn / nháp"}
+                          {c.status === 1 ? "Published" : "Hidden / Draft"}
                         </div>
 
                         <div className="mt-3">
                           <Link to={detailUrl} className="btn btn-dark btn-sm w-100">
                             <i className="bi bi-eye me-2" />
-                            Xem chi tiết
+                            View Details
                           </Link>
                         </div>
                       </div>

@@ -24,7 +24,7 @@ function fmtUpdated(d) {
 function normalizeExternalComic(c) {
   return {
     id: c.api_id || c.id,
-    name: c.name || "Không tên",
+    name: c.name || "Untitled",
     slug: c.slug,
     cover: buildCover(c.thumb_url),
     tags: (c.categories || []).map((x) => x?.name).filter(Boolean),
@@ -81,7 +81,7 @@ function Pagination({ page, totalPages, onPage }) {
   return (
     <div className="clp-pagi">
       <button className="clp-pagiBtn" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-        <i className="bi bi-chevron-left" /> Trước
+        <i className="bi bi-chevron-left" /> Previous
       </button>
 
       <div className="clp-pagiNums">
@@ -104,7 +104,7 @@ function Pagination({ page, totalPages, onPage }) {
       </div>
 
       <button className="clp-pagiBtn" disabled={page >= totalPages} onClick={() => onPage(page + 1)}>
-        Sau <i className="bi bi-chevron-right" />
+        Next <i className="bi bi-chevron-right" />
       </button>
     </div>
   );
@@ -148,7 +148,6 @@ export default function ComicListPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // load danh mục
   useEffect(() => {
     const run = async () => {
       try {
@@ -160,7 +159,7 @@ export default function ComicListPage() {
 
         setCategories(rows);
       } catch (e) {
-        setCatErr(e?.message || "Lỗi tải danh mục");
+        setCatErr(e?.message || "Failed to load categories");
         setCategories([]);
       } finally {
         setCatLoading(false);
@@ -170,7 +169,6 @@ export default function ComicListPage() {
     run();
   }, []);
 
-  // load truyện
   useEffect(() => {
     const run = async () => {
       try {
@@ -196,7 +194,7 @@ export default function ComicListPage() {
           totalPages: Number(data?.totalPages || 1),
         });
       } catch (e) {
-        setErr(e?.message || "Lỗi tải dữ liệu");
+        setErr(e?.message || "Failed to load data");
         setItems([]);
         setMeta({ page: 1, limit, total: 0, totalPages: 1 });
       } finally {
@@ -214,12 +212,12 @@ export default function ComicListPage() {
       <div className="clp-wrap">
         <div className="clp-hero">
           <div className="clp-heroLeft">
-            <h1 className="clp-title">Danh sách truyện</h1>
+            <h1 className="clp-title">Comic List</h1>
             <div className="clp-sub">
               <i className="bi bi-collection me-2" />
-              Tổng: <b className="ms-1">{meta.total}</b>
+              Total: <b className="ms-1">{meta.total}</b>
               <span className="ms-2 text-secondary">
-                • Trang {meta.page}/{meta.totalPages}
+                • Page {meta.page}/{meta.totalPages}
               </span>
             </div>
           </div>
@@ -230,7 +228,7 @@ export default function ComicListPage() {
               <input
                 value={q}
                 onChange={(e) => setParam("q", e.target.value)}
-                placeholder="Tìm truyện..."
+                placeholder="Search comics..."
               />
               {q ? (
                 <button className="clp-x" onClick={() => setParam("q", "")} aria-label="Clear">
@@ -245,7 +243,7 @@ export default function ComicListPage() {
               className="clp-select"
               disabled={catLoading}
             >
-              <option value="">Tất cả thể loại</option>
+              <option value="">All genres</option>
 
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.slug}>
@@ -259,7 +257,7 @@ export default function ComicListPage() {
         {catErr ? (
           <div className="clp-alert">
             <i className="bi bi-exclamation-triangle me-2" />
-            Lỗi danh mục: {catErr}
+            Category error: {catErr}
           </div>
         ) : null}
 
@@ -273,12 +271,12 @@ export default function ComicListPage() {
         {loading ? (
           <div className="clp-loading">
             <div className="spinner-border spinner-border-sm me-2" />
-            Đang tải trang {page}...
+            Loading page {page}...
           </div>
         ) : items.length === 0 ? (
           <div className="clp-empty">
             <i className="bi bi-inbox fs-1" />
-            <div className="mt-2">Không có dữ liệu.</div>
+            <div className="mt-2">No data found.</div>
           </div>
         ) : (
           <>
@@ -289,7 +287,7 @@ export default function ComicListPage() {
                 return (
                 <div key={c.id} className="col-12 col-sm-6 col-lg-4">
                     <div className="clp-card">
-                      <Link to={detailUrl} className="clp-thumbLink" aria-label={`Xem ${c.name}`}>
+                      <Link to={detailUrl} className="clp-thumbLink" aria-label={`View ${c.name}`}>
                         <div className="clp-thumb">
                           <img src={c.cover} alt={c.name} loading="lazy" />
 
@@ -302,14 +300,14 @@ export default function ComicListPage() {
                           </div>
 
                           <div className="clp-badgesRight">
-                            {c.latest ? <span className="clp-badge dark">Chap {c.latest}</span> : null}
+                            {c.latest ? <span className="clp-badge dark">Ch.{c.latest}</span> : null}
 
                             {c.is_paid ? (
                               <span className="clp-badge pay">
-                                Trả phí{c.price ? ` • ${fmtVND(c.price)}` : ""}
+                                Paid{c.price ? ` • ${fmtVND(c.price)}` : ""}
                               </span>
                             ) : (
-                              <span className="clp-badge free">Miễn phí</span>
+                              <span className="clp-badge free">Free</span>
                             )}
                           </div>
 
@@ -318,7 +316,7 @@ export default function ComicListPage() {
                               {c.name}
                             </div>
                             <div className="clp-overlayMeta">
-                              <i className="bi bi-clock me-1" /> Cập nhật: <span>{c.updated}</span>
+                              <i className="bi bi-clock me-1" /> Updated: <span>{c.updated}</span>
                             </div>
                           </div>
                         </div>

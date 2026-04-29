@@ -106,7 +106,6 @@ export default function ReadSelfChapter() {
     localStorage.setItem("self_reader_settings", JSON.stringify(readerSettings));
   }, [readerSettings]);
 
-  // load dữ liệu comic + access + chapter list + current chapter
   useEffect(() => {
     const run = async () => {
       try {
@@ -114,7 +113,7 @@ export default function ReadSelfChapter() {
         setErr("");
 
         if (!comicId || !chapterId) {
-          throw new Error("Thiếu comicId hoặc chapterId.");
+          throw new Error("Missing comicId or chapterId.");
         }
 
         const d1 = await fetchJSON(`${API_BASE}/api/self-comics/${comicId}`, {
@@ -156,7 +155,7 @@ export default function ReadSelfChapter() {
         setChapterData(d3?.data || null);
       } catch (e) {
         console.error(e);
-        setErr(e.message || "Lỗi tải chapter");
+        setErr(e.message || "Failed to load chapter");
         setComic(null);
         setChapterData(null);
         setChapters([]);
@@ -199,7 +198,6 @@ export default function ReadSelfChapter() {
   const isOwner = !!(ownerUserId && myId && ownerUserId === myId);
   const locked = isPaid && !hasAccess;
 
-  // lưu lịch sử đọc
   useEffect(() => {
     if (!token) return;
     if (!comicId) return;
@@ -221,7 +219,7 @@ export default function ReadSelfChapter() {
           }),
         });
 
-        console.log("Đã lưu lịch sử đọc self:", {
+        console.log("Reading history saved (self):", {
           comicType: "self",
           comicId,
           chapterId,
@@ -234,7 +232,6 @@ export default function ReadSelfChapter() {
     return () => clearTimeout(timer);
   }, [token, comicId, chapterId, locked]);
 
-  // socket
   useEffect(() => {
     if (!chapterId) return;
 
@@ -318,7 +315,6 @@ export default function ReadSelfChapter() {
     };
   }, [chapterId, token]);
 
-  // load comments + reactions
   useEffect(() => {
     if (!chapterId || !comicId) return;
 
@@ -369,12 +365,12 @@ export default function ReadSelfChapter() {
 
   const toggleLike = async () => {
     if (!token) {
-      toast.info("Bạn cần đăng nhập để thả tim.");
+      toast.info("You need to log in to like.");
       return;
     }
 
     if (!chapterId || !comicId) {
-      toast.warning("Thiếu thông tin chapter.");
+      toast.warning("Missing chapter information.");
       return;
     }
 
@@ -412,7 +408,7 @@ export default function ReadSelfChapter() {
         liked: !!data?.data?.liked,
       });
     } catch (e) {
-      toast.error(e.message || "Lỗi");
+      toast.error(e.message || "Error");
     } finally {
       setReactionLoading(false);
     }
@@ -420,7 +416,7 @@ export default function ReadSelfChapter() {
 
   const sendComment = async () => {
     if (!token) {
-      toast.info("Bạn cần đăng nhập để bình luận.");
+      toast.info("You need to log in to comment.");
       return;
     }
 
@@ -461,15 +457,15 @@ export default function ReadSelfChapter() {
 
       setCommentText("");
       setReplyTo(null);
-      toast.success("Đã gửi bình luận!");
+      toast.success("Comment sent!");
     } catch (e) {
-      toast.error(e.message || "Không gửi được bình luận");
+      toast.error(e.message || "Failed to send comment");
     }
   };
 
   const deleteComment = async (commentId) => {
     if (!token) {
-      toast.info("Bạn cần đăng nhập.");
+      toast.info("You need to log in.");
       return;
     }
 
@@ -489,15 +485,15 @@ export default function ReadSelfChapter() {
         commentId,
       });
 
-      toast.success("Đã xóa bình luận!");
+      toast.success("Comment deleted!");
     } catch (e) {
-      toast.error(e.message || "Không xóa được bình luận");
+      toast.error(e.message || "Failed to delete comment");
     }
   };
 
   const handleBuy = async () => {
     if (!token) {
-      toast.info("Bạn cần đăng nhập để mua truyện");
+      toast.info("You need to log in to purchase.");
       return;
     }
 
@@ -510,9 +506,9 @@ export default function ReadSelfChapter() {
       });
 
       setHasAccess(true);
-      toast.success(`Mua thành công! Số dư còn lại: ${data?.data?.balance || 0}`);
+      toast.success(`Purchase successful! Remaining balance: ${data?.data?.balance || 0}`);
     } catch (e) {
-      toast.error(e.message || "Lỗi mua truyện");
+      toast.error(e.message || "Purchase failed");
     }
   };
 
@@ -550,7 +546,7 @@ export default function ReadSelfChapter() {
         <div className="rsc-wrap">
           <div className="rsc-loading">
             <div className="spinner-border spinner-border-sm me-2" />
-            Đang tải chapter...
+            Loading chapter...
           </div>
         </div>
       </div>
@@ -577,7 +573,7 @@ export default function ReadSelfChapter() {
       <div className="rsc-topbar">
         <div className="rsc-topbar-inner">
           <Link className="rsc-back" to={`/self-comics/${comicId}`}>
-            <i className="bi bi-arrow-left" /> Quay lại truyện
+            <i className="bi bi-arrow-left" /> Back to Comic
           </Link>
 
           <div className="rsc-title">
@@ -593,14 +589,14 @@ export default function ReadSelfChapter() {
               disabled={!prevChap}
               onClick={() => prevChap && goChap(prevChap.id)}
             >
-              <i className="bi bi-chevron-left" /> Chap trước
+              <i className="bi bi-chevron-left" /> Previous
             </button>
             <button
               className="btn btn-outline-dark btn-sm"
               disabled={!nextChap}
               onClick={() => nextChap && goChap(nextChap.id)}
             >
-              Chap sau <i className="bi bi-chevron-right" />
+              Next <i className="bi bi-chevron-right" />
             </button>
           </div>
         </div>
@@ -613,7 +609,7 @@ export default function ReadSelfChapter() {
             type="button"
             onClick={toggleLike}
             disabled={!reactionReady || reactionLoading}
-            title={liked ? "Bỏ tim" : "Thả tim"}
+            title={liked ? "Unlike" : "Like"}
           >
             <i className={`bi ${liked ? "bi-heart-fill" : "bi-heart"}`} />
             <span>{likeCount}</span>
@@ -622,7 +618,7 @@ export default function ReadSelfChapter() {
           <div className="rsc-actionsMeta">
             <span className="rsc-pill">
               <i className="bi bi-chat-dots me-2" />
-              {comments.length} bình luận
+              {comments.length} comments
             </span>
             <span className="rsc-pill">
               <i className="bi bi-journal-text me-2" />
@@ -636,26 +632,26 @@ export default function ReadSelfChapter() {
             <div className="rsc-toolsHead">
               <div className="rsc-toolsTitle">
                 <i className="bi bi-sliders me-2" />
-                Tùy chỉnh đọc truyện
+                Reading Settings
               </div>
               <button
                 className="btn btn-sm btn-outline-secondary"
                 onClick={resetReaderSettings}
                 type="button"
               >
-                Mặc định
+                Default
               </button>
             </div>
 
             <div className="rsc-toolsGrid">
               <div className="rsc-toolItem">
-                <label>Font chữ</label>
+                <label>Font</label>
                 <select
                   value={readerSettings.fontFamily}
                   onChange={(e) => updateReaderSetting("fontFamily", e.target.value)}
                   className="form-select"
                 >
-                  <option value="system">Mặc định</option>
+                  <option value="system">Default</option>
                   <option value="serif">Serif</option>
                   <option value="sans">Sans</option>
                   <option value="mono">Mono</option>
@@ -663,20 +659,20 @@ export default function ReadSelfChapter() {
               </div>
 
               <div className="rsc-toolItem">
-                <label>Nền đọc</label>
+                <label>Background</label>
                 <select
                   value={readerSettings.theme}
                   onChange={(e) => updateReaderSetting("theme", e.target.value)}
                   className="form-select"
                 >
-                  <option value="light">Sáng</option>
+                  <option value="light">Light</option>
                   <option value="sepia">Sepia</option>
-                  <option value="dark">Tối</option>
+                  <option value="dark">Dark</option>
                 </select>
               </div>
 
               <div className="rsc-toolItem">
-                <label>Cỡ chữ: {readerSettings.fontSize}px</label>
+                <label>Font size: {readerSettings.fontSize}px</label>
                 <input
                   type="range"
                   min="15"
@@ -689,7 +685,7 @@ export default function ReadSelfChapter() {
               </div>
 
               <div className="rsc-toolItem">
-                <label>Giãn dòng: {readerSettings.lineHeight}</label>
+                <label>Line height: {readerSettings.lineHeight}</label>
                 <input
                   type="range"
                   min="1.4"
@@ -702,7 +698,7 @@ export default function ReadSelfChapter() {
               </div>
 
               <div className="rsc-toolItem">
-                <label>Chiều rộng: {readerSettings.contentWidth}px</label>
+                <label>Width: {readerSettings.contentWidth}px</label>
                 <input
                   type="range"
                   min="640"
@@ -723,17 +719,17 @@ export default function ReadSelfChapter() {
               <i className="bi bi-lock" />
             </div>
             <div className="rsc-locktext">
-              <div className="fw-bold">Nội dung bị khóa</div>
+              <div className="fw-bold">Content Locked</div>
               <div className="text-secondary">
                 {isOwner
-                  ? "Bạn là chủ truyện nên luôn có quyền đọc."
-                  : "Mua truyện để mở khóa nội dung chapter này."}
+                  ? "You are the owner and always have read access."
+                  : "Purchase this comic to unlock this chapter."}
               </div>
             </div>
 
             {!isOwner ? (
               <button className="btn btn-danger" onClick={handleBuy}>
-                Mua truyện • {fmtVND(comic?.price)}
+                Buy Comic • {fmtVND(comic?.price)}
               </button>
             ) : null}
           </div>
@@ -747,7 +743,7 @@ export default function ReadSelfChapter() {
                 <div className="rsc-chapterHeader">
                   <h2>{chapterData?.chapter_title || `Chap ${chapterData?.chapter_no || ""}`}</h2>
                   <div className="rsc-subInfo">
-                    <span>{comic?.title || "Truyện tự đăng"}</span>
+                    <span>{comic?.title || "Novel"}</span>
                     <span>•</span>
                     <span>{fmtTime(chapterData?.created_at)}</span>
                   </div>
@@ -761,7 +757,7 @@ export default function ReadSelfChapter() {
                   }}
                   dangerouslySetInnerHTML={{
                     __html:
-                      chapterData?.content || "<p>Chưa có nội dung cho chapter này.</p>",
+                      chapterData?.content || "<p>No content for this chapter.</p>",
                   }}
                 />
               </div>
@@ -772,7 +768,7 @@ export default function ReadSelfChapter() {
         <div className="rsc-bottomNav">
           <button className="btn btn-dark" disabled={!prevChap} onClick={() => prevChap && goChap(prevChap.id)}>
             <i className="bi bi-chevron-left me-2" />
-            Chap trước
+            Previous
           </button>
 
           <button
@@ -783,7 +779,7 @@ export default function ReadSelfChapter() {
           </button>
 
           <button className="btn btn-dark" disabled={!nextChap} onClick={() => nextChap && goChap(nextChap.id)}>
-            Chap sau <i className="bi bi-chevron-right ms-2" />
+            Next <i className="bi bi-chevron-right ms-2" />
           </button>
         </div>
 
@@ -791,15 +787,15 @@ export default function ReadSelfChapter() {
           <div className="rsc-commentsHead">
             <div className="rsc-commentsTitle">
               <i className="bi bi-chat-left-text me-2" />
-              Bình luận
+              Comments
             </div>
-            <div className="rsc-commentsHint">Bình luận sẽ hiện ngay cho mọi người.</div>
+            <div className="rsc-commentsHint">Comments are visible to everyone immediately.</div>
           </div>
 
           <div className="rsc-composer">
             {replyTo ? (
               <div className="rsc-replyTo">
-                Đang trả lời <b>{replyTo.replyName || "user"}</b>
+                Replying to <b>{replyTo.replyName || "user"}</b>
                 <button className="rsc-x" onClick={() => setReplyTo(null)} type="button">
                   <i className="bi bi-x" />
                 </button>
@@ -809,7 +805,7 @@ export default function ReadSelfChapter() {
             <textarea
               className="rsc-input"
               rows={3}
-              placeholder={token ? "Viết bình luận..." : "Đăng nhập để bình luận..."}
+              placeholder={token ? "Write a comment..." : "Log in to comment..."}
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               disabled={!token}
@@ -822,7 +818,7 @@ export default function ReadSelfChapter() {
                 onClick={() => setCommentText("")}
                 disabled={!token}
               >
-                Xóa
+                Clear
               </button>
               <button
                 className="btn btn-primary"
@@ -831,7 +827,7 @@ export default function ReadSelfChapter() {
                 disabled={!token || !commentText.trim()}
               >
                 <i className="bi bi-send me-2" />
-                Gửi
+                Send
               </button>
             </div>
           </div>
@@ -840,7 +836,7 @@ export default function ReadSelfChapter() {
             {rootComments.length === 0 ? (
               <div className="rsc-empty">
                 <i className="bi bi-chat-square-dots" />
-                <div>Chưa có bình luận. Hãy là người đầu tiên!</div>
+                <div>No comments yet. Be the first!</div>
               </div>
             ) : (
               rootComments.map((c) => {
@@ -877,7 +873,7 @@ export default function ReadSelfChapter() {
                           disabled={!token}
                         >
                           <i className="bi bi-reply me-1" />
-                          Trả lời
+                          Reply
                         </button>
 
                         {isMine ? (
@@ -885,7 +881,7 @@ export default function ReadSelfChapter() {
                             className="rsc-iconBtn danger"
                             type="button"
                             onClick={() => deleteComment(c.id)}
-                            title="Xóa bình luận"
+                            title="Delete comment"
                           >
                             <i className="bi bi-trash3" />
                           </button>
@@ -909,7 +905,7 @@ export default function ReadSelfChapter() {
                                       className="rsc-iconBtn danger"
                                       type="button"
                                       onClick={() => deleteComment(r.id)}
-                                      title="Xóa bình luận"
+                                      title="Delete comment"
                                     >
                                       <i className="bi bi-trash3" />
                                     </button>
@@ -926,7 +922,7 @@ export default function ReadSelfChapter() {
                                     disabled={!token}
                                   >
                                     <i className="bi bi-reply me-1" />
-                                    Trả lời
+                                    Reply
                                   </button>
                                 </div>
                               </div>

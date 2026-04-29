@@ -55,13 +55,13 @@ export default function AdminUsers() {
 
   // ===== Modal state =====
   const [modalOpen, setModalOpen] = useState(false);
-  const [picked, setPicked] = useState(null); // user row
+  const [picked, setPicked] = useState(null);
   const [draft, setDraft] = useState({ status: 1, role: "user" });
   const [saving, setSaving] = useState(false);
 
   const fetchPage = async (p = 1) => {
     if (!token) {
-      setErr("Bạn cần đăng nhập admin (token không tồn tại).");
+      setErr("You need to log in as admin (token does not exist).");
       return;
     }
 
@@ -87,7 +87,7 @@ export default function AdminUsers() {
       setRows([]);
       setTotalPages(1);
       setTotal(0);
-      setErr(e.message || "Không kết nối được server");
+      setErr(e.message || "Cannot connect to server");
     } finally {
       setLoading(false);
     }
@@ -98,7 +98,6 @@ export default function AdminUsers() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // search server-side theo q -> bấm enter/refresh
   const onSearch = (e) => {
     e.preventDefault();
     fetchPage(1);
@@ -164,7 +163,7 @@ export default function AdminUsers() {
 
       closeModal();
     } catch (e) {
-      toast(e.message || "Lỗi lưu thay đổi");
+      toast(e.message || "Error saving changes");
     } finally {
       setSaving(false);
     }
@@ -180,9 +179,9 @@ export default function AdminUsers() {
             {/* Header */}
             <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
               <div>
-                <h2 className="m-0 ad-title">Quản lý người dùng</h2>
+                <h2 className="m-0 ad-title">Manage Users</h2>
                 <div className="text-secondary small">
-                  Tổng: <b>{total}</b> người dùng
+                  Total: <b>{total}</b> users
                 </div>
               </div>
 
@@ -193,7 +192,7 @@ export default function AdminUsers() {
                   </span>
                   <input
                     className="form-control"
-                    placeholder="Tìm username / email / phone..."
+                    placeholder="Search username / email / phone..."
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                   />
@@ -206,7 +205,7 @@ export default function AdminUsers() {
                   disabled={loading}
                 >
                   <i className={`bi ${loading ? "bi-arrow-repeat" : "bi-arrow-clockwise"}`} />
-                  Làm mới
+                  Refresh
                 </button>
               </div>
             </div>
@@ -227,13 +226,13 @@ export default function AdminUsers() {
                     <thead>
                       <tr className="text-secondary small">
                         <th>ID</th>
-                        <th>Người dùng</th>
+                        <th>User</th>
                         <th>Email</th>
                         <th>Provider</th>
-                        <th>Quyền</th>
-                        <th>Trạng thái</th>
-                        <th>Ngày tạo</th>
-                        <th className="text-end">Hành động</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Created At</th>
+                        <th className="text-end">Actions</th>
                       </tr>
                     </thead>
 
@@ -242,14 +241,14 @@ export default function AdminUsers() {
                         <tr>
                           <td colSpan={8} className="py-4 text-center text-secondary">
                             <span className="spinner-border spinner-border-sm me-2" />
-                            Đang tải...
+                            Loading...
                           </td>
                         </tr>
                       ) : rows.length === 0 ? (
                         <tr>
                           <td colSpan={8} className="py-5 text-center text-secondary">
                             <i className="bi bi-inbox fs-3 d-block mb-2" />
-                            Không có người dùng
+                            No users found
                           </td>
                         </tr>
                       ) : (
@@ -282,7 +281,7 @@ export default function AdminUsers() {
 
                             <td>
                               <Badge tone={toneStatus(u.status)}>
-                                {Number(u.status) === 1 ? "Hoạt động" : "Bị khóa"}
+                                {Number(u.status) === 1 ? "Active" : "Locked"}
                               </Badge>
                             </td>
 
@@ -295,7 +294,7 @@ export default function AdminUsers() {
                                 onClick={() => openModal(u)}
                               >
                                 <i className="bi bi-pencil-square me-1" />
-                                Cập nhật
+                                Update
                               </button>
                             </td>
                           </tr>
@@ -308,7 +307,7 @@ export default function AdminUsers() {
                 {/* Pagination footer */}
                 <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center mt-3">
                   <div className="small text-secondary">
-                    Trang {page}/{totalPages}
+                    Page {page}/{totalPages}
                   </div>
 
                   <div className="d-flex gap-2 align-items-center">
@@ -317,7 +316,7 @@ export default function AdminUsers() {
                       type="button"
                       disabled={!canPrev}
                       onClick={() => setPage(1)}
-                      title="Trang đầu"
+                      title="First page"
                     >
                       <i className="bi bi-chevron-double-left" />
                     </button>
@@ -329,7 +328,7 @@ export default function AdminUsers() {
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                     >
                       <i className="bi bi-chevron-left me-1" />
-                      Trước
+                      Previous
                     </button>
 
                     <span className="small text-secondary px-2">
@@ -342,7 +341,7 @@ export default function AdminUsers() {
                       disabled={!canNext}
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     >
-                      Sau
+                      Next
                       <i className="bi bi-chevron-right ms-1" />
                     </button>
 
@@ -351,7 +350,7 @@ export default function AdminUsers() {
                       type="button"
                       disabled={!canNext}
                       onClick={() => setPage(totalPages)}
-                      title="Trang cuối"
+                      title="Last page"
                     >
                       <i className="bi bi-chevron-double-right" />
                     </button>
@@ -366,7 +365,7 @@ export default function AdminUsers() {
                 <div className="ad-modal" onMouseDown={(e) => e.stopPropagation()}>
                   <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
                     <div className="min-w-0">
-                      <div className="fw-bold">Cập nhật người dùng</div>
+                      <div className="fw-bold">Update user</div>
                       <div className="text-secondary small text-truncate" title={picked.email || ""}>
                         #{picked.id} • {picked.username || "—"} • {picked.email || "—"}
                       </div>
@@ -379,20 +378,20 @@ export default function AdminUsers() {
 
                   <div className="mt-3">
                     {/* Status */}
-                    <label className="form-label fw-semibold">Trạng thái tài khoản</label>
+                    <label className="form-label fw-semibold">Account status</label>
                     <select
                       className="form-select"
                       value={draft.status}
                       onChange={(e) => setDraft((p) => ({ ...p, status: Number(e.target.value) }))}
                       disabled={saving}
                     >
-                      <option value={1}>Hoạt động</option>
-                      <option value={0}>Khóa</option>
+                      <option value={1}>Active</option>
+                      <option value={0}>Locked</option>
                     </select>
 
                     {/* Role */}
                     <div className="mt-3">
-                      <label className="form-label fw-semibold">Quyền</label>
+                      <label className="form-label fw-semibold">Role</label>
                       <select
                         className="form-select"
                         value={draft.role}
@@ -400,21 +399,21 @@ export default function AdminUsers() {
                         disabled={saving}
                       >
                         <option value="user">User</option>
-                        <option value="sub_admin">Admin phụ</option>
+                        <option value="sub_admin">Sub Admin</option>
                         <option value="admin">Admin</option>
                       </select>
 
                       <div className="text-secondary small mt-2">
-                        * Admin phụ chỉ nên có quyền hạn chế (tuỳ backend bạn chặn route).
+                        * Sub Admin should have limited permissions .
                       </div>
                     </div>
 
                     <div className="ad-modal-actions mt-4">
                       <button className="btn btn-outline-secondary w-100" type="button" onClick={closeModal} disabled={saving}>
-                        Huỷ
+                        Cancel
                       </button>
                       <button className="btn btn-primary w-100" type="button" onClick={saveChanges} disabled={saving}>
-                        {saving ? "Đang lưu..." : "Lưu"}
+                        {saving ? "Saving..." : "Save"}
                       </button>
                     </div>
                   </div>

@@ -1,77 +1,198 @@
+/* =====================================================
+   FOOTER — Readink
+   Pure CSS redesign — zero logic touched
+===================================================== */
+
 .ft-wrapper {
-  background: linear-gradient(180deg, #111827, #0f172a);
-  color: #fff;
+  background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+  color: #e2e8f0;
+  position: relative;
+  overflow: hidden;
 }
+
+/* Decorative gradient orb (top) */
+.ft-wrapper::before {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(37,99,235,.12), transparent 70%);
+  top: -80px;
+  left: -100px;
+  pointer-events: none;
+}
+.ft-wrapper::after {
+  content: '';
+  position: absolute;
+  width: 400px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(99,102,241,.08), transparent 70%);
+  bottom: -60px;
+  right: -60px;
+  pointer-events: none;
+}
+
+/* ── Brand ── */
+.ft-brand { display: flex; align-items: center; gap: 10px; }
 
 .ft-title {
   font-size: 22px;
   font-weight: 800;
+  letter-spacing: -.2px;
+  color: #fff;
 }
+.ft-z { color: #3b82f6; }
 
-.ft-z {
-  color: #3b82f6;
-}
-
+/* ── Description ── */
 .ft-desc {
-  color: #cbd5e1;
+  color: #94a3b8;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
+  max-width: 320px;
 }
 
+/* ── Headings ── */
 .ft-heading {
   font-weight: 700;
-  margin-bottom: 15px;
+  font-size: 13.5px;
+  color: #f1f5f9;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: .8px;
 }
 
+/* ── Links ── */
 .ft-links {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.ft-links li {
-  margin-bottom: 8px;
-}
-
-.ft-links a {
+.ft-links li a {
   text-decoration: none;
-  color: #cbd5e1;
-  transition: 0.3s;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color .2s ease, padding-left .2s ease;
 }
-
-.ft-links a:hover {
+.ft-links li a::before {
+  content: '›';
+  opacity: 0;
+  transition: opacity .2s ease;
+  font-size: 16px;
+  line-height: 1;
+}
+.ft-links li a:hover {
   color: #3b82f6;
-  padding-left: 4px;
+  padding-left: 6px;
+}
+.ft-links li a:hover::before { opacity: 1; }
+
+/* ── Social icons ── */
+.ft-social {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .ft-social a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.10);
+  color: #94a3b8;
+  font-size: 16px;
+  text-decoration: none;
+  transition: background .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.ft-social a:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(37,99,235,.35);
+}
+
+/* ── CTA button ── */
+.ft-btn {
+  border-radius: 999px !important;
+  padding: 10px 24px !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  background: linear-gradient(135deg, #2563eb, #4f46e5) !important;
+  border: none !important;
+  color: #fff !important;
+  box-shadow: 0 6px 20px rgba(37,99,235,.30);
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease !important;
+  letter-spacing: .1px;
+}
+.ft-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 28px rgba(37,99,235,.40) !important;
+  filter: brightness(1.06) !important;
+}
+.ft-btn:active {
+  transform: translateY(0) !important;
+}
+
+/* ── Divider ── */
+.ft-divider {
+  border: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.10) 30%, rgba(255,255,255,.10) 70%, transparent);
+  margin: 0;
+}
+
+/* ── Copyright ── */
+.ft-copy {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+  letter-spacing: .1px;
+  padding: 1.25rem 0 0;
+}
+
+/* ── Logo in footer ── */
+.ft-wrapper .hero-logo {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
-  background: #1e293b;
-  margin-right: 8px;
-  color: #fff;
-  transition: 0.3s;
+  object-fit: contain;
+  border-radius: 8px;
+  filter: brightness(1.1);
 }
 
-.ft-social a:hover {
-  background: #3b82f6;
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+@media (max-width: 991.98px) {
+  .ft-title { font-size: 20px; }
+  .ft-desc  { max-width: 100%; }
 }
 
-.ft-btn {
-  border-radius: 999px;
-  padding: 8px 20px;
-  font-weight: 600;
+@media (max-width: 767.98px) {
+  .ft-wrapper .container-fluid {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+  .ft-heading { font-size: 12.5px; margin-bottom: 12px; }
+  .ft-links li a { font-size: 13.5px; }
+  .ft-social a { width: 38px; height: 38px; font-size: 15px; }
 }
 
-.ft-divider {
-  border-color: rgba(255,255,255,0.1);
-}
-
-.ft-copy {
-  font-size: 14px;
-  color: #94a3b8;
+@media (max-width: 480px) {
+  .ft-title { font-size: 19px; }
+  .ft-copy  { font-size: 12px; text-align: center; }
+  .ft-social { gap: 8px; }
 }

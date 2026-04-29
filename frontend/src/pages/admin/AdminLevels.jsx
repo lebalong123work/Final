@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import AdminSidebar from "./AdminSidebar";
-import "./adminComics.css"; // bạn có thể đổi tên css riêng nếu muốn
+import "./adminComics.css";
 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Swal from "sweetalert2";
 
-const API_BASE = "http://localhost:5000"; // đổi theo backend bạn
-const API_LEVELS = `${API_BASE}/levels`;
+const API_BASE = "http://localhost:5000";
+const API_LEVELS = `${API_BASE}/api/levels`;
 
 function Badge({ children, tone = "dark" }) {
   return <span className={`badge rounded-pill text-bg-${tone}`}>{children}</span>;
@@ -52,7 +52,7 @@ export default function AdminLevels() {
 
   // modal
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(null); // level object hoặc null
+  const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState({ level_no: 1, min_total_topup: 0, name: "" });
 
   const loadLevels = async () => {
@@ -60,11 +60,10 @@ export default function AdminLevels() {
       setErr("");
       setLoading(true);
       const json = await fetchJSON(API_LEVELS, { method: "GET" });
-      // backend mình gửi trước trả {data:[], paging:{...}}
       setItems(json?.data ?? []);
     } catch (e) {
       console.error(e);
-      setErr(e.message || "Không tải được levels.");
+      setErr(e.message || "Failed to load levels.");
     } finally {
       setLoading(false);
     }
@@ -106,10 +105,10 @@ export default function AdminLevels() {
   };
 
   const validateDraft = () => {
-    if (!draft.name || String(draft.name).trim() === "") return "Tên level không được rỗng";
+    if (!draft.name || String(draft.name).trim() === "") return "Level name cannot be empty";
     if (!Number.isInteger(Number(draft.level_no)) || Number(draft.level_no) <= 0)
-      return "level_no phải là số nguyên dương";
-    if (Number(draft.min_total_topup) < 0) return "min_total_topup phải >= 0";
+      return "level_no must be a positive integer";
+    if (Number(draft.min_total_topup) < 0) return "min_total_topup must be >= 0";
     return "";
   };
 
@@ -129,26 +128,26 @@ export default function AdminLevels() {
           method: "PUT",
           body: JSON.stringify(payload),
         });
-        toast.success("Cập nhật level thành công!");
+        toast.success("Level updated successfully!");
       } else {
         await fetchJSON(API_LEVELS, {
           method: "POST",
           body: JSON.stringify(payload),
         });
-        toast.success("Thêm level thành công!");
+        toast.success("Level added successfully!");
       }
 
       closeModal();
       await loadLevels();
     } catch (e) {
       console.error(e);
-      toast.error(e.message || "Lỗi khi lưu level");
+      toast.error(e.message || "Error saving level");
     }
   };
 
   const handleDelete = async (level) => {
     const rs = await Swal.fire({
-      title: "Xoá level?",
+      title: "Delete level?",
       html: `<div style="text-align:left">
               <b>${escapeHtml(level?.name || "")}</b><br/>
               Level No: ${level?.level_no ?? "—"}<br/>
@@ -156,8 +155,8 @@ export default function AdminLevels() {
             </div>`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Xoá",
-      cancelButtonText: "Huỷ",
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
       confirmButtonColor: "#d33",
     });
 
@@ -166,8 +165,8 @@ export default function AdminLevels() {
     try {
       await fetchJSON(`${API_LEVELS}/${level.id}`, { method: "DELETE" });
       await Swal.fire({
-        title: "Đã xoá!",
-        text: "Xoá level thành công.",
+        title: "Deleted!",
+        text: "Level deleted successfully.",
         icon: "success",
         timer: 1200,
         showConfirmButton: false,
@@ -176,8 +175,8 @@ export default function AdminLevels() {
     } catch (e) {
       console.error(e);
       await Swal.fire({
-        title: "Không xoá được",
-        text: e.message || "Lỗi server",
+        title: "Could not delete",
+        text: e.message || "Server error",
         icon: "error",
       });
     }
@@ -195,7 +194,7 @@ export default function AdminLevels() {
             {/* Header */}
             <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
               <div>
-                <h2 className="m-0 ad-title">Quản lý Level</h2>
+                <h2 className="m-0 ad-title">Manage Levels</h2>
                
               </div>
 
@@ -206,7 +205,7 @@ export default function AdminLevels() {
                   </span>
                   <input
                     className="form-control"
-                    placeholder="Tìm theo tên hoặc level_no..."
+                    placeholder="Search by name or level_no..."
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                   />
@@ -218,7 +217,7 @@ export default function AdminLevels() {
                   onClick={openAdd}
                 >
                   <i className="bi bi-plus-lg" />
-                  Thêm level
+                  Add Level
                 </button>
 
                 <button
@@ -228,7 +227,7 @@ export default function AdminLevels() {
                   disabled={loading}
                 >
                   <i className={`bi ${loading ? "bi-arrow-repeat" : "bi-arrow-clockwise"}`} />
-                  Tải lại
+                  Reload
                 </button>
               </div>
             </div>
@@ -245,7 +244,7 @@ export default function AdminLevels() {
               <div className="card border-0 shadow-sm rounded-4">
                 <div className="card-body d-flex align-items-center gap-2">
                   <div className="spinner-border spinner-border-sm" />
-                  <span className="text-secondary">Đang tải danh sách level...</span>
+                  <span className="text-secondary">Loading level list...</span>
                 </div>
               </div>
             ) : null}
@@ -278,12 +277,12 @@ export default function AdminLevels() {
                           <div className="d-flex gap-2">
                             <button className="btn btn-warning btn-sm" type="button" onClick={() => openEdit(lv)}>
                               <i className="bi bi-pencil-square me-1" />
-                              Sửa
+                              Edit
                             </button>
 
                             <button className="btn btn-outline-danger btn-sm" type="button" onClick={() => handleDelete(lv)}>
                               <i className="bi bi-trash me-1" />
-                              Xoá
+                              Delete
                             </button>
                           </div>
                         </div>
@@ -298,7 +297,7 @@ export default function AdminLevels() {
                   <div className="card border-0 shadow-sm rounded-4">
                     <div className="card-body text-center text-secondary">
                       <i className="bi bi-inbox fs-3 d-block mb-2" />
-                      Không có level nào.
+                      No levels found.
                     </div>
                   </div>
                 </div>
@@ -313,9 +312,9 @@ export default function AdminLevels() {
             <div className="ad-modal" onMouseDown={(e) => e.stopPropagation()}>
               <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
                 <div className="min-w-0">
-                  <div className="fw-bold">{editing ? "Sửa level" : "Thêm level"}</div>
+                  <div className="fw-bold">{editing ? "Edit level" : "Add level"}</div>
                   <div className="text-secondary small">
-                    {editing ? `ID: ${editing.id}` : "Tạo mới một level"}
+                    {editing ? `ID: ${editing.id}` : "Create a new level"}
                   </div>
                 </div>
 
@@ -332,40 +331,40 @@ export default function AdminLevels() {
                   className="form-control"
                   value={draft.level_no}
                   onChange={(e) => setDraft((p) => ({ ...p, level_no: e.target.value }))}
-                  placeholder="Ví dụ: 1"
+                  placeholder="E.g.: 1"
                 />
 
                 <div className="mt-3">
-                  <label className="form-label fw-semibold">Tên level</label>
+                  <label className="form-label fw-semibold">Level name</label>
                   <input
                     className="form-control"
                     value={draft.name}
                     onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="Ví dụ: Đồng / Bạc / Vàng..."
+                    placeholder="E.g.: Bronze / Silver / Gold..."
                   />
                 </div>
 
                 <div className="mt-3">
-                  <label className="form-label fw-semibold">Min total topup (VNĐ)</label>
+                  <label className="form-label fw-semibold">Min total topup (VND)</label>
                   <input
                     type="number"
                     min="0"
                     className="form-control"
                     value={draft.min_total_topup}
                     onChange={(e) => setDraft((p) => ({ ...p, min_total_topup: e.target.value }))}
-                    placeholder="Ví dụ: 500000"
+                    placeholder="E.g.: 500000"
                   />
                   <div className="text-secondary small mt-1">
-                    Tổng nạp tối thiểu để đạt level này.
+                    Minimum total top-up required to reach this level.
                   </div>
                 </div>
 
                 <div className="ad-modal-actions mt-4">
                   <button className="btn btn-outline-secondary w-100" type="button" onClick={closeModal}>
-                    Huỷ
+                    Cancel
                   </button>
                   <button className="btn btn-primary w-100" type="button" onClick={handleSave}>
-                    Lưu
+                    Save
                   </button>
                 </div>
               </div>
@@ -381,7 +380,6 @@ function fmtVND(n) {
   return new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + " ₫";
 }
 
-// để nhét HTML vào Swal an toàn hơn
 function escapeHtml(str) {
   return String(str)
     .replaceAll("&", "&amp;")

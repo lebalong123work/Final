@@ -1844,11 +1844,11 @@ COPY public.user_follows (id, follower_id, followee_id, created_at) FROM stdin;
 --
 
 COPY public.users (id, username, email, phone, provider, google_id, password_hash, role_id, status, created_at) FROM stdin;
-3	thuanee	huynhduythuan68@gmail.com	0339 171 545	local	\N	$2b$10$WZ0xtMvSgnX8CrbUgzJki.tMrheW7pIr/q3kDISFtiAPQ2bAJCluq	1	1	2026-02-18 22:08:26.098319
-18	thuan huynh	huynhtuhan123456@gmail.com	\N	google	111877367279903624115	\N	1	1	2026-03-09 22:29:04.342794
-1	thuan	huynhduythuan668@gmail.com	0339 171 545	local	105240375290208597958	$2b$10$q5Y4qC189i6PWbTBsHoPvuQ0rRj6qrPWV/p65P9XzjZnLOAOX9orq	3	1	2026-02-18 22:05:11.401234
+3	longbb	lebalong90@gmail.com	0339 171 545	local	\N	$2b$10$WZ0xtMvSgnX8CrbUgzJki.tMrheW7pIr/q3kDISFtiAPQ2bAJCluq	1	1	2026-02-18 22:08:26.098319
+18	longe le	lebalong987451@gmail.com	\N	google	111877367279903624115	\N	1	1	2026-03-09 22:29:04.342794
+1	bale	long1452@gmail.com	0339 171 545	local	105240375290208597958	$2b$10$q5Y4qC189i6PWbTBsHoPvuQ0rRj6qrPWV/p65P9XzjZnLOAOX9orq	3	1	2026-02-18 22:05:11.401234
 16	admin1	longlbgcd210546@fpt.edu.vn	\N	local	\N	$2b$10$YiBlgYIe9K/VwEhYUxRKq.DtRA6gDvXL.k5rQz6eoXw505uYNxxTC	2	1	2026-02-20 21:52:50.218745
-17	Duythuan Huynh	duythuanh700@gmail.com	\N	google	113064438496548220012	\N	1	1	2026-02-28 22:01:44.794383
+17	BaLong Le	balongle123@gmail.com	\N	google	113064438496548220012	\N	1	1	2026-02-28 22:01:44.794383
 \.
 
 
