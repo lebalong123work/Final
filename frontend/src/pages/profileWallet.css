@@ -1,0 +1,736 @@
+/* =====================================================
+   PROFILE & WALLET — Readink "Obsidian Premium"
+   Premium light-mode with glassmorphism accents
+===================================================== */
+
+/* ── Page shell ── */
+.pw-page {
+  background:
+    radial-gradient(ellipse 900px 500px at 5% 0%,   rgba(59,130,246,.10)  0%, transparent 60%),
+    radial-gradient(ellipse 700px 400px at 95% 15%,  rgba(99,102,241,.08) 0%, transparent 58%),
+    radial-gradient(ellipse 600px 350px at 50% 80%,  rgba(139,92,246,.06) 0%, transparent 55%),
+    #f0f4ff;
+  min-height: 100vh;
+}
+
+/* ── Top identity card ── */
+.pw-top {
+  border-radius: 24px;
+  border: 1px solid rgba(59,130,246,.10);
+  box-shadow:
+    0 20px 60px rgba(8,12,24,.09),
+    0 1px 0 rgba(255,255,255,.90) inset;
+  overflow: hidden;
+  background: rgba(255,255,255,.97);
+  backdrop-filter: blur(16px) saturate(160%);
+}
+
+/* ── Avatar ── */
+.pw-avatar-wrap {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  flex-shrink: 0;
+}
+
+.pw-avatar {
+  width: 92px;
+  height: 92px;
+  object-fit: cover;
+  border-radius: 22px;
+  border: 3px solid #fff;
+  box-shadow: 0 14px 36px rgba(8,12,24,.14);
+  background: #e2e8f0;
+}
+
+.pw-level-badge {
+  position: absolute;
+  right: -6px;
+  bottom: -8px;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
+  border: 2px solid #fff;
+  box-shadow: 0 8px 20px rgba(15,23,42,.20);
+  letter-spacing: .2px;
+}
+
+/* ── Name / username ── */
+.pw-name {
+  font-weight: 900;
+  letter-spacing: .2px;
+  line-height: 1.2;
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.pw-username {
+  color: #64748b;
+  background: rgba(241,245,249,.90);
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  word-break: break-word;
+  backdrop-filter: blur(8px);
+}
+
+/* ── Level progress bar ── */
+.pw-progress {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(226,232,240,.70);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.06);
+}
+
+.pw-progress .progress-bar {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3b82f6, #6366f1) !important;
+}
+
+/* ── Role / provider badge ── */
+.pw-badge {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1e293b, #1e3a8a);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(30,58,138,.20);
+}
+
+/* ── Wallet mini card ── */
+.pw-wallet-mini {
+  min-width: 210px;
+  background: rgba(255,255,255,.95);
+  border: 1px solid rgba(59,130,246,.12);
+  border-radius: 20px;
+  padding: 16px 18px;
+  box-shadow: 0 12px 32px rgba(8,12,24,.07);
+  backdrop-filter: blur(12px);
+}
+
+.pw-balance {
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.2;
+  word-break: break-word;
+  background: linear-gradient(135deg, #2563eb, #6366f1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Quick-stat cards ── */
+.pw-stat {
+  border: 1px solid rgba(59,130,246,.08);
+  border-radius: 20px;
+  padding: 16px;
+  background: rgba(255,255,255,.95);
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  box-shadow: 0 10px 28px rgba(8,12,24,.06);
+  height: 100%;
+  backdrop-filter: blur(10px);
+  transition: transform .2s, box-shadow .2s;
+}
+
+.pw-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(37,99,235,.10);
+}
+
+.pw-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1e293b, #1e3a8a);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-size: 17px;
+  box-shadow: 0 8px 18px rgba(30,58,138,.20);
+}
+
+.pw-stat-value {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+.pw-stat-label {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+/* ── Tab group ── */
+.pw-tabs {
+  margin-top: 24px;
+}
+
+.pw-tab-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255,255,255,.95);
+  border: 1px solid rgba(59,130,246,.08);
+  border-radius: 20px;
+  box-shadow: 0 12px 36px rgba(8,12,24,.06);
+  backdrop-filter: blur(12px);
+}
+
+.pw-tab-group .btn {
+  flex: 1 1 calc(20% - 10px);
+  min-width: 140px;
+  border-radius: 14px !important;
+  padding: 12px 14px;
+  font-weight: 700;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(148,163,184,.18);
+  transition: all .2s ease;
+  white-space: nowrap;
+}
+
+.pw-tab-group .btn i {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.pw-tab-group .btn.btn-outline-dark {
+  background: rgba(248,250,252,.90);
+  color: #1e293b;
+  border-color: rgba(148,163,184,.20);
+}
+
+.pw-tab-group .btn.btn-outline-dark:hover {
+  background: rgba(59,130,246,.06);
+  border-color: rgba(59,130,246,.22);
+  color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(37,99,235,.10);
+}
+
+.pw-tab-group .btn.btn-dark {
+  background: linear-gradient(135deg, #1e293b, #1e3a8a);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(30,58,138,.22);
+}
+
+/* ── Info grid ── */
+.pw-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pw-info-item {
+  background: rgba(248,250,252,.90);
+  border: 1px solid rgba(59,130,246,.08);
+  border-radius: 18px;
+  padding: 14px 16px;
+  min-width: 0;
+  transition: border-color .2s;
+}
+
+.pw-info-item:hover {
+  border-color: rgba(59,130,246,.18);
+}
+
+.pw-info-item strong,
+.pw-info-item b,
+.pw-info-item .label {
+  display: block;
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+.pw-info-item .value,
+.pw-info-item span,
+.pw-info-item div {
+  word-break: break-word;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* ── Mini shelf ── */
+.pw-mini-shelf {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pw-mini-item {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(59,130,246,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.95);
+  transition: border-color .2s, box-shadow .2s, transform .15s;
+}
+
+.pw-mini-item:hover {
+  border-color: rgba(59,130,246,.18);
+  box-shadow: 0 8px 24px rgba(37,99,235,.08);
+  transform: translateX(2px);
+}
+
+.pw-mini-cover {
+  width: 54px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0,0,0,.10);
+}
+
+.pw-mini-item .title,
+.pw-mini-item .name,
+.pw-mini-item h6,
+.pw-mini-item h5 {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.35;
+  word-break: break-word;
+  color: #0f172a;
+}
+
+.pw-mini-item .meta,
+.pw-mini-item small,
+.pw-mini-item p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* ── Library search ── */
+.pw-search {
+  width: 320px;
+  max-width: 100%;
+}
+
+/* ── Library comic thumbnail ── */
+.pw-comic-thumb {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  height: 260px;
+  background: #e2e8f0;
+  box-shadow: 0 12px 32px rgba(8,12,24,.09);
+  transition: transform .2s, box-shadow .2s;
+}
+
+.pw-comic-thumb:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 48px rgba(37,99,235,.12);
+}
+
+.pw-comic-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .35s;
+}
+
+.pw-comic-thumb:hover img {
+  transform: scale(1.04);
+}
+
+.pw-comic-chip {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  background: rgba(8,12,24,.68);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  backdrop-filter: blur(8px);
+  max-width: calc(100% - 20px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+/* ── Wallet hero card ── */
+.pw-wallet-card {
+  border-radius: 24px;
+  padding: 22px;
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 45%, #4f46e5 100%);
+  box-shadow: 0 20px 50px rgba(30,58,138,.28);
+  overflow: hidden;
+  position: relative;
+}
+
+.pw-wallet-card::before {
+  content: '';
+  position: absolute;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.10), transparent 70%);
+  top: -150px;
+  right: -100px;
+  pointer-events: none;
+}
+
+.pw-wallet-balance {
+  font-size: 30px;
+  font-weight: 900;
+  color: #fff;
+  margin-top: 8px;
+  line-height: 1.2;
+  word-break: break-word;
+  text-shadow: 0 2px 12px rgba(0,0,0,.15);
+}
+
+.pw-wallet-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.pw-wallet-actions .btn {
+  border-radius: 14px !important;
+  font-weight: 700;
+  padding: 11px 16px;
+  backdrop-filter: blur(8px);
+}
+
+/* ── Transaction colors ── */
+.pw-pos {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.pw-neg {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+/* ── Generic card wrappers ── */
+.pw-card,
+.pw-section-card {
+  border-radius: 22px;
+  border: 1px solid rgba(59,130,246,.08);
+  box-shadow: 0 12px 36px rgba(8,12,24,.06);
+  overflow: hidden;
+  background: rgba(255,255,255,.97);
+}
+
+/* ── Bootstrap table overrides inside pw-page ── */
+.pw-page .card.border-0 {
+  border-radius: 22px !important;
+  border: 1px solid rgba(59,130,246,.08) !important;
+  box-shadow: 0 12px 36px rgba(8,12,24,.06) !important;
+  background: rgba(255,255,255,.97) !important;
+}
+
+.pw-page .table {
+  margin-bottom: 0;
+}
+
+.pw-page .table thead th {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  border-color: rgba(0,0,0,.05);
+}
+
+.pw-page .table td {
+  border-color: rgba(0,0,0,.04);
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+.pw-page .table tbody tr:hover td {
+  background: rgba(59,130,246,.025);
+}
+
+/* =========================
+   Tablet
+========================= */
+@media (max-width: 991.98px) {
+  .pw-avatar-wrap,
+  .pw-avatar {
+    width: 84px;
+    height: 84px;
+  }
+
+  .pw-name {
+    font-size: 26px;
+  }
+
+  .pw-wallet-mini {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .pw-tab-group .btn {
+    flex: 1 1 calc(33.333% - 10px);
+    min-width: 130px;
+    font-size: 13px;
+    padding: 11px 12px;
+  }
+
+  .pw-info-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pw-comic-thumb {
+    height: 230px;
+  }
+
+  .pw-wallet-balance {
+    font-size: 26px;
+  }
+}
+
+/* =========================
+   Mobile
+========================= */
+@media (max-width: 767.98px) {
+  .pw-page {
+    background:
+      radial-gradient(700px 380px at 5% 0%, rgba(59,130,246,.10) 0%, transparent 55%),
+      radial-gradient(600px 320px at 95% 20%, rgba(99,102,241,.08) 0%, transparent 55%),
+      #f0f4ff;
+  }
+
+  .pw-top {
+    border-radius: 18px;
+  }
+
+  .pw-avatar-wrap,
+  .pw-avatar {
+    width: 76px;
+    height: 76px;
+  }
+
+  .pw-avatar {
+    border-radius: 18px;
+  }
+
+  .pw-level-badge {
+    font-size: 11px;
+    padding: 5px 9px;
+    right: -4px;
+    bottom: -6px;
+  }
+
+  .pw-name {
+    font-size: 22px;
+  }
+
+  .pw-username {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  .pw-badge {
+    font-size: 12px;
+    padding: 6px 11px;
+  }
+
+  .pw-wallet-mini {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .pw-balance {
+    font-size: 18px;
+  }
+
+  .pw-stat {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .pw-stat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 16px;
+  }
+
+  .pw-stat-value {
+    font-size: 17px;
+  }
+
+  .pw-stat-label {
+    font-size: 12px;
+  }
+
+  .pw-tab-group {
+    gap: 8px;
+    padding: 9px;
+    border-radius: 18px;
+  }
+
+  .pw-tab-group .btn {
+    flex: 1 1 calc(50% - 8px);
+    min-width: unset;
+    white-space: normal;
+    text-align: center;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 10px;
+    font-size: 12px;
+    line-height: 1.3;
+    min-height: 72px;
+  }
+
+  .pw-tab-group .btn i {
+    margin: 0 !important;
+    font-size: 17px;
+  }
+
+  .pw-info-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .pw-info-item {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .pw-mini-item {
+    grid-template-columns: 50px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .pw-mini-item > :last-child {
+    grid-column: 2 / 3;
+    justify-self: start;
+    margin-top: 6px;
+  }
+
+  .pw-mini-cover {
+    width: 50px;
+    height: 68px;
+  }
+
+  .pw-search {
+    width: 100%;
+  }
+
+  .pw-comic-thumb {
+    height: 210px;
+    border-radius: 16px;
+  }
+
+  .pw-comic-chip {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .pw-wallet-card {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .pw-wallet-balance {
+    font-size: 24px;
+  }
+
+  .pw-wallet-actions {
+    flex-direction: column;
+  }
+
+  .pw-wallet-actions .btn {
+    width: 100%;
+  }
+}
+
+/* =========================
+   Very small mobile
+========================= */
+@media (max-width: 480px) {
+  .pw-avatar-wrap,
+  .pw-avatar {
+    width: 68px;
+    height: 68px;
+  }
+
+  .pw-avatar {
+    border-radius: 16px;
+  }
+
+  .pw-name {
+    font-size: 20px;
+  }
+
+  .pw-balance {
+    font-size: 17px;
+  }
+
+  .pw-tab-group .btn {
+    flex: 1 1 100%;
+    min-height: 58px;
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+    padding: 11px 12px;
+    font-size: 13px;
+  }
+
+  .pw-tab-group .btn i {
+    font-size: 16px;
+    margin-right: 2px !important;
+  }
+
+  .pw-mini-item {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .pw-comic-thumb {
+    height: 190px;
+  }
+
+  .pw-wallet-balance {
+    font-size: 21px;
+  }
+
+  .pw-level-badge {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+}
